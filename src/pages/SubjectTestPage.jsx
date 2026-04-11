@@ -4,14 +4,14 @@ import api from "../lib/api";
 
 const styles = {
   page: {
-    maxWidth: "720px",
+    maxWidth: "900px",
     margin: "0 auto",
     padding: "2rem 1rem",
-    fontFamily: "var(--font-sans, system-ui, sans-serif)",
+    fontFamily: "system-ui, sans-serif",
   },
   card: {
-    background: "var(--color-background-primary, #fff)",
-    border: "0.5px solid var(--color-border-tertiary, rgba(0,0,0,0.12))",
+    background: "#fff",
+    border: "1px solid #e2e8f0",
     borderRadius: "12px",
     padding: "1.25rem 1.5rem",
   },
@@ -25,22 +25,21 @@ const styles = {
     fontSize: "14px",
     fontWeight: "500",
     cursor: "pointer",
-    border: "0.5px solid rgba(0,0,0,0.2)",
+    border: "1px solid rgba(0,0,0,0.15)",
     background: "transparent",
     color: "inherit",
-    transition: "background 0.15s",
   },
   btnPrimary: {
     background: "#185FA5",
-    color: "#E6F1FB",
-    borderColor: "#185FA5",
+    color: "#fff",
+    border: "1px solid #185FA5",
   },
 };
 
 const shuffleArray = (array) => {
   const shuffled = [...array];
 
-  for (let i = shuffled.length - 1; i > 0; i--) {
+  for (let i = shuffled.length - 1; i > 0; i -= 1) {
     const j = Math.floor(Math.random() * (i + 1));
     [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
@@ -147,8 +146,11 @@ function SubjectTestPage() {
             throw new Error("Topic not found");
           }
 
+          const resolvedSubjectId =
+            selectedTopic.subjectId?._id || selectedTopic.subjectId;
+
           const subjectResponse = await api.get(
-            `/api/subjects/${selectedTopic.subjectId._id || selectedTopic.subjectId}`,
+            `/api/subjects/${resolvedSubjectId}`,
           );
 
           const uniqueQuestions = Array.from(
@@ -165,10 +167,6 @@ function SubjectTestPage() {
           setTopic(selectedTopic);
           setSubject(subjectResponse.data);
           setQuestions(randomizedQuestions);
-          setCurrentQuestionIndex(0);
-          setSelectedAnswers({});
-          setShowResults(false);
-          setTimeLeft(subjectResponse.data.duration || 300);
         } else {
           const [subjectResponse, questionsResponse] = await Promise.all([
             api.get(`/api/subjects/${subjectId}`),
@@ -189,11 +187,11 @@ function SubjectTestPage() {
           setTopic(null);
           setSubject(subjectResponse.data);
           setQuestions(randomizedQuestions);
-          setCurrentQuestionIndex(0);
-          setSelectedAnswers({});
-          setShowResults(false);
-          setTimeLeft(subjectResponse.data.duration || 300);
         }
+
+        setCurrentQuestionIndex(0);
+        setSelectedAnswers({});
+        setShowResults(false);
       } catch (error) {
         console.error("Error loading test page:", error);
         setErrorMessage("Unable to load this test right now.");
@@ -204,6 +202,11 @@ function SubjectTestPage() {
 
     fetchPageData();
   }, [subjectId, topicId, isTopicMode]);
+
+  useEffect(() => {
+    if (!subject) return;
+    setTimeLeft(subject.duration || 300);
+  }, [subject]);
 
   useEffect(() => {
     if (isLoading || showResults || questions.length === 0) return;
@@ -220,15 +223,11 @@ function SubjectTestPage() {
     return () => clearInterval(timer);
   }, [timeLeft, isLoading, showResults, questions.length]);
 
-  const formatTime = (seconds) => {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${m}:${s.toString().padStart(2, "0")}`;
-  };
-
   const score = useMemo(() => {
-    return questions.reduce((total, q) => {
-      return selectedAnswers[q._id] === q.correctAnswer ? total + 1 : total;
+    return questions.reduce((total, question) => {
+      return selectedAnswers[question._id] === question.correctAnswer
+        ? total + 1
+        : total;
     }, 0);
   }, [questions, selectedAnswers]);
 
@@ -238,7 +237,14 @@ function SubjectTestPage() {
     ? ((currentQuestionIndex + 1) / questions.length) * 100
     : 0;
 
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
+
   const getPerformanceMessage = () => {
+    if (questions.length === 0) return "";
     if (score === questions.length) return "Excellent performance";
     if (score === 0) return "You need to review this topic carefully";
     if (score >= questions.length / 2) return "Good job, keep improving";
@@ -246,7 +252,10 @@ function SubjectTestPage() {
   };
 
   const handleOptionSelect = (questionId, option) => {
-    setSelectedAnswers((prev) => ({ ...prev, [questionId]: option }));
+    setSelectedAnswers((prev) => ({
+      ...prev,
+      [questionId]: option,
+    }));
   };
 
   const handleNextQuestion = () => {
@@ -270,23 +279,24 @@ function SubjectTestPage() {
   };
 
   const handleRetakeTest = () => {
-    setShowResults(false);
+    const reshuffledQuestions = shuffleArray(
+      questions.map((question) => ({
+        ...question,
+        options: shuffleArray(question.options),
+      })),
+    );
+
+    setQuestions(reshuffledQuestions);
     setSelectedAnswers({});
     setCurrentQuestionIndex(0);
+    setShowResults(false);
     setTimeLeft(defaultDuration);
   };
 
   if (isLoading) {
     return (
       <div style={{ ...styles.page, textAlign: "center", paddingTop: "6rem" }}>
-        <p
-          style={{
-            color: "var(--color-text-secondary, #666)",
-            fontSize: "14px",
-          }}
-        >
-          Loading test...
-        </p>
+        <p>Loading test...</p>
       </div>
     );
   }
@@ -295,12 +305,7 @@ function SubjectTestPage() {
     return (
       <div style={styles.page}>
         <div style={styles.card}>
-          <p
-            style={{
-              marginBottom: "1rem",
-              color: "var(--color-text-secondary, #666)",
-            }}
-          >
+          <p style={{ marginBottom: "1rem", color: "#64748b" }}>
             {errorMessage}
           </p>
           <button onClick={() => navigate("/user")} style={styles.btnBase}>
@@ -317,17 +322,12 @@ function SubjectTestPage() {
     return (
       <div style={styles.page}>
         <div style={styles.card}>
-          <p style={{ marginBottom: "0.5rem", fontWeight: 500 }}>
+          <p style={{ marginBottom: "0.5rem", fontWeight: "600" }}>
             {isTopicMode
               ? `${subject.name} / ${topic?.name || ""}`
               : subject.name}
           </p>
-          <p
-            style={{
-              color: "var(--color-text-secondary, #666)",
-              fontSize: "14px",
-            }}
-          >
+          <p style={{ color: "#64748b" }}>
             No questions available for this test yet.
           </p>
         </div>
@@ -337,6 +337,7 @@ function SubjectTestPage() {
 
   if (showResults) {
     const timeUsed = defaultDuration - timeLeft;
+    const percentage = Math.round((score / questions.length) * 100);
 
     return (
       <div style={styles.page}>
@@ -344,7 +345,7 @@ function SubjectTestPage() {
           style={{
             ...styles.card,
             textAlign: "center",
-            marginBottom: "1rem",
+            marginBottom: "1.25rem",
             padding: "2rem",
           }}
         >
@@ -364,15 +365,16 @@ function SubjectTestPage() {
           </div>
 
           <h2
-            style={{ fontSize: "22px", fontWeight: "500", marginBottom: "4px" }}
+            style={{ fontSize: "28px", marginBottom: "8px", color: "#0f172a" }}
           >
-            {getPerformanceMessage()}
+            Result
           </h2>
 
           <p
             style={{
               fontSize: "14px",
-              color: "var(--color-text-secondary, #666)",
+              color: "#64748b",
+              marginBottom: "18px",
             }}
           >
             {isTopicMode
@@ -380,58 +382,189 @@ function SubjectTestPage() {
               : subject.name}
           </p>
 
+          <h3
+            style={{
+              fontSize: "20px",
+              marginBottom: "10px",
+              color: "#0f172a",
+            }}
+          >
+            Score: {score} / {questions.length} ({percentage}%)
+          </h3>
+
+          <p
+            style={{
+              margin: 0,
+              fontSize: "16px",
+              fontWeight: "600",
+              color: "#0f172a",
+            }}
+          >
+            {getPerformanceMessage()}
+          </p>
+
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(3, 1fr)",
+              gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
               gap: "12px",
               marginTop: "1.5rem",
             }}
           >
-            {[
-              {
-                value: `${Math.round((score / questions.length) * 100)}%`,
-                label: "Score",
-              },
-              { value: `${score} / ${questions.length}`, label: "Correct" },
-              { value: formatTime(timeUsed), label: "Time used" },
-            ].map(({ value, label }) => (
+            <div
+              style={{
+                backgroundColor: "#f8fafc",
+                borderRadius: "10px",
+                padding: "14px",
+              }}
+            >
               <div
-                key={label}
                 style={{
-                  background: "var(--color-background-secondary, #f5f5f5)",
-                  borderRadius: "8px",
-                  padding: "1rem",
+                  fontSize: "22px",
+                  fontWeight: "700",
+                  color: "#185FA5",
                 }}
               >
-                <p
-                  style={{
-                    fontSize: "22px",
-                    fontWeight: "500",
-                    color: label === "Score" ? "#185FA5" : "inherit",
-                  }}
-                >
-                  {value}
-                </p>
-                <p
-                  style={{
-                    fontSize: "12px",
-                    color: "var(--color-text-secondary, #666)",
-                    marginTop: "2px",
-                  }}
-                >
-                  {label}
-                </p>
+                {percentage}%
               </div>
-            ))}
+              <div style={{ fontSize: "13px", color: "#64748b" }}>Score</div>
+            </div>
+
+            <div
+              style={{
+                backgroundColor: "#f8fafc",
+                borderRadius: "10px",
+                padding: "14px",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "22px",
+                  fontWeight: "700",
+                  color: "#0f172a",
+                }}
+              >
+                {score}/{questions.length}
+              </div>
+              <div style={{ fontSize: "13px", color: "#64748b" }}>Correct</div>
+            </div>
+
+            <div
+              style={{
+                backgroundColor: "#f8fafc",
+                borderRadius: "10px",
+                padding: "14px",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "22px",
+                  fontWeight: "700",
+                  color: "#0f172a",
+                }}
+              >
+                {formatTime(timeUsed)}
+              </div>
+              <div style={{ fontSize: "13px", color: "#64748b" }}>
+                Time used
+              </div>
+            </div>
           </div>
         </div>
+
+        {questions.map((question, index) => {
+          const userAnswer = selectedAnswers[question._id];
+
+          return (
+            <div
+              key={question._id}
+              style={{
+                ...styles.card,
+                marginBottom: "1rem",
+              }}
+            >
+              <h3
+                style={{
+                  marginTop: 0,
+                  marginBottom: "12px",
+                  color: "#0f172a",
+                  lineHeight: "1.5",
+                }}
+              >
+                {index + 1}. {question.questionText}
+              </h3>
+
+              <div>
+                {question.options.map((option, optionIndex) => {
+                  const isCorrect = option === question.correctAnswer;
+                  const isUserAnswer = option === userAnswer;
+                  const isWrongSelected = isUserAnswer && !isCorrect;
+
+                  let color = "#111827";
+                  let fontWeight = "400";
+                  let extraText = "";
+
+                  if (isCorrect && isUserAnswer) {
+                    color = "green";
+                    fontWeight = "700";
+                    extraText = " (Your Answer ✓)";
+                  } else if (isCorrect) {
+                    color = "green";
+                    fontWeight = "700";
+                    extraText = " (Correct Answer)";
+                  } else if (isWrongSelected) {
+                    color = "red";
+                    fontWeight = "700";
+                    extraText = " (Your Answer)";
+                  }
+
+                  return (
+                    <p
+                      key={optionIndex}
+                      style={{
+                        margin: "0 0 6px",
+                        color,
+                        fontWeight,
+                      }}
+                    >
+                      {option}
+                      {extraText}
+                    </p>
+                  );
+                })}
+              </div>
+
+              <details style={{ marginTop: "12px" }}>
+                <summary
+                  style={{
+                    cursor: "pointer",
+                    fontWeight: "600",
+                    color: "#0f172a",
+                  }}
+                >
+                  Show Explanation
+                </summary>
+                <p
+                  style={{
+                    marginTop: "12px",
+                    color: "#334155",
+                    lineHeight: "1.7",
+                    whiteSpace: "pre-wrap",
+                  }}
+                >
+                  {question.explanation}
+                </p>
+              </details>
+            </div>
+          );
+        })}
 
         <div
           style={{
             display: "flex",
             gap: "10px",
             justifyContent: "center",
+            flexWrap: "wrap",
             marginTop: "1.5rem",
           }}
         >
@@ -439,13 +572,14 @@ function SubjectTestPage() {
             onClick={handleRetakeTest}
             style={{ ...styles.btnBase, ...styles.btnPrimary }}
           >
-            Retake test
+            Retake Test
           </button>
+
           <button
             onClick={() => navigate(`/subject/${subject._id}/topics`)}
             style={styles.btnBase}
           >
-            Back to topics
+            Back to Topics
           </button>
         </div>
       </div>
@@ -459,6 +593,8 @@ function SubjectTestPage() {
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
+          gap: "12px",
+          flexWrap: "wrap",
           marginBottom: "0.25rem",
         }}
       >
@@ -466,7 +602,7 @@ function SubjectTestPage() {
           <p
             style={{
               fontSize: "13px",
-              color: "var(--color-text-secondary, #666)",
+              color: "#64748b",
               marginBottom: "2px",
             }}
           >
@@ -474,8 +610,8 @@ function SubjectTestPage() {
               ? `${subject.name} / ${topic?.name || ""}`
               : subject.name}
           </p>
-          <h2 style={{ fontSize: "20px", fontWeight: "500" }}>
-            {isTopicMode ? "Topic test" : "Subject test"}
+          <h2 style={{ fontSize: "20px", fontWeight: "600", color: "#0f172a" }}>
+            {isTopicMode ? "Topic Test" : "Subject Test"}
           </h2>
         </div>
 
@@ -486,13 +622,11 @@ function SubjectTestPage() {
             gap: "6px",
             padding: "8px 14px",
             borderRadius: "8px",
-            background: "var(--color-background-secondary, #f5f5f5)",
-            border:
-              "0.5px solid var(--color-border-tertiary, rgba(0,0,0,0.12))",
+            background: "#f5f5f5",
+            border: "1px solid rgba(0,0,0,0.12)",
             fontSize: "14px",
-            fontWeight: "500",
-            color: timeLeft <= 30 ? "#A32D2D" : "inherit",
-            transition: "color 0.3s",
+            fontWeight: "600",
+            color: timeLeft <= 30 ? "#A32D2D" : "#0f172a",
           }}
         >
           <ClockIcon />
@@ -506,20 +640,17 @@ function SubjectTestPage() {
             display: "flex",
             justifyContent: "space-between",
             fontSize: "13px",
-            color: "var(--color-text-secondary, #666)",
+            color: "#64748b",
             marginBottom: "8px",
           }}
         >
           <span>
-            Question{" "}
-            <strong style={{ color: "inherit", fontWeight: "500" }}>
-              {currentQuestionIndex + 1}
-            </strong>{" "}
-            of {questions.length}
+            Question <strong>{currentQuestionIndex + 1}</strong> of{" "}
+            {questions.length}
           </span>
           <span>
             Answered:{" "}
-            <strong style={{ fontWeight: "500" }}>
+            <strong>
               {answeredCount} / {questions.length}
             </strong>
           </span>
@@ -528,7 +659,7 @@ function SubjectTestPage() {
         <div
           style={{
             height: "4px",
-            background: "var(--color-background-secondary, #e9ecef)",
+            background: "#e9ecef",
             borderRadius: "999px",
             overflow: "hidden",
           }}
@@ -549,8 +680,8 @@ function SubjectTestPage() {
         <p
           style={{
             fontSize: "12px",
-            fontWeight: "500",
-            color: "var(--color-text-secondary, #666)",
+            fontWeight: "600",
+            color: "#64748b",
             textTransform: "uppercase",
             letterSpacing: "0.05em",
             marginBottom: "0.75rem",
@@ -559,7 +690,7 @@ function SubjectTestPage() {
           Question {currentQuestionIndex + 1}
         </p>
 
-        <p style={{ fontSize: "16px", lineHeight: "1.6" }}>
+        <p style={{ fontSize: "16px", lineHeight: "1.6", color: "#0f172a" }}>
           {currentQuestion.questionText}
         </p>
 
@@ -581,11 +712,10 @@ function SubjectTestPage() {
                   fontSize: "14px",
                   marginBottom: "8px",
                   border: isSelected
-                    ? "0.5px solid #185FA5"
-                    : "0.5px solid var(--color-border-tertiary, rgba(0,0,0,0.12))",
+                    ? "1px solid #185FA5"
+                    : "1px solid rgba(0,0,0,0.12)",
                   background: isSelected ? "#E6F1FB" : "transparent",
-                  color: isSelected ? "#0C447C" : "inherit",
-                  transition: "border-color 0.15s, background 0.15s",
+                  color: isSelected ? "#0C447C" : "#0f172a",
                 }}
               >
                 <div
@@ -594,7 +724,7 @@ function SubjectTestPage() {
                     height: "18px",
                     borderRadius: "50%",
                     flexShrink: 0,
-                    border: isSelected ? "none" : "0.5px solid rgba(0,0,0,0.2)",
+                    border: isSelected ? "none" : "1px solid rgba(0,0,0,0.2)",
                     background: isSelected ? "#185FA5" : "transparent",
                     display: "flex",
                     alignItems: "center",
@@ -625,6 +755,7 @@ function SubjectTestPage() {
           justifyContent: "space-between",
           alignItems: "center",
           marginTop: "1rem",
+          gap: "10px",
         }}
       >
         <button
@@ -655,8 +786,7 @@ function SubjectTestPage() {
                     ? "#185FA5"
                     : answered
                       ? "rgba(24,95,165,0.4)"
-                      : "var(--color-border-tertiary, rgba(0,0,0,0.12))",
-                  transition: "background 0.2s",
+                      : "rgba(0,0,0,0.12)",
                 }}
               />
             );
