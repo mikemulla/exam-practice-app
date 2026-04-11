@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import api from "../lib/api";
 import { useNavigate } from "react-router-dom";
-import { Header } from "../components/Header";
+import Header from "../components/Header";
+
 function UserPage() {
   const [subjects, setSubjects] = useState([]);
   const [topics, setTopics] = useState([]);

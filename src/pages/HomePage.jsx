@@ -1,5 +1,4 @@
 import { useNavigate } from "react-router-dom";
-import Header from "../components/Header";
 
 function PlusIcon() {
   return (
@@ -127,7 +126,6 @@ function HomePage() {
 
   return (
     <>
-      <Header />
       <div style={{ minHeight: "100vh", background: "#f8f9fb" }}>
         <div
           style={{
