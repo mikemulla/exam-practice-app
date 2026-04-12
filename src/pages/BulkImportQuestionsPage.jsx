@@ -60,6 +60,17 @@ function BulkImportQuestionsPage() {
   }
 ]`;
 
+  const sanitizeJsonInput = (input) => {
+    return input
+      .replace(/\[span_\d+\]\(start_span\)/g, "")
+      .replace(/\[span_\d+\]\(end_span\)/g, "")
+      .replace(/\[span_\d+\]/g, "")
+      .replace(/\(start_span\)/g, "")
+      .replace(/\(end_span\)/g, "")
+      .replace(/\u00A0/g, " ")
+      .trim();
+  };
+
   const handleImport = async (e) => {
     e.preventDefault();
 
@@ -76,8 +87,10 @@ function BulkImportQuestionsPage() {
     let parsedQuestions;
 
     try {
-      parsedQuestions = JSON.parse(jsonInput);
+      const cleanedInput = sanitizeJsonInput(jsonInput);
+      parsedQuestions = JSON.parse(cleanedInput);
     } catch (error) {
+      console.error("JSON parse error:", error);
       alert("Invalid JSON format");
       return;
     }
@@ -87,35 +100,54 @@ function BulkImportQuestionsPage() {
       return;
     }
 
-    for (const question of parsedQuestions) {
-      if (
-        !question.questionText ||
-        !Array.isArray(question.options) ||
-        question.options.length < 2 ||
-        !question.correctAnswer ||
-        !question.explanation
-      ) {
-        alert(
-          "Each question must have questionText, options array, correctAnswer, and explanation",
-        );
+    const normalizedQuestions = parsedQuestions.map((question) => ({
+      questionText: (question.questionText || "").trim(),
+      options: Array.isArray(question.options)
+        ? question.options
+            .map((option) => String(option).trim())
+            .filter((option) => option !== "")
+        : [],
+      correctAnswer: (question.correctAnswer || "").trim(),
+      explanation: (question.explanation || "").trim(),
+      topicId,
+    }));
+
+    for (const question of normalizedQuestions) {
+      if (!question.questionText) {
+        alert("Each question must have questionText");
+        return;
+      }
+
+      if (!Array.isArray(question.options) || question.options.length < 2) {
+        alert("Each question must have at least 2 options");
+        return;
+      }
+
+      if (!question.correctAnswer) {
+        alert("Each question must have a correctAnswer");
+        return;
+      }
+
+      if (!question.options.includes(question.correctAnswer)) {
+        alert("Each correct answer must match one of its options");
+        return;
+      }
+
+      if (!question.explanation) {
+        alert("Each question must have an explanation");
         return;
       }
     }
-
-    const questionsWithTopic = parsedQuestions.map((question) => ({
-      ...question,
-      topicId,
-    }));
 
     try {
       setIsSubmitting(true);
 
       const response = await api.post("/api/questions/bulk", {
         subjectId,
-        questions: questionsWithTopic,
+        questions: normalizedQuestions,
       });
 
-      alert(response.data.message);
+      alert(response.data.message || "Questions imported successfully");
       setJsonInput("");
       setTopicId("");
     } catch (error) {
@@ -164,8 +196,8 @@ function BulkImportQuestionsPage() {
               lineHeight: "1.6",
             }}
           >
-            Select a subject, choose a topic under it, then paste a JSON array
-            of questions to import them all in one step.
+            Select a subject, choose a topic, then paste a JSON array of
+            questions to import them all in one step.
           </p>
         </div>
 
@@ -307,11 +339,25 @@ function BulkImportQuestionsPage() {
                   borderRadius: "10px",
                   overflowX: "auto",
                   fontSize: "13px",
+                  whiteSpace: "pre-wrap",
                 }}
               >
                 {sampleJson}
               </pre>
             </details>
+
+            <p
+              style={{
+                marginTop: 0,
+                marginBottom: "20px",
+                color: "#64748b",
+                fontSize: "13px",
+                lineHeight: "1.6",
+              }}
+            >
+              The importer automatically cleans copied markers like
+              <code> [span_0](start_span) </code> before parsing.
+            </p>
 
             <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
               <button
