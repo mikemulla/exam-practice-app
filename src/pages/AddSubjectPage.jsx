@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 function AddSubjectPage() {
   const navigate = useNavigate();
   const [subjectName, setSubjectName] = useState("");
-  const [duration, setDuration] = useState(300);
+  const [durationMinutes, setDurationMinutes] = useState(5);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -13,12 +13,12 @@ function AddSubjectPage() {
     try {
       await api.post("/api/subjects", {
         name: subjectName,
-        duration: Number(duration),
+        duration: Number(durationMinutes) * 60,
       });
 
       alert("Subject saved successfully");
       setSubjectName("");
-      setDuration(300);
+      setDurationMinutes(5);
     } catch (error) {
       console.error("Error saving subject:", error);
       alert("Error saving subject");
@@ -63,8 +63,7 @@ function AddSubjectPage() {
               lineHeight: "1.6",
             }}
           >
-            Add a subject name and set the default duration for tests under that
-            subject.
+            Add a subject name and set the test duration in minutes.
           </p>
         </div>
 
@@ -116,13 +115,13 @@ function AddSubjectPage() {
                   color: "#0f172a",
                 }}
               >
-                Duration in Seconds
+                Duration in Minutes
               </label>
               <input
                 type="number"
-                placeholder="For example: 600"
-                value={duration}
-                onChange={(e) => setDuration(e.target.value)}
+                placeholder="For example: 10"
+                value={durationMinutes}
+                onChange={(e) => setDurationMinutes(e.target.value)}
                 style={{
                   width: "100%",
                   padding: "14px 16px",
@@ -132,7 +131,7 @@ function AddSubjectPage() {
                   outline: "none",
                   boxSizing: "border-box",
                 }}
-                min="30"
+                min="1"
                 required
               />
               <p
@@ -143,7 +142,7 @@ function AddSubjectPage() {
                   fontSize: "13px",
                 }}
               >
-                Example: 300 = 5 minutes, 600 = 10 minutes.
+                Example: 5 = 5 minutes, 10 = 10 minutes.
               </p>
             </div>
 

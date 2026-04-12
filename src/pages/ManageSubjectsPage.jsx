@@ -11,7 +11,7 @@ function ManageSubjectsPage() {
 
   const [editingId, setEditingId] = useState(null);
   const [editName, setEditName] = useState("");
-  const [editDuration, setEditDuration] = useState(300);
+  const [editDurationMinutes, setEditDurationMinutes] = useState(5);
 
   const fetchSubjects = async () => {
     try {
@@ -51,7 +51,6 @@ function ManageSubjectsPage() {
 
     topics.forEach((topic) => {
       const currentSubjectId = topic.subjectId?._id || topic.subjectId;
-
       if (currentSubjectId) {
         counts[currentSubjectId] = (counts[currentSubjectId] || 0) + 1;
       }
@@ -65,7 +64,6 @@ function ManageSubjectsPage() {
 
     questions.forEach((question) => {
       const currentSubjectId = question.subjectId?._id || question.subjectId;
-
       if (currentSubjectId) {
         counts[currentSubjectId] = (counts[currentSubjectId] || 0) + 1;
       }
@@ -77,20 +75,22 @@ function ManageSubjectsPage() {
   const startEdit = (subject) => {
     setEditingId(subject._id);
     setEditName(subject.name);
-    setEditDuration(subject.duration || 300);
+    setEditDurationMinutes(
+      Math.max(1, Math.floor((subject.duration || 300) / 60)),
+    );
   };
 
   const cancelEdit = () => {
     setEditingId(null);
     setEditName("");
-    setEditDuration(300);
+    setEditDurationMinutes(5);
   };
 
   const handleUpdate = async (id) => {
     try {
       await api.put(`/api/subjects/${id}`, {
         name: editName,
-        duration: Number(editDuration),
+        duration: Number(editDurationMinutes) * 60,
       });
 
       alert("Subject updated successfully");
@@ -215,17 +215,29 @@ function ManageSubjectsPage() {
 
                       <input
                         type="number"
-                        value={editDuration}
-                        onChange={(e) => setEditDuration(e.target.value)}
+                        value={editDurationMinutes}
+                        onChange={(e) => setEditDurationMinutes(e.target.value)}
+                        min="1"
                         style={{
                           width: "100%",
                           padding: "12px",
-                          marginBottom: "10px",
+                          marginBottom: "6px",
                           borderRadius: "8px",
                           border: "1px solid #cbd5e1",
                           boxSizing: "border-box",
                         }}
                       />
+
+                      <p
+                        style={{
+                          marginTop: 0,
+                          marginBottom: "12px",
+                          color: "#64748b",
+                          fontSize: "13px",
+                        }}
+                      >
+                        Enter the subject timer in minutes.
+                      </p>
 
                       <div
                         style={{

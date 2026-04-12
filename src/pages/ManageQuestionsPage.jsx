@@ -1,130 +1,282 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import api from "../lib/api";
 import { useNavigate } from "react-router-dom";
 
-function BulkImportQuestionsPage() {
+function ManageQuestionsPage() {
   const navigate = useNavigate();
 
+  const [questions, setQuestions] = useState([]);
   const [subjects, setSubjects] = useState([]);
   const [topics, setTopics] = useState([]);
+  const [editingId, setEditingId] = useState(null);
+
+  const [filterSubjectId, setFilterSubjectId] = useState("");
+  const [filterTopicId, setFilterTopicId] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+
   const [subjectId, setSubjectId] = useState("");
   const [topicId, setTopicId] = useState("");
-  const [jsonInput, setJsonInput] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [questionText, setQuestionText] = useState("");
+  const [options, setOptions] = useState(["", "", "", ""]);
+  const [correctAnswer, setCorrectAnswer] = useState("");
+  const [explanation, setExplanation] = useState("");
+
+  const [editTopics, setEditTopics] = useState([]);
+
+  const fetchQuestions = async () => {
+    try {
+      const response = await api.get("/api/questions");
+      setQuestions(response.data);
+    } catch (error) {
+      console.error("Error fetching questions:", error);
+    }
+  };
+
+  const fetchSubjects = async () => {
+    try {
+      const response = await api.get("/api/subjects");
+      setSubjects(response.data);
+    } catch (error) {
+      console.error("Error fetching subjects:", error);
+    }
+  };
 
   useEffect(() => {
-    const fetchSubjects = async () => {
-      try {
-        const response = await api.get("/api/subjects");
-        setSubjects(response.data);
-      } catch (error) {
-        console.error("Error fetching subjects:", error);
-      }
-    };
-
+    fetchQuestions();
     fetchSubjects();
   }, []);
 
   useEffect(() => {
-    const fetchTopics = async () => {
-      if (!subjectId) {
+    const fetchFilterTopics = async () => {
+      if (!filterSubjectId) {
         setTopics([]);
-        setTopicId("");
+        setFilterTopicId("");
+        return;
+      }
+
+      try {
+        const response = await api.get(
+          `/api/topics/subject/${filterSubjectId}`,
+        );
+        setTopics(response.data);
+        setFilterTopicId("");
+      } catch (error) {
+        console.error("Error fetching filter topics:", error);
+      }
+    };
+
+    fetchFilterTopics();
+  }, [filterSubjectId]);
+
+  useEffect(() => {
+    const fetchEditTopics = async () => {
+      if (!editingId || !subjectId) {
+        setEditTopics([]);
         return;
       }
 
       try {
         const response = await api.get(`/api/topics/subject/${subjectId}`);
-        setTopics(response.data);
-        setTopicId("");
+        setEditTopics(response.data);
       } catch (error) {
-        console.error("Error fetching topics:", error);
+        console.error("Error fetching edit topics:", error);
       }
     };
 
-    fetchTopics();
-  }, [subjectId]);
+    fetchEditTopics();
+  }, [editingId, subjectId]);
 
-  const sampleJson = `[
-  {
-    "questionText": "What is 2 + 2?",
-    "options": ["2", "3", "4", "5"],
-    "correctAnswer": "4",
-    "explanation": "2 + 2 equals 4."
-  },
-  {
-    "questionText": "What is the capital of France?",
-    "options": ["Berlin", "Madrid", "Paris", "Rome"],
-    "correctAnswer": "Paris",
-    "explanation": "Paris is the capital of France."
-  }
-]`;
+  const filteredQuestions = useMemo(() => {
+    return questions.filter((question) => {
+      const currentSubjectId = question.subjectId?._id || question.subjectId;
+      const currentTopicId = question.topicId?._id || question.topicId;
 
-  const handleImport = async (e) => {
-    e.preventDefault();
+      const matchesSubject =
+        !filterSubjectId || currentSubjectId === filterSubjectId;
+
+      const matchesTopic = !filterTopicId || currentTopicId === filterTopicId;
+
+      const lowerSearch = searchTerm.trim().toLowerCase();
+
+      const matchesSearch =
+        !lowerSearch ||
+        question.questionText.toLowerCase().includes(lowerSearch) ||
+        question.correctAnswer.toLowerCase().includes(lowerSearch) ||
+        question.explanation.toLowerCase().includes(lowerSearch) ||
+        question.options.some((option) =>
+          option.toLowerCase().includes(lowerSearch),
+        );
+
+      return matchesSubject && matchesTopic && matchesSearch;
+    });
+  }, [questions, filterSubjectId, filterTopicId, searchTerm]);
+
+  const startEdit = async (question) => {
+    const currentSubjectId =
+      question.subjectId?._id || question.subjectId || "";
+    const currentTopicId = question.topicId?._id || question.topicId || "";
+
+    setEditingId(question._id);
+    setSubjectId(currentSubjectId);
+    setTopicId(currentTopicId);
+    setQuestionText(question.questionText);
+    setOptions(question.options.length ? question.options : ["", "", "", ""]);
+    setCorrectAnswer(question.correctAnswer);
+    setExplanation(question.explanation);
+
+    try {
+      const response = await api.get(`/api/topics/subject/${currentSubjectId}`);
+      setEditTopics(response.data);
+    } catch (error) {
+      console.error("Error loading topics for editing:", error);
+      setEditTopics([]);
+    }
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setSubjectId("");
+    setTopicId("");
+    setQuestionText("");
+    setOptions(["", "", "", ""]);
+    setCorrectAnswer("");
+    setExplanation("");
+    setEditTopics([]);
+  };
+
+  const handleEditSubjectChange = async (newSubjectId) => {
+    setSubjectId(newSubjectId);
+    setTopicId("");
+
+    if (!newSubjectId) {
+      setEditTopics([]);
+      return;
+    }
+
+    try {
+      const response = await api.get(`/api/topics/subject/${newSubjectId}`);
+      setEditTopics(response.data);
+    } catch (error) {
+      console.error("Error fetching topics for selected subject:", error);
+      setEditTopics([]);
+    }
+  };
+
+  const handleOptionChange = (index, value) => {
+    const updatedOptions = [...options];
+    updatedOptions[index] = value;
+    setOptions(updatedOptions);
+
+    const cleanedOptions = updatedOptions
+      .map((option) => option.trim())
+      .filter((option) => option !== "");
+
+    if (correctAnswer && !cleanedOptions.includes(correctAnswer)) {
+      setCorrectAnswer("");
+    }
+  };
+
+  const addOptionField = () => {
+    if (options.length >= 6) return;
+    setOptions((prev) => [...prev, ""]);
+  };
+
+  const removeOptionField = (indexToRemove) => {
+    if (options.length <= 2) return;
+
+    const updatedOptions = options.filter(
+      (_, index) => index !== indexToRemove,
+    );
+    setOptions(updatedOptions);
+
+    const cleanedOptions = updatedOptions
+      .map((option) => option.trim())
+      .filter((option) => option !== "");
+
+    if (correctAnswer && !cleanedOptions.includes(correctAnswer)) {
+      setCorrectAnswer("");
+    }
+  };
+
+  const handleUpdate = async (id) => {
+    const cleanedOptions = options
+      .map((option) => option.trim())
+      .filter((option) => option !== "");
 
     if (!subjectId) {
-      alert("Please select a subject");
+      alert("Please select a subject.");
       return;
     }
 
     if (!topicId) {
-      alert("Please select a topic");
+      alert("Please select a topic.");
       return;
     }
 
-    let parsedQuestions;
+    if (!questionText.trim()) {
+      alert("Please enter the question text.");
+      return;
+    }
+
+    if (cleanedOptions.length < 2) {
+      alert("Please provide at least two options.");
+      return;
+    }
+
+    if (!correctAnswer) {
+      alert("Please select the correct answer.");
+      return;
+    }
+
+    if (!cleanedOptions.includes(correctAnswer)) {
+      alert("Correct answer must match one of the options.");
+      return;
+    }
+
+    if (!explanation.trim()) {
+      alert("Please enter the explanation.");
+      return;
+    }
 
     try {
-      parsedQuestions = JSON.parse(jsonInput);
-    } catch (error) {
-      alert("Invalid JSON format");
-      return;
-    }
-
-    if (!Array.isArray(parsedQuestions) || parsedQuestions.length === 0) {
-      alert("JSON must be a non-empty array");
-      return;
-    }
-
-    for (const question of parsedQuestions) {
-      if (
-        !question.questionText ||
-        !Array.isArray(question.options) ||
-        question.options.length < 2 ||
-        !question.correctAnswer ||
-        !question.explanation
-      ) {
-        alert(
-          "Each question must have questionText, options array, correctAnswer, and explanation",
-        );
-        return;
-      }
-    }
-
-    const questionsWithTopic = parsedQuestions.map((question) => ({
-      ...question,
-      topicId,
-    }));
-
-    try {
-      setIsSubmitting(true);
-
-      const response = await api.post("/api/questions/bulk", {
+      await api.put(`/api/questions/${id}`, {
         subjectId,
-        questions: questionsWithTopic,
+        topicId,
+        questionText: questionText.trim(),
+        options: cleanedOptions,
+        correctAnswer,
+        explanation: explanation.trim(),
       });
 
-      alert(response.data.message);
-      setJsonInput("");
-      setTopicId("");
+      alert("Question updated successfully");
+      cancelEdit();
+      fetchQuestions();
     } catch (error) {
-      console.error("Error importing questions:", error);
-      alert("Error importing questions");
-    } finally {
-      setIsSubmitting(false);
+      console.error("Error updating question:", error);
+      alert("Error updating question");
     }
   };
+
+  const handleDelete = async (id) => {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this question?",
+    );
+
+    if (!confirmed) return;
+
+    try {
+      await api.delete(`/api/questions/${id}`);
+      alert("Question deleted successfully");
+      fetchQuestions();
+    } catch (error) {
+      console.error("Error deleting question:", error);
+      alert("Error deleting question");
+    }
+  };
+
+  const currentValidOptions = options
+    .map((option) => option.trim())
+    .filter((option) => option !== "");
 
   return (
     <div
@@ -135,7 +287,7 @@ function BulkImportQuestionsPage() {
         padding: "32px 20px",
       }}
     >
-      <div style={{ maxWidth: "900px", margin: "0 auto" }}>
+      <div style={{ maxWidth: "1000px", margin: "0 auto" }}>
         <div style={{ marginBottom: "24px" }}>
           <p
             style={{
@@ -145,7 +297,7 @@ function BulkImportQuestionsPage() {
               fontWeight: "600",
             }}
           >
-            Admin / Bulk question import
+            Admin / Manage questions
           </p>
           <h1
             style={{
@@ -154,7 +306,7 @@ function BulkImportQuestionsPage() {
               color: "#0f172a",
             }}
           >
-            Import many questions at once
+            Edit and delete questions
           </h1>
           <p
             style={{
@@ -164,8 +316,8 @@ function BulkImportQuestionsPage() {
               lineHeight: "1.6",
             }}
           >
-            Select a subject, choose a topic under it, then paste a JSON array
-            of questions to import them all in one step.
+            Filter by subject, topic, and keyword to manage large question banks
+            more easily.
           </p>
         </div>
 
@@ -178,88 +330,15 @@ function BulkImportQuestionsPage() {
             boxShadow: "0 12px 30px rgba(15,23,42,0.06)",
           }}
         >
-          <form onSubmit={handleImport}>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-                gap: "16px",
-                marginBottom: "20px",
-              }}
-            >
-              <div>
-                <label
-                  style={{
-                    display: "block",
-                    marginBottom: "8px",
-                    fontWeight: "600",
-                    color: "#0f172a",
-                  }}
-                >
-                  Subject
-                </label>
-                <select
-                  value={subjectId}
-                  onChange={(e) => setSubjectId(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "14px 16px",
-                    borderRadius: "10px",
-                    border: "1px solid #cbd5e1",
-                    fontSize: "15px",
-                    backgroundColor: "white",
-                    boxSizing: "border-box",
-                  }}
-                  required
-                >
-                  <option value="">Select Subject</option>
-                  {subjects.map((subject) => (
-                    <option key={subject._id} value={subject._id}>
-                      {subject.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label
-                  style={{
-                    display: "block",
-                    marginBottom: "8px",
-                    fontWeight: "600",
-                    color: "#0f172a",
-                  }}
-                >
-                  Topic
-                </label>
-                <select
-                  value={topicId}
-                  onChange={(e) => setTopicId(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "14px 16px",
-                    borderRadius: "10px",
-                    border: "1px solid #cbd5e1",
-                    fontSize: "15px",
-                    backgroundColor: "white",
-                    boxSizing: "border-box",
-                  }}
-                  required
-                  disabled={!subjectId}
-                >
-                  <option value="">
-                    {subjectId ? "Select Topic" : "Select subject first"}
-                  </option>
-                  {topics.map((topic) => (
-                    <option key={topic._id} value={topic._id}>
-                      {topic.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div style={{ marginBottom: "12px" }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+              gap: "14px",
+              marginBottom: "24px",
+            }}
+          >
+            <div>
               <label
                 style={{
                   display: "block",
@@ -268,92 +347,369 @@ function BulkImportQuestionsPage() {
                   color: "#0f172a",
                 }}
               >
-                JSON Array
+                Filter by Subject
               </label>
-              <textarea
-                value={jsonInput}
-                onChange={(e) => setJsonInput(e.target.value)}
-                placeholder="Paste your JSON array here"
-                rows="18"
+              <select
+                value={filterSubjectId}
+                onChange={(e) => setFilterSubjectId(e.target.value)}
                 style={{
                   width: "100%",
-                  padding: "14px 16px",
-                  borderRadius: "10px",
+                  padding: "12px",
+                  borderRadius: "8px",
                   border: "1px solid #cbd5e1",
-                  fontSize: "14px",
-                  fontFamily: "monospace",
                   boxSizing: "border-box",
-                  resize: "vertical",
+                  backgroundColor: "white",
                 }}
-                required
+              >
+                <option value="">All Subjects</option>
+                {subjects.map((subject) => (
+                  <option key={subject._id} value={subject._id}>
+                    {subject.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label
+                style={{
+                  display: "block",
+                  marginBottom: "8px",
+                  fontWeight: "600",
+                  color: "#0f172a",
+                }}
+              >
+                Filter by Topic
+              </label>
+              <select
+                value={filterTopicId}
+                onChange={(e) => setFilterTopicId(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "12px",
+                  borderRadius: "8px",
+                  border: "1px solid #cbd5e1",
+                  boxSizing: "border-box",
+                  backgroundColor: "white",
+                }}
+                disabled={!filterSubjectId}
+              >
+                <option value="">
+                  {filterSubjectId ? "All Topics" : "Select subject first"}
+                </option>
+                {topics.map((topic) => (
+                  <option key={topic._id} value={topic._id}>
+                    {topic.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label
+                style={{
+                  display: "block",
+                  marginBottom: "8px",
+                  fontWeight: "600",
+                  color: "#0f172a",
+                }}
+              >
+                Search
+              </label>
+              <input
+                type="text"
+                placeholder="Search question, option, answer, explanation"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "12px",
+                  borderRadius: "8px",
+                  border: "1px solid #cbd5e1",
+                  boxSizing: "border-box",
+                }}
               />
             </div>
+          </div>
 
-            <details style={{ marginBottom: "20px" }}>
-              <summary
-                style={{
-                  cursor: "pointer",
-                  color: "#185FA5",
-                  fontWeight: "600",
-                }}
-              >
-                Show sample JSON format
-              </summary>
-              <pre
-                style={{
-                  marginTop: "12px",
-                  backgroundColor: "#f8fafc",
-                  padding: "16px",
-                  borderRadius: "10px",
-                  overflowX: "auto",
-                  fontSize: "13px",
-                }}
-              >
-                {sampleJson}
-              </pre>
-            </details>
+          <p style={{ color: "#64748b", marginBottom: "18px" }}>
+            Showing {filteredQuestions.length} question
+            {filteredQuestions.length === 1 ? "" : "s"}
+          </p>
 
-            <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-              <button
-                type="submit"
-                disabled={isSubmitting}
+          {filteredQuestions.length === 0 ? (
+            <p>No matching questions found.</p>
+          ) : (
+            filteredQuestions.map((question, index) => (
+              <div
+                key={question._id}
                 style={{
-                  padding: "14px 22px",
-                  border: "none",
-                  borderRadius: "10px",
-                  backgroundColor: "#185FA5",
-                  color: "white",
-                  fontSize: "15px",
-                  fontWeight: "600",
-                  cursor: isSubmitting ? "not-allowed" : "pointer",
-                  opacity: isSubmitting ? 0.7 : 1,
+                  borderBottom: "1px solid #e2e8f0",
+                  padding: "18px 0",
                 }}
               >
-                {isSubmitting ? "Importing..." : "Import Questions"}
-              </button>
+                {editingId === question._id ? (
+                  <>
+                    <select
+                      value={subjectId}
+                      onChange={(e) => handleEditSubjectChange(e.target.value)}
+                      style={{
+                        width: "100%",
+                        padding: "12px",
+                        marginBottom: "10px",
+                        borderRadius: "8px",
+                        border: "1px solid #cbd5e1",
+                        boxSizing: "border-box",
+                        backgroundColor: "white",
+                      }}
+                    >
+                      <option value="">Select Subject</option>
+                      {subjects.map((subject) => (
+                        <option key={subject._id} value={subject._id}>
+                          {subject.name}
+                        </option>
+                      ))}
+                    </select>
 
-              <button
-                type="button"
-                onClick={() => navigate("/admin")}
-                style={{
-                  padding: "14px 22px",
-                  border: "1px solid #cbd5e1",
-                  borderRadius: "10px",
-                  backgroundColor: "white",
-                  color: "#0f172a",
-                  fontSize: "15px",
-                  fontWeight: "600",
-                  cursor: "pointer",
-                }}
-              >
-                Back to Admin
-              </button>
-            </div>
-          </form>
+                    <select
+                      value={topicId}
+                      onChange={(e) => setTopicId(e.target.value)}
+                      style={{
+                        width: "100%",
+                        padding: "12px",
+                        marginBottom: "10px",
+                        borderRadius: "8px",
+                        border: "1px solid #cbd5e1",
+                        boxSizing: "border-box",
+                        backgroundColor: "white",
+                      }}
+                      disabled={!subjectId}
+                    >
+                      <option value="">
+                        {subjectId ? "Select Topic" : "Select subject first"}
+                      </option>
+                      {editTopics.map((topic) => (
+                        <option key={topic._id} value={topic._id}>
+                          {topic.name}
+                        </option>
+                      ))}
+                    </select>
+
+                    <textarea
+                      value={questionText}
+                      onChange={(e) => setQuestionText(e.target.value)}
+                      rows="3"
+                      placeholder="Question text"
+                      style={{
+                        width: "100%",
+                        padding: "12px",
+                        marginBottom: "10px",
+                        borderRadius: "8px",
+                        border: "1px solid #cbd5e1",
+                        boxSizing: "border-box",
+                        resize: "vertical",
+                      }}
+                    />
+
+                    {options.map((option, optionIndex) => (
+                      <div
+                        key={optionIndex}
+                        style={{
+                          display: "flex",
+                          gap: "10px",
+                          alignItems: "center",
+                          marginBottom: "10px",
+                        }}
+                      >
+                        <input
+                          type="text"
+                          value={option}
+                          onChange={(e) =>
+                            handleOptionChange(optionIndex, e.target.value)
+                          }
+                          placeholder={`Option ${optionIndex + 1}`}
+                          style={{
+                            flex: 1,
+                            padding: "12px",
+                            borderRadius: "8px",
+                            border: "1px solid #cbd5e1",
+                            boxSizing: "border-box",
+                          }}
+                        />
+                        {options.length > 2 && (
+                          <button
+                            type="button"
+                            onClick={() => removeOptionField(optionIndex)}
+                            style={{
+                              padding: "10px 14px",
+                              border: "1px solid #fecaca",
+                              borderRadius: "8px",
+                              backgroundColor: "#fff5f5",
+                              color: "#dc2626",
+                              cursor: "pointer",
+                            }}
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                    ))}
+
+                    <div style={{ marginBottom: "10px" }}>
+                      <button
+                        type="button"
+                        onClick={addOptionField}
+                        disabled={options.length >= 6}
+                        style={{
+                          padding: "10px 16px",
+                          border: "1px solid #cbd5e1",
+                          borderRadius: "8px",
+                          backgroundColor: "white",
+                          cursor:
+                            options.length >= 6 ? "not-allowed" : "pointer",
+                          opacity: options.length >= 6 ? 0.5 : 1,
+                        }}
+                      >
+                        Add Option
+                      </button>
+                    </div>
+
+                    <select
+                      value={correctAnswer}
+                      onChange={(e) => setCorrectAnswer(e.target.value)}
+                      style={{
+                        width: "100%",
+                        padding: "12px",
+                        marginBottom: "10px",
+                        borderRadius: "8px",
+                        border: "1px solid #cbd5e1",
+                        boxSizing: "border-box",
+                        backgroundColor: "white",
+                      }}
+                    >
+                      <option value="">Select Correct Answer</option>
+                      {currentValidOptions.map((option, optionIndex) => (
+                        <option key={optionIndex} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+
+                    <textarea
+                      value={explanation}
+                      onChange={(e) => setExplanation(e.target.value)}
+                      rows="3"
+                      placeholder="Explanation"
+                      style={{
+                        width: "100%",
+                        padding: "12px",
+                        marginBottom: "10px",
+                        borderRadius: "8px",
+                        border: "1px solid #cbd5e1",
+                        boxSizing: "border-box",
+                        resize: "vertical",
+                      }}
+                    />
+
+                    <div
+                      style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}
+                    >
+                      <button
+                        onClick={() => handleUpdate(question._id)}
+                        style={{
+                          padding: "10px 18px",
+                          border: "none",
+                          borderRadius: "8px",
+                          backgroundColor: "#185FA5",
+                          color: "white",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Save
+                      </button>
+                      <button
+                        onClick={cancelEdit}
+                        style={{
+                          padding: "10px 18px",
+                          border: "1px solid #cbd5e1",
+                          borderRadius: "8px",
+                          backgroundColor: "white",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <div>
+                    <p style={{ margin: "0 0 6px", color: "#64748b" }}>
+                      Subject: {question.subjectId?.name || "Unknown"}
+                    </p>
+                    <p style={{ margin: "0 0 8px", color: "#64748b" }}>
+                      Topic: {question.topicId?.name || "Unknown"}
+                    </p>
+                    <h3 style={{ margin: "0 0 10px", color: "#0f172a" }}>
+                      {index + 1}. {question.questionText}
+                    </h3>
+                    <p style={{ margin: "0 0 10px", color: "#64748b" }}>
+                      Correct Answer: {question.correctAnswer}
+                    </p>
+
+                    <div
+                      style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}
+                    >
+                      <button
+                        onClick={() => startEdit(question)}
+                        style={{
+                          padding: "10px 18px",
+                          border: "none",
+                          borderRadius: "8px",
+                          backgroundColor: "#185FA5",
+                          color: "white",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDelete(question._id)}
+                        style={{
+                          padding: "10px 18px",
+                          border: "none",
+                          borderRadius: "8px",
+                          backgroundColor: "#dc2626",
+                          color: "white",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+
+          <div style={{ marginTop: "24px" }}>
+            <button
+              onClick={() => navigate("/admin")}
+              style={{
+                padding: "12px 20px",
+                borderRadius: "10px",
+                border: "1px solid #cbd5e1",
+                backgroundColor: "white",
+                cursor: "pointer",
+              }}
+            >
+              Back to Admin
+            </button>
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
-export default BulkImportQuestionsPage;
+export default ManageQuestionsPage;
