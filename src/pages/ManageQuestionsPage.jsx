@@ -22,6 +22,9 @@ function ManageQuestionsPage() {
   const [explanation, setExplanation] = useState("");
 
   const [editTopics, setEditTopics] = useState([]);
+  const [rangeStart, setRangeStart] = useState("");
+  const [rangeEnd, setRangeEnd] = useState("");
+  const [selectedQuestionIds, setSelectedQuestionIds] = useState([]);
 
   const fetchQuestions = async () => {
     try {
@@ -110,6 +113,12 @@ function ManageQuestionsPage() {
       return matchesSubject && matchesTopic && matchesSearch;
     });
   }, [questions, filterSubjectId, filterTopicId, searchTerm]);
+
+  useEffect(() => {
+    setSelectedQuestionIds([]);
+    setRangeStart("");
+    setRangeEnd("");
+  }, [filterSubjectId, filterTopicId, searchTerm]);
 
   const startEdit = async (question) => {
     const currentSubjectId =
@@ -268,9 +277,95 @@ function ManageQuestionsPage() {
       await api.delete(`/api/questions/${id}`);
       alert("Question deleted successfully");
       fetchQuestions();
+      setSelectedQuestionIds((prev) =>
+        prev.filter((questionId) => questionId !== id),
+      );
     } catch (error) {
       console.error("Error deleting question:", error);
       alert("Error deleting question");
+    }
+  };
+
+  const handleToggleQuestionSelection = (questionId) => {
+    setSelectedQuestionIds((prev) =>
+      prev.includes(questionId)
+        ? prev.filter((id) => id !== questionId)
+        : [...prev, questionId],
+    );
+  };
+
+  const handleSelectAllFiltered = () => {
+    const allFilteredIds = filteredQuestions.map((question) => question._id);
+    setSelectedQuestionIds(allFilteredIds);
+  };
+
+  const handleClearSelection = () => {
+    setSelectedQuestionIds([]);
+  };
+
+  const handleSelectRange = () => {
+    const start = Number(rangeStart);
+    const end = Number(rangeEnd);
+
+    if (!start || !end) {
+      alert("Please enter both start and end numbers.");
+      return;
+    }
+
+    if (start < 1 || end < 1) {
+      alert("Range numbers must be 1 or higher.");
+      return;
+    }
+
+    if (start > end) {
+      alert("Start number cannot be greater than end number.");
+      return;
+    }
+
+    const selectedRangeIds = filteredQuestions
+      .filter((_, index) => {
+        const displayNumber = index + 1;
+        return displayNumber >= start && displayNumber <= end;
+      })
+      .map((question) => question._id);
+
+    if (selectedRangeIds.length === 0) {
+      alert("No questions found in that range.");
+      return;
+    }
+
+    setSelectedQuestionIds(selectedRangeIds);
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedQuestionIds.length === 0) {
+      alert("No questions selected.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Are you sure you want to delete ${selectedQuestionIds.length} selected question${
+        selectedQuestionIds.length === 1 ? "" : "s"
+      }?`,
+    );
+
+    if (!confirmed) return;
+
+    try {
+      await Promise.all(
+        selectedQuestionIds.map((questionId) =>
+          api.delete(`/api/questions/${questionId}`),
+        ),
+      );
+
+      alert("Selected questions deleted successfully");
+      setSelectedQuestionIds([]);
+      setRangeStart("");
+      setRangeEnd("");
+      fetchQuestions();
+    } catch (error) {
+      console.error("Error deleting selected questions:", error);
+      alert("Error deleting selected questions");
     }
   };
 
@@ -430,6 +525,163 @@ function ManageQuestionsPage() {
                 }}
               />
             </div>
+          </div>
+
+          <div
+            style={{
+              border: "1px solid #e2e8f0",
+              borderRadius: "14px",
+              padding: "16px",
+              marginBottom: "20px",
+              backgroundColor: "#f8fafc",
+            }}
+          >
+            <h3
+              style={{
+                marginTop: 0,
+                marginBottom: "12px",
+                color: "#0f172a",
+                fontSize: "18px",
+              }}
+            >
+              Bulk delete tools
+            </h3>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+                gap: "12px",
+                alignItems: "end",
+              }}
+            >
+              <div>
+                <label
+                  style={{
+                    display: "block",
+                    marginBottom: "8px",
+                    fontWeight: "600",
+                    color: "#0f172a",
+                  }}
+                >
+                  From
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={rangeStart}
+                  onChange={(e) => setRangeStart(e.target.value)}
+                  placeholder="1"
+                  style={{
+                    width: "100%",
+                    padding: "12px",
+                    borderRadius: "8px",
+                    border: "1px solid #cbd5e1",
+                    boxSizing: "border-box",
+                  }}
+                />
+              </div>
+
+              <div>
+                <label
+                  style={{
+                    display: "block",
+                    marginBottom: "8px",
+                    fontWeight: "600",
+                    color: "#0f172a",
+                  }}
+                >
+                  To
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={rangeEnd}
+                  onChange={(e) => setRangeEnd(e.target.value)}
+                  placeholder="20"
+                  style={{
+                    width: "100%",
+                    padding: "12px",
+                    borderRadius: "8px",
+                    border: "1px solid #cbd5e1",
+                    boxSizing: "border-box",
+                  }}
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={handleSelectRange}
+                style={{
+                  padding: "12px 16px",
+                  border: "1px solid #cbd5e1",
+                  borderRadius: "8px",
+                  backgroundColor: "white",
+                  cursor: "pointer",
+                  fontWeight: "600",
+                }}
+              >
+                Select Range
+              </button>
+
+              <button
+                type="button"
+                onClick={handleSelectAllFiltered}
+                style={{
+                  padding: "12px 16px",
+                  border: "1px solid #cbd5e1",
+                  borderRadius: "8px",
+                  backgroundColor: "white",
+                  cursor: "pointer",
+                  fontWeight: "600",
+                }}
+              >
+                Select All Filtered
+              </button>
+
+              <button
+                type="button"
+                onClick={handleClearSelection}
+                style={{
+                  padding: "12px 16px",
+                  border: "1px solid #cbd5e1",
+                  borderRadius: "8px",
+                  backgroundColor: "white",
+                  cursor: "pointer",
+                  fontWeight: "600",
+                }}
+              >
+                Clear Selection
+              </button>
+
+              <button
+                type="button"
+                onClick={handleDeleteSelected}
+                style={{
+                  padding: "12px 16px",
+                  border: "none",
+                  borderRadius: "8px",
+                  backgroundColor: "#dc2626",
+                  color: "white",
+                  cursor: "pointer",
+                  fontWeight: "600",
+                }}
+              >
+                Delete Selected
+              </button>
+            </div>
+
+            <p
+              style={{
+                marginTop: "12px",
+                marginBottom: 0,
+                color: "#64748b",
+                fontSize: "13px",
+              }}
+            >
+              Selected: {selectedQuestionIds.length} question
+              {selectedQuestionIds.length === 1 ? "" : "s"}
+            </p>
           </div>
 
           <p style={{ color: "#64748b", marginBottom: "18px" }}>
@@ -642,49 +894,74 @@ function ManageQuestionsPage() {
                     </div>
                   </>
                 ) : (
-                  <div>
-                    <p style={{ margin: "0 0 6px", color: "#64748b" }}>
-                      Subject: {question.subjectId?.name || "Unknown"}
-                    </p>
-                    <p style={{ margin: "0 0 8px", color: "#64748b" }}>
-                      Topic: {question.topicId?.name || "Unknown"}
-                    </p>
-                    <h3 style={{ margin: "0 0 10px", color: "#0f172a" }}>
-                      {index + 1}. {question.questionText}
-                    </h3>
-                    <p style={{ margin: "0 0 10px", color: "#64748b" }}>
-                      Correct Answer: {question.correctAnswer}
-                    </p>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "14px",
+                      alignItems: "flex-start",
+                    }}
+                  >
+                    <div style={{ paddingTop: "4px" }}>
+                      <input
+                        type="checkbox"
+                        checked={selectedQuestionIds.includes(question._id)}
+                        onChange={() =>
+                          handleToggleQuestionSelection(question._id)
+                        }
+                      />
+                    </div>
 
-                    <div
-                      style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}
-                    >
-                      <button
-                        onClick={() => startEdit(question)}
+                    <div style={{ flex: 1 }}>
+                      <p style={{ margin: "0 0 6px", color: "#64748b" }}>
+                        #{index + 1}
+                      </p>
+                      <p style={{ margin: "0 0 6px", color: "#64748b" }}>
+                        Subject: {question.subjectId?.name || "Unknown"}
+                      </p>
+                      <p style={{ margin: "0 0 8px", color: "#64748b" }}>
+                        Topic: {question.topicId?.name || "Unknown"}
+                      </p>
+                      <h3 style={{ margin: "0 0 10px", color: "#0f172a" }}>
+                        {question.questionText}
+                      </h3>
+                      <p style={{ margin: "0 0 10px", color: "#64748b" }}>
+                        Correct Answer: {question.correctAnswer}
+                      </p>
+
+                      <div
                         style={{
-                          padding: "10px 18px",
-                          border: "none",
-                          borderRadius: "8px",
-                          backgroundColor: "#185FA5",
-                          color: "white",
-                          cursor: "pointer",
+                          display: "flex",
+                          gap: "10px",
+                          flexWrap: "wrap",
                         }}
                       >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleDelete(question._id)}
-                        style={{
-                          padding: "10px 18px",
-                          border: "none",
-                          borderRadius: "8px",
-                          backgroundColor: "#dc2626",
-                          color: "white",
-                          cursor: "pointer",
-                        }}
-                      >
-                        Delete
-                      </button>
+                        <button
+                          onClick={() => startEdit(question)}
+                          style={{
+                            padding: "10px 18px",
+                            border: "none",
+                            borderRadius: "8px",
+                            backgroundColor: "#185FA5",
+                            color: "white",
+                            cursor: "pointer",
+                          }}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDelete(question._id)}
+                          style={{
+                            padding: "10px 18px",
+                            border: "none",
+                            borderRadius: "8px",
+                            backgroundColor: "#dc2626",
+                            color: "white",
+                            cursor: "pointer",
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}

@@ -6,12 +6,12 @@ const S = {
   page: {
     maxWidth: "700px",
     margin: "0 auto",
-    padding: "2rem 1rem",
+    padding: "2rem 1rem 3rem",
     fontFamily: "system-ui, sans-serif",
   },
   card: {
     background: "#fff",
-    border: "0.5px solid rgba(0,0,0,0.1)",
+    border: "0.5px solid rgba(0,0,0,0.08)",
     borderRadius: "12px",
     padding: "1.25rem 1.5rem",
   },
@@ -22,18 +22,22 @@ const S = {
     gap: "6px",
     padding: "10px 20px",
     borderRadius: "8px",
-    fontSize: "14px",
+    fontSize: "13px",
     fontWeight: "500",
     cursor: "pointer",
     border: "0.5px solid rgba(0,0,0,0.18)",
     background: "transparent",
     color: "#0f172a",
-    transition: "background 0.15s",
   },
   btnPrimary: {
     background: "#185FA5",
     color: "#E6F1FB",
     border: "0.5px solid #185FA5",
+  },
+  btnDanger: {
+    background: "#fff5f5",
+    color: "#b91c1c",
+    border: "0.5px solid #fecaca",
   },
 };
 
@@ -59,7 +63,6 @@ function ChevronLeft() {
     </svg>
   );
 }
-
 function ChevronRight() {
   return (
     <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
@@ -73,7 +76,6 @@ function ChevronRight() {
     </svg>
   );
 }
-
 function ClockIcon() {
   return (
     <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
@@ -94,14 +96,13 @@ function ClockIcon() {
   );
 }
 
-function Badge({ children, variant = "neutral" }) {
-  const colors = {
-    neutral: { bg: "#f1f5f9", text: "#475569" },
-    info: { bg: "#E6F1FB", text: "#0C447C" },
-    success: { bg: "#EAF3DE", text: "#27500A" },
-    danger: { bg: "#FCEBEB", text: "#791F1F" },
+function Badge({ variant, children }) {
+  const map = {
+    correct: { bg: "#EAF3DE", color: "#27500A" },
+    incorrect: { bg: "#FCEBEB", color: "#791F1F" },
+    info: { bg: "#E6F1FB", color: "#0C447C" },
   };
-  const c = colors[variant] || colors.neutral;
+  const c = map[variant] || map.info;
   return (
     <span
       style={{
@@ -112,7 +113,7 @@ function Badge({ children, variant = "neutral" }) {
         padding: "3px 9px",
         borderRadius: "999px",
         background: c.bg,
-        color: c.text,
+        color: c.color,
         flexShrink: 0,
       }}
     >
@@ -121,64 +122,12 @@ function Badge({ children, variant = "neutral" }) {
   );
 }
 
-function OptionButton({ option, isSelected, onClick }) {
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: "12px",
-        padding: "12px 16px",
-        borderRadius: "8px",
-        cursor: "pointer",
-        fontSize: "14px",
-        marginBottom: "8px",
-        width: "100%",
-        textAlign: "left",
-        border: isSelected
-          ? "0.5px solid #185FA5"
-          : "0.5px solid rgba(0,0,0,0.1)",
-        background: isSelected ? "#E6F1FB" : "transparent",
-        color: isSelected ? "#0C447C" : "#0f172a",
-        transition: "border-color 0.15s, background 0.15s",
-      }}
-    >
-      <div
-        style={{
-          width: "18px",
-          height: "18px",
-          borderRadius: "50%",
-          flexShrink: 0,
-          border: isSelected ? "none" : "0.5px solid rgba(0,0,0,0.2)",
-          background: isSelected ? "#185FA5" : "transparent",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        {isSelected && (
-          <div
-            style={{
-              width: "8px",
-              height: "8px",
-              background: "#E6F1FB",
-              borderRadius: "50%",
-            }}
-          />
-        )}
-      </div>
-      {option}
-    </button>
-  );
-}
-
 function ReviewOption({ option, isCorrect, isUserAnswer }) {
   if (!isCorrect && !isUserAnswer) return null;
 
-  const styles = isCorrect
-    ? { bg: "#EAF3DE", border: "#97C459", color: "#27500A", dotBg: "#3B6D11" }
-    : { bg: "#FCEBEB", border: "#F09595", color: "#791F1F", dotBg: "#A32D2D" };
+  const st = isCorrect
+    ? { bg: "#EAF3DE", border: "#C0DD97", color: "#27500A", dot: "#3B6D11" }
+    : { bg: "#FCEBEB", border: "#F7C1C1", color: "#791F1F", dot: "#A32D2D" };
 
   const label =
     isCorrect && isUserAnswer
@@ -193,12 +142,12 @@ function ReviewOption({ option, isCorrect, isUserAnswer }) {
         display: "flex",
         alignItems: "center",
         gap: "12px",
-        padding: "10px 14px",
+        padding: "9px 14px",
         borderRadius: "8px",
         marginBottom: "6px",
-        border: `0.5px solid ${styles.border}`,
-        background: styles.bg,
-        color: styles.color,
+        background: st.bg,
+        border: `0.5px solid ${st.border}`,
+        color: st.color,
       }}
     >
       <div
@@ -207,7 +156,7 @@ function ReviewOption({ option, isCorrect, isUserAnswer }) {
           height: "18px",
           borderRadius: "50%",
           flexShrink: 0,
-          background: styles.dotBg,
+          background: st.dot,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -226,7 +175,7 @@ function ReviewOption({ option, isCorrect, isUserAnswer }) {
         ) : (
           <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
             <path
-              d="M2 2l6 6M8 2L2 8"
+              d="M2.5 2.5l5 5M7.5 2.5l-5 5"
               stroke="#FCEBEB"
               strokeWidth="1.5"
               strokeLinecap="round"
@@ -234,16 +183,16 @@ function ReviewOption({ option, isCorrect, isUserAnswer }) {
           </svg>
         )}
       </div>
-      <span style={{ fontSize: "14px", flex: 1 }}>{option}</span>
-      <span style={{ fontSize: "12px", opacity: 0.8 }}>{label}</span>
+      <span style={{ fontSize: "13px", flex: 1 }}>{option}</span>
+      <span style={{ fontSize: "11px", opacity: 0.8 }}>{label}</span>
     </div>
   );
 }
 
-function Explanation({ text }) {
+function ExplanationToggle({ text }) {
   const [open, setOpen] = useState(false);
   return (
-    <div style={{ marginTop: "1rem" }}>
+    <div style={{ marginTop: "0.75rem" }}>
       <button
         onClick={() => setOpen(!open)}
         style={{
@@ -253,9 +202,9 @@ function Explanation({ text }) {
           background: "none",
           border: "none",
           cursor: "pointer",
-          fontSize: "13px",
-          color: "#64748b",
           padding: 0,
+          fontSize: "12px",
+          color: "#64748b",
         }}
       >
         <span
@@ -276,13 +225,56 @@ function Explanation({ text }) {
             fontSize: "13px",
             color: "#64748b",
             lineHeight: "1.65",
-            marginTop: "0.75rem",
+            marginTop: "0.625rem",
             whiteSpace: "pre-wrap",
           }}
         >
           {text}
         </p>
       )}
+    </div>
+  );
+}
+
+function QuestionReviewCard({ question, index, userAnswer }) {
+  const isCorrect = userAnswer === question.correctAnswer;
+  return (
+    <div style={{ ...S.card, marginBottom: "0.75rem" }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          gap: "12px",
+          marginBottom: "0.875rem",
+        }}
+      >
+        <p
+          style={{
+            fontSize: "14px",
+            lineHeight: "1.55",
+            color: "#0f172a",
+            flex: 1,
+          }}
+        >
+          <span style={{ color: "#94a3b8", marginRight: "5px" }}>
+            {index + 1}.
+          </span>
+          {question.questionText}
+        </p>
+        <Badge variant={isCorrect ? "correct" : "incorrect"}>
+          {isCorrect ? "Correct" : "Incorrect"}
+        </Badge>
+      </div>
+      {question.options.map((opt, i) => (
+        <ReviewOption
+          key={i}
+          option={opt}
+          isCorrect={opt === question.correctAnswer}
+          isUserAnswer={opt === userAnswer}
+        />
+      ))}
+      <ExplanationToggle text={question.explanation} />
     </div>
   );
 }
@@ -309,7 +301,6 @@ function SubjectTestPage() {
       try {
         setIsLoading(true);
         setErrorMessage("");
-
         if (isTopicMode) {
           const [topicResponse, questionsResponse] = await Promise.all([
             api.get("/api/topics"),
@@ -350,7 +341,6 @@ function SubjectTestPage() {
             ),
           );
         }
-
         setCurrentQuestionIndex(0);
         setSelectedAnswers({});
         setShowResults(false);
@@ -396,7 +386,6 @@ function SubjectTestPage() {
   const breadcrumb = isTopicMode
     ? `${subject?.name} / ${topic?.name || ""}`
     : subject?.name || "";
-
   const formatTime = (s) =>
     `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
 
@@ -420,6 +409,16 @@ function SubjectTestPage() {
     setTimeLeft(defaultDuration);
   };
 
+  const handleStopTest = () => {
+    if (
+      window.confirm(
+        "Are you sure you want to stop? Unanswered questions will count as wrong.",
+      )
+    ) {
+      setShowResults(true);
+    }
+  };
+
   const handleSubmit = () => {
     if (answeredCount !== questions.length) {
       alert("Please answer all questions before submitting.");
@@ -431,7 +430,7 @@ function SubjectTestPage() {
   if (isLoading) {
     return (
       <div style={{ ...S.page, textAlign: "center", paddingTop: "6rem" }}>
-        <p style={{ color: "#64748b", fontSize: "14px" }}>Loading test...</p>
+        <p style={{ fontSize: "14px", color: "#64748b" }}>Loading test...</p>
       </div>
     );
   }
@@ -470,6 +469,7 @@ function SubjectTestPage() {
     );
   }
 
+  /* ── Results view ── */
   if (showResults) {
     const timeUsed = defaultDuration - timeLeft;
     const percentage = Math.round((score / questions.length) * 100);
@@ -487,8 +487,8 @@ function SubjectTestPage() {
         >
           <div
             style={{
-              width: "64px",
-              height: "64px",
+              width: "60px",
+              height: "60px",
               borderRadius: "50%",
               background: "#E6F1FB",
               display: "flex",
@@ -497,7 +497,7 @@ function SubjectTestPage() {
               margin: "0 auto 1rem",
             }}
           >
-            <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+            <svg width="26" height="26" viewBox="0 0 32 32" fill="none">
               <path
                 d="M8 16l5 5 11-11"
                 stroke="#185FA5"
@@ -509,12 +509,12 @@ function SubjectTestPage() {
           </div>
           <p
             style={{
-              fontSize: "12px",
-              color: "#64748b",
+              fontSize: "11px",
               fontWeight: "500",
+              color: "#94a3b8",
               textTransform: "uppercase",
               letterSpacing: "0.05em",
-              marginBottom: "6px",
+              marginBottom: "5px",
             }}
           >
             {breadcrumb}
@@ -523,8 +523,8 @@ function SubjectTestPage() {
             style={{
               fontSize: "20px",
               fontWeight: "500",
-              marginBottom: "4px",
               color: "#0f172a",
+              marginBottom: "4px",
             }}
           >
             {getPerformanceMessage()}
@@ -532,6 +532,7 @@ function SubjectTestPage() {
           <p style={{ fontSize: "13px", color: "#64748b" }}>
             {isTopicMode ? "Topic test" : "Subject test"} complete
           </p>
+
           <div
             style={{
               display: "grid",
@@ -541,25 +542,27 @@ function SubjectTestPage() {
             }}
           >
             {[
-              { val: `${percentage}%`, label: "Score", highlight: true },
-              { val: `${score} / ${questions.length}`, label: "Correct" },
-              { val: formatTime(timeUsed), label: "Time used" },
-            ].map(({ val, label, highlight }) => (
+              { val: `${percentage}%`, label: "Score", color: "#185FA5" },
+              {
+                val: `${score} / ${questions.length}`,
+                label: "Correct",
+                color: "#0f172a",
+              },
+              {
+                val: formatTime(timeUsed),
+                label: "Time used",
+                color: "#0f172a",
+              },
+            ].map(({ val, label, color }) => (
               <div
                 key={label}
                 style={{
-                  background: "#f8fafc",
+                  background: "#f8f9fb",
                   borderRadius: "8px",
                   padding: "0.875rem",
                 }}
               >
-                <div
-                  style={{
-                    fontSize: "22px",
-                    fontWeight: "500",
-                    color: highlight ? "#185FA5" : "#0f172a",
-                  }}
-                >
+                <div style={{ fontSize: "22px", fontWeight: "500", color }}>
                   {val}
                 </div>
                 <div
@@ -574,9 +577,41 @@ function SubjectTestPage() {
               </div>
             ))}
           </div>
+
+          <div style={{ marginTop: "1.25rem" }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                fontSize: "11px",
+                color: "#94a3b8",
+                marginBottom: "6px",
+              }}
+            >
+              <span>Performance</span>
+              <span>{percentage}%</span>
+            </div>
+            <div
+              style={{
+                height: "6px",
+                background: "#f1f5f9",
+                borderRadius: "999px",
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{
+                  width: `${percentage}%`,
+                  height: "100%",
+                  background: "#185FA5",
+                  borderRadius: "999px",
+                }}
+              />
+            </div>
+          </div>
         </div>
 
-        {/* Question number dots */}
+        {/* Question overview dots */}
         <div
           style={{
             display: "flex",
@@ -610,52 +645,14 @@ function SubjectTestPage() {
         </div>
 
         {/* Per-question review */}
-        {questions.map((question, index) => {
-          const userAnswer = selectedAnswers[question._id];
-          const isCorrect = userAnswer === question.correctAnswer;
-          return (
-            <div
-              key={question._id}
-              style={{ ...S.card, marginBottom: "0.75rem" }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "flex-start",
-                  gap: "12px",
-                  marginBottom: "1rem",
-                }}
-              >
-                <p
-                  style={{
-                    fontSize: "14px",
-                    lineHeight: "1.55",
-                    color: "#0f172a",
-                    flex: 1,
-                  }}
-                >
-                  <span style={{ color: "#94a3b8", marginRight: "5px" }}>
-                    {index + 1}.
-                  </span>
-                  {question.questionText}
-                </p>
-                <Badge variant={isCorrect ? "success" : "danger"}>
-                  {isCorrect ? "Correct" : "Incorrect"}
-                </Badge>
-              </div>
-              {question.options.map((option, i) => (
-                <ReviewOption
-                  key={i}
-                  option={option}
-                  isCorrect={option === question.correctAnswer}
-                  isUserAnswer={option === userAnswer}
-                />
-              ))}
-              <Explanation text={question.explanation} />
-            </div>
-          );
-        })}
+        {questions.map((question, index) => (
+          <QuestionReviewCard
+            key={question._id}
+            question={question}
+            index={index}
+            userAnswer={selectedAnswers[question._id]}
+          />
+        ))}
 
         <div
           style={{
@@ -683,9 +680,9 @@ function SubjectTestPage() {
     );
   }
 
+  /* ── Test view ── */
   return (
     <div style={S.page}>
-      {/* Header row */}
       <div
         style={{
           display: "flex",
@@ -715,25 +712,36 @@ function SubjectTestPage() {
         </div>
         <div
           style={{
-            display: "inline-flex",
+            display: "flex",
+            gap: "8px",
             alignItems: "center",
-            gap: "7px",
-            padding: "8px 14px",
-            borderRadius: "8px",
-            background: "#f8fafc",
-            border: "0.5px solid rgba(0,0,0,0.1)",
-            fontSize: "14px",
-            fontWeight: "500",
-            color: timeLeft <= 30 ? "#A32D2D" : "#0f172a",
-            transition: "color 0.3s",
+            flexWrap: "wrap",
           }}
         >
-          <ClockIcon />
-          {formatTime(timeLeft)}
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "7px",
+              padding: "8px 14px",
+              borderRadius: "8px",
+              background: "#f8f9fb",
+              border: "0.5px solid rgba(0,0,0,0.1)",
+              fontSize: "14px",
+              fontWeight: "500",
+              color: timeLeft <= 30 ? "#A32D2D" : "#0f172a",
+              transition: "color 0.3s",
+            }}
+          >
+            <ClockIcon />
+            {formatTime(timeLeft)}
+          </div>
+          <button onClick={handleStopTest} style={{ ...S.btn, ...S.btnDanger }}>
+            Stop test
+          </button>
         </div>
       </div>
 
-      {/* Progress bar */}
       <div style={{ margin: "1.25rem 0" }}>
         <div
           style={{
@@ -778,7 +786,6 @@ function SubjectTestPage() {
         </div>
       </div>
 
-      {/* Question card */}
       <div style={S.card}>
         <Badge variant="info">Question {currentQuestionIndex + 1}</Badge>
         <p
@@ -792,23 +799,65 @@ function SubjectTestPage() {
           {currentQuestion.questionText}
         </p>
         <div style={{ marginTop: "1.25rem" }}>
-          {currentQuestion.options.map((option, i) => (
-            <OptionButton
-              key={i}
-              option={option}
-              isSelected={selectedAnswers[currentQuestion._id] === option}
-              onClick={() =>
-                setSelectedAnswers((prev) => ({
-                  ...prev,
-                  [currentQuestion._id]: option,
-                }))
-              }
-            />
-          ))}
+          {currentQuestion.options.map((option, i) => {
+            const isSelected = selectedAnswers[currentQuestion._id] === option;
+            return (
+              <label
+                key={i}
+                onClick={() =>
+                  setSelectedAnswers((prev) => ({
+                    ...prev,
+                    [currentQuestion._id]: option,
+                  }))
+                }
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "12px",
+                  padding: "12px 16px",
+                  borderRadius: "8px",
+                  cursor: "pointer",
+                  fontSize: "14px",
+                  marginBottom: "8px",
+                  border: isSelected
+                    ? "0.5px solid #185FA5"
+                    : "0.5px solid rgba(0,0,0,0.1)",
+                  background: isSelected ? "#E6F1FB" : "transparent",
+                  color: isSelected ? "#0C447C" : "#0f172a",
+                  transition: "border-color 0.15s, background 0.15s",
+                }}
+              >
+                <div
+                  style={{
+                    width: "18px",
+                    height: "18px",
+                    borderRadius: "50%",
+                    flexShrink: 0,
+                    border: isSelected ? "none" : "0.5px solid rgba(0,0,0,0.2)",
+                    background: isSelected ? "#185FA5" : "transparent",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  {isSelected && (
+                    <div
+                      style={{
+                        width: "8px",
+                        height: "8px",
+                        background: "#E6F1FB",
+                        borderRadius: "50%",
+                      }}
+                    />
+                  )}
+                </div>
+                {option}
+              </label>
+            );
+          })}
         </div>
       </div>
 
-      {/* Navigation */}
       <div
         style={{
           display: "flex",
@@ -830,7 +879,7 @@ function SubjectTestPage() {
           <ChevronLeft /> Back
         </button>
 
-        <div style={{ display: "flex", gap: "5px", alignItems: "center" }}>
+        <div style={{ display: "flex", gap: "5px" }}>
           {questions.slice(0, Math.min(questions.length, 10)).map((q, i) => (
             <div
               key={i}
