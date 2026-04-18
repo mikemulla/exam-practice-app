@@ -2,49 +2,535 @@ import { useEffect, useMemo, useState } from "react";
 import api from "../lib/api";
 import { useNavigate } from "react-router-dom";
 
+const styles = {
+  page: {
+    minHeight: "100vh",
+    background: "#f6f5f1",
+    padding: "40px 24px",
+    fontFamily: "'Geist', 'Inter', sans-serif",
+  },
+  inner: { maxWidth: "940px", margin: "0 auto" },
+  breadcrumb: {
+    fontFamily: "'DM Mono', monospace",
+    fontSize: "11px",
+    color: "#64748b",
+    letterSpacing: "0.08em",
+    textTransform: "uppercase",
+    marginBottom: "10px",
+  },
+  pageTitle: {
+    fontFamily: "'Instrument Serif', Georgia, serif",
+    fontSize: "40px",
+    fontStyle: "italic",
+    color: "#0f172a",
+    lineHeight: 1.1,
+    marginBottom: "8px",
+  },
+  pageSub: {
+    fontSize: "14px",
+    color: "#64748b",
+    lineHeight: 1.6,
+    marginBottom: "36px",
+  },
+  card: {
+    background: "#fff",
+    border: "0.5px solid rgba(15,23,42,0.1)",
+    borderRadius: "16px",
+    overflow: "hidden",
+  },
+  filtersRow: {
+    padding: "20px 24px",
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr 1.4fr",
+    gap: "14px",
+    borderBottom: "0.5px solid rgba(15,23,42,0.1)",
+    background: "#f9f8f5",
+  },
+  fieldLabel: {
+    display: "block",
+    fontSize: "11px",
+    fontWeight: 600,
+    letterSpacing: "0.06em",
+    textTransform: "uppercase",
+    color: "#64748b",
+    fontFamily: "'DM Mono', monospace",
+    marginBottom: "6px",
+  },
+  select: {
+    width: "100%",
+    padding: "9px 28px 9px 12px",
+    border: "0.5px solid rgba(15,23,42,0.18)",
+    borderRadius: "8px",
+    background: "#fff",
+    color: "#0f172a",
+    fontSize: "13px",
+    outline: "none",
+    appearance: "none",
+    backgroundImage:
+      "url(\"data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2364748b' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E\")",
+    backgroundRepeat: "no-repeat",
+    backgroundPosition: "right 10px center",
+    cursor: "pointer",
+    boxSizing: "border-box",
+  },
+  input: {
+    width: "100%",
+    padding: "9px 12px",
+    border: "0.5px solid rgba(15,23,42,0.18)",
+    borderRadius: "8px",
+    background: "#fff",
+    color: "#0f172a",
+    fontSize: "13px",
+    outline: "none",
+    boxSizing: "border-box",
+  },
+  textarea: {
+    width: "100%",
+    padding: "9px 12px",
+    border: "0.5px solid rgba(15,23,42,0.18)",
+    borderRadius: "8px",
+    background: "#fff",
+    color: "#0f172a",
+    fontSize: "13px",
+    outline: "none",
+    resize: "vertical",
+    boxSizing: "border-box",
+    fontFamily: "'Geist', 'Inter', sans-serif",
+  },
+  bulkBar: {
+    padding: "14px 24px",
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+    borderBottom: "0.5px solid rgba(15,23,42,0.1)",
+    flexWrap: "wrap",
+  },
+  bulkLabel: {
+    fontFamily: "'DM Mono', monospace",
+    fontSize: "11px",
+    color: "#64748b",
+    textTransform: "uppercase",
+    letterSpacing: "0.06em",
+    marginRight: "4px",
+  },
+  rangeInput: {
+    width: "64px",
+    padding: "7px 10px",
+    border: "0.5px solid rgba(15,23,42,0.18)",
+    borderRadius: "8px",
+    fontSize: "12px",
+    outline: "none",
+    boxSizing: "border-box",
+  },
+  rangeSep: { fontSize: "13px", color: "#94a3b8" },
+  btn: {
+    padding: "7px 14px",
+    borderRadius: "8px",
+    fontSize: "12px",
+    fontWeight: 500,
+    cursor: "pointer",
+    border: "0.5px solid rgba(15,23,42,0.18)",
+    background: "#fff",
+    color: "#0f172a",
+    whiteSpace: "nowrap",
+    fontFamily: "inherit",
+  },
+  btnAccent: {
+    background: "#185FA5",
+    color: "#fff",
+    border: "none",
+  },
+  btnDanger: {
+    background: "#dc2626",
+    color: "#fff",
+    border: "none",
+  },
+  btnGhost: {
+    background: "#f9f8f5",
+    border: "0.5px solid rgba(15,23,42,0.18)",
+    color: "#0f172a",
+  },
+  countBar: {
+    padding: "12px 24px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderBottom: "0.5px solid rgba(15,23,42,0.1)",
+  },
+  countBadge: {
+    fontFamily: "'DM Mono', monospace",
+    fontSize: "11px",
+    color: "#64748b",
+  },
+  selBadge: {
+    background: "#e6f1fb",
+    color: "#185FA5",
+    fontFamily: "'DM Mono', monospace",
+    fontSize: "11px",
+    padding: "3px 10px",
+    borderRadius: "20px",
+  },
+  qItem: {
+    borderBottom: "0.5px solid rgba(15,23,42,0.08)",
+    padding: "18px 24px",
+    display: "flex",
+    gap: "14px",
+  },
+  qNum: {
+    fontFamily: "'DM Mono', monospace",
+    fontSize: "11px",
+    color: "#94a3b8",
+    marginBottom: "5px",
+  },
+  qMeta: { display: "flex", gap: "8px", marginBottom: "8px", flexWrap: "wrap" },
+  pillSubj: {
+    fontSize: "11px",
+    padding: "2px 8px",
+    borderRadius: "20px",
+    fontWeight: 500,
+    background: "#e6f1fb",
+    color: "#185FA5",
+  },
+  pillTopic: {
+    fontSize: "11px",
+    padding: "2px 8px",
+    borderRadius: "20px",
+    fontWeight: 500,
+    background: "#eaf3de",
+    color: "#3B6D11",
+  },
+  qText: {
+    fontSize: "14px",
+    color: "#0f172a",
+    lineHeight: 1.5,
+    marginBottom: "8px",
+    fontWeight: 500,
+  },
+  qAnswer: {
+    fontFamily: "'DM Mono', monospace",
+    fontSize: "11px",
+    color: "#3B6D11",
+    background: "#eaf3de",
+    display: "inline-block",
+    padding: "2px 8px",
+    borderRadius: "6px",
+    marginBottom: "10px",
+  },
+  qActions: { display: "flex", gap: "8px" },
+  editForm: {
+    padding: "20px 24px",
+    background: "#f9f8f5",
+    borderBottom: "0.5px solid rgba(15,23,42,0.1)",
+  },
+  twoCol: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" },
+  editField: { marginBottom: "12px" },
+  optRow: {
+    display: "flex",
+    gap: "8px",
+    alignItems: "center",
+    marginBottom: "8px",
+  },
+  formActions: { display: "flex", gap: "8px", marginTop: "16px" },
+  footerBar: {
+    padding: "20px 24px",
+    borderTop: "0.5px solid rgba(15,23,42,0.1)",
+  },
+  empty: {
+    padding: "60px 24px",
+    textAlign: "center",
+    color: "#94a3b8",
+    fontSize: "14px",
+  },
+};
+
+function QuestionItem({
+  question,
+  index,
+  isSelected,
+  isEditing,
+  onToggleSelect,
+  onEdit,
+  onDelete,
+  onUpdate,
+  onCancelEdit,
+  subjects,
+  editTopics,
+  onEditSubjectChange,
+}) {
+  const [subjectId, setSubjectId] = useState(
+    question.subjectId?._id || question.subjectId || "",
+  );
+  const [topicId, setTopicId] = useState(
+    question.topicId?._id || question.topicId || "",
+  );
+  const [questionText, setQuestionText] = useState(question.questionText);
+  const [options, setOptions] = useState(
+    question.options.length ? question.options : ["", "", "", ""],
+  );
+  const [correctAnswer, setCorrectAnswer] = useState(question.correctAnswer);
+  const [explanation, setExplanation] = useState(question.explanation);
+
+  useEffect(() => {
+    if (isEditing) {
+      setSubjectId(question.subjectId?._id || question.subjectId || "");
+      setTopicId(question.topicId?._id || question.topicId || "");
+      setQuestionText(question.questionText);
+      setOptions(question.options.length ? question.options : ["", "", "", ""]);
+      setCorrectAnswer(question.correctAnswer);
+      setExplanation(question.explanation);
+    }
+  }, [isEditing]);
+
+  const handleSubjectChange = (val) => {
+    setSubjectId(val);
+    setTopicId("");
+    onEditSubjectChange(val);
+  };
+
+  const handleOptionChange = (i, val) => {
+    const updated = [...options];
+    updated[i] = val;
+    setOptions(updated);
+    const cleaned = updated.map((o) => o.trim()).filter(Boolean);
+    if (correctAnswer && !cleaned.includes(correctAnswer)) setCorrectAnswer("");
+  };
+
+  const removeOption = (i) => {
+    if (options.length <= 2) return;
+    const updated = options.filter((_, idx) => idx !== i);
+    setOptions(updated);
+    const cleaned = updated.map((o) => o.trim()).filter(Boolean);
+    if (correctAnswer && !cleaned.includes(correctAnswer)) setCorrectAnswer("");
+  };
+
+  const validOptions = options.map((o) => o.trim()).filter(Boolean);
+
+  const handleSave = () => {
+    onUpdate(question._id, {
+      subjectId,
+      topicId,
+      questionText,
+      options,
+      correctAnswer,
+      explanation,
+    });
+  };
+
+  if (isEditing) {
+    return (
+      <div style={styles.editForm}>
+        <div style={styles.twoCol}>
+          <div style={styles.editField}>
+            <label style={styles.fieldLabel}>Subject</label>
+            <select
+              style={styles.select}
+              value={subjectId}
+              onChange={(e) => handleSubjectChange(e.target.value)}
+            >
+              <option value="">Select subject</option>
+              {subjects.map((s) => (
+                <option key={s._id} value={s._id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div style={styles.editField}>
+            <label style={styles.fieldLabel}>Topic</label>
+            <select
+              style={styles.select}
+              value={topicId}
+              onChange={(e) => setTopicId(e.target.value)}
+              disabled={!subjectId}
+            >
+              <option value="">
+                {subjectId ? "Select topic" : "Select subject first"}
+              </option>
+              {editTopics.map((t) => (
+                <option key={t._id} value={t._id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <div style={styles.editField}>
+          <label style={styles.fieldLabel}>Question</label>
+          <textarea
+            style={styles.textarea}
+            rows={3}
+            value={questionText}
+            onChange={(e) => setQuestionText(e.target.value)}
+            placeholder="Question text"
+          />
+        </div>
+        <div style={styles.editField}>
+          <label style={styles.fieldLabel}>Options</label>
+          {options.map((opt, i) => (
+            <div key={i} style={styles.optRow}>
+              <input
+                style={{ ...styles.input, flex: 1 }}
+                type="text"
+                value={opt}
+                onChange={(e) => handleOptionChange(i, e.target.value)}
+                placeholder={`Option ${i + 1}`}
+              />
+              {options.length > 2 && (
+                <button
+                  style={{
+                    ...styles.btn,
+                    color: "#dc2626",
+                    borderColor: "#fecaca",
+                    padding: "5px 10px",
+                    fontSize: "11px",
+                  }}
+                  onClick={() => removeOption(i)}
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          ))}
+          {options.length < 6 && (
+            <button
+              style={{
+                ...styles.btn,
+                fontSize: "11px",
+                padding: "5px 12px",
+                marginTop: "4px",
+              }}
+              onClick={() => setOptions([...options, ""])}
+            >
+              + Add option
+            </button>
+          )}
+        </div>
+        <div style={styles.editField}>
+          <label style={styles.fieldLabel}>Correct answer</label>
+          <select
+            style={styles.select}
+            value={correctAnswer}
+            onChange={(e) => setCorrectAnswer(e.target.value)}
+          >
+            <option value="">Select correct answer</option>
+            {validOptions.map((o, i) => (
+              <option key={i} value={o}>
+                {o}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div style={styles.editField}>
+          <label style={styles.fieldLabel}>Explanation</label>
+          <textarea
+            style={styles.textarea}
+            rows={2}
+            value={explanation}
+            onChange={(e) => setExplanation(e.target.value)}
+            placeholder="Explanation"
+          />
+        </div>
+        <div style={styles.formActions}>
+          <button
+            style={{ ...styles.btn, ...styles.btnAccent }}
+            onClick={handleSave}
+          >
+            Save changes
+          </button>
+          <button style={styles.btn} onClick={onCancelEdit}>
+            Cancel
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      style={{
+        ...styles.qItem,
+        background: isSelected ? "#eef6ff" : "transparent",
+      }}
+    >
+      <div style={{ paddingTop: "2px" }}>
+        <input
+          type="checkbox"
+          checked={isSelected}
+          onChange={() => onToggleSelect(question._id)}
+          style={{
+            width: 16,
+            height: 16,
+            accentColor: "#185FA5",
+            cursor: "pointer",
+          }}
+        />
+      </div>
+      <div style={{ flex: 1 }}>
+        <div style={styles.qNum}>#{index + 1}</div>
+        <div style={styles.qMeta}>
+          <span style={styles.pillSubj}>
+            {question.subjectId?.name || "Unknown"}
+          </span>
+          <span style={styles.pillTopic}>
+            {question.topicId?.name || "Unknown"}
+          </span>
+        </div>
+        <div style={styles.qText}>{question.questionText}</div>
+        <div style={styles.qAnswer}>✓ {question.correctAnswer}</div>
+        <div style={styles.qActions}>
+          <button
+            style={{ ...styles.btn, ...styles.btnAccent }}
+            onClick={() => onEdit(question)}
+          >
+            Edit
+          </button>
+          <button
+            style={{ ...styles.btn, ...styles.btnDanger }}
+            onClick={() => onDelete(question._id)}
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ManageQuestionsPage() {
   const navigate = useNavigate();
 
   const [questions, setQuestions] = useState([]);
   const [subjects, setSubjects] = useState([]);
   const [topics, setTopics] = useState([]);
+  const [editTopics, setEditTopics] = useState([]);
   const [editingId, setEditingId] = useState(null);
 
   const [filterSubjectId, setFilterSubjectId] = useState("");
   const [filterTopicId, setFilterTopicId] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
 
-  const [subjectId, setSubjectId] = useState("");
-  const [topicId, setTopicId] = useState("");
-  const [questionText, setQuestionText] = useState("");
-  const [options, setOptions] = useState(["", "", "", ""]);
-  const [correctAnswer, setCorrectAnswer] = useState("");
-  const [explanation, setExplanation] = useState("");
-
-  const [editTopics, setEditTopics] = useState([]);
   const [rangeStart, setRangeStart] = useState("");
   const [rangeEnd, setRangeEnd] = useState("");
-  const [selectedQuestionIds, setSelectedQuestionIds] = useState([]);
+  const [selectedIds, setSelectedIds] = useState([]);
 
   const fetchQuestions = async () => {
     try {
-      const response = await api.get("/api/questions");
-      setQuestions(response.data);
-    } catch (error) {
-      console.error("Error fetching questions:", error);
-    }
-  };
-
-  const fetchSubjects = async () => {
-    try {
-      const response = await api.get("/api/subjects");
-      setSubjects(response.data);
-    } catch (error) {
-      console.error("Error fetching subjects:", error);
+      const res = await api.get("/api/questions");
+      setQuestions(res.data);
+    } catch (e) {
+      console.error("Error fetching questions:", e);
     }
   };
 
   useEffect(() => {
+    const fetchSubjects = async () => {
+      try {
+        const res = await api.get("/api/subjects");
+        setSubjects(res.data);
+      } catch (e) {
+        console.error("Error fetching subjects:", e);
+      }
+    };
     fetchQuestions();
     fetchSubjects();
   }, []);
@@ -56,931 +542,321 @@ function ManageQuestionsPage() {
         setFilterTopicId("");
         return;
       }
-
       try {
-        const response = await api.get(
-          `/api/topics/subject/${filterSubjectId}`,
-        );
-        setTopics(response.data);
+        const res = await api.get(`/api/topics/subject/${filterSubjectId}`);
+        setTopics(res.data);
         setFilterTopicId("");
-      } catch (error) {
-        console.error("Error fetching filter topics:", error);
+      } catch (e) {
+        console.error("Error fetching filter topics:", e);
       }
     };
-
     fetchFilterTopics();
   }, [filterSubjectId]);
 
   useEffect(() => {
-    const fetchEditTopics = async () => {
-      if (!editingId || !subjectId) {
-        setEditTopics([]);
-        return;
-      }
-
-      try {
-        const response = await api.get(`/api/topics/subject/${subjectId}`);
-        setEditTopics(response.data);
-      } catch (error) {
-        console.error("Error fetching edit topics:", error);
-      }
-    };
-
-    fetchEditTopics();
-  }, [editingId, subjectId]);
-
-  const filteredQuestions = useMemo(() => {
-    return questions.filter((question) => {
-      const currentSubjectId = question.subjectId?._id || question.subjectId;
-      const currentTopicId = question.topicId?._id || question.topicId;
-
-      const matchesSubject =
-        !filterSubjectId || currentSubjectId === filterSubjectId;
-
-      const matchesTopic = !filterTopicId || currentTopicId === filterTopicId;
-
-      const lowerSearch = searchTerm.trim().toLowerCase();
-
-      const matchesSearch =
-        !lowerSearch ||
-        question.questionText.toLowerCase().includes(lowerSearch) ||
-        question.correctAnswer.toLowerCase().includes(lowerSearch) ||
-        question.explanation.toLowerCase().includes(lowerSearch) ||
-        question.options.some((option) =>
-          option.toLowerCase().includes(lowerSearch),
-        );
-
-      return matchesSubject && matchesTopic && matchesSearch;
-    });
-  }, [questions, filterSubjectId, filterTopicId, searchTerm]);
-
-  useEffect(() => {
-    setSelectedQuestionIds([]);
+    setSelectedIds([]);
     setRangeStart("");
     setRangeEnd("");
   }, [filterSubjectId, filterTopicId, searchTerm]);
 
-  const startEdit = async (question) => {
-    const currentSubjectId =
-      question.subjectId?._id || question.subjectId || "";
-    const currentTopicId = question.topicId?._id || question.topicId || "";
+  const filteredQuestions = useMemo(() => {
+    return questions.filter((q) => {
+      const sid = q.subjectId?._id || q.subjectId;
+      const tid = q.topicId?._id || q.topicId;
+      if (filterSubjectId && sid !== filterSubjectId) return false;
+      if (filterTopicId && tid !== filterTopicId) return false;
+      const s = searchTerm.trim().toLowerCase();
+      if (s) {
+        const hay = [
+          q.questionText,
+          q.correctAnswer,
+          q.explanation,
+          ...q.options,
+        ]
+          .join(" ")
+          .toLowerCase();
+        if (!hay.includes(s)) return false;
+      }
+      return true;
+    });
+  }, [questions, filterSubjectId, filterTopicId, searchTerm]);
 
-    setEditingId(question._id);
-    setSubjectId(currentSubjectId);
-    setTopicId(currentTopicId);
-    setQuestionText(question.questionText);
-    setOptions(question.options.length ? question.options : ["", "", "", ""]);
-    setCorrectAnswer(question.correctAnswer);
-    setExplanation(question.explanation);
-
-    try {
-      const response = await api.get(`/api/topics/subject/${currentSubjectId}`);
-      setEditTopics(response.data);
-    } catch (error) {
-      console.error("Error loading topics for editing:", error);
+  const handleEditSubjectChange = async (newSubjectId) => {
+    if (!newSubjectId) {
       setEditTopics([]);
+      return;
+    }
+    try {
+      const res = await api.get(`/api/topics/subject/${newSubjectId}`);
+      setEditTopics(res.data);
+    } catch (e) {
+      console.error("Error fetching edit topics:", e);
+      setEditTopics([]);
+    }
+  };
+
+  const startEdit = async (question) => {
+    const sid = question.subjectId?._id || question.subjectId || "";
+    setEditingId(question._id);
+    if (sid) {
+      try {
+        const res = await api.get(`/api/topics/subject/${sid}`);
+        setEditTopics(res.data);
+      } catch (e) {
+        setEditTopics([]);
+      }
     }
   };
 
   const cancelEdit = () => {
     setEditingId(null);
-    setSubjectId("");
-    setTopicId("");
-    setQuestionText("");
-    setOptions(["", "", "", ""]);
-    setCorrectAnswer("");
-    setExplanation("");
     setEditTopics([]);
   };
 
-  const handleEditSubjectChange = async (newSubjectId) => {
-    setSubjectId(newSubjectId);
-    setTopicId("");
-
-    if (!newSubjectId) {
-      setEditTopics([]);
-      return;
-    }
-
-    try {
-      const response = await api.get(`/api/topics/subject/${newSubjectId}`);
-      setEditTopics(response.data);
-    } catch (error) {
-      console.error("Error fetching topics for selected subject:", error);
-      setEditTopics([]);
-    }
-  };
-
-  const handleOptionChange = (index, value) => {
-    const updatedOptions = [...options];
-    updatedOptions[index] = value;
-    setOptions(updatedOptions);
-
-    const cleanedOptions = updatedOptions
-      .map((option) => option.trim())
-      .filter((option) => option !== "");
-
-    if (correctAnswer && !cleanedOptions.includes(correctAnswer)) {
-      setCorrectAnswer("");
-    }
-  };
-
-  const addOptionField = () => {
-    if (options.length >= 6) return;
-    setOptions((prev) => [...prev, ""]);
-  };
-
-  const removeOptionField = (indexToRemove) => {
-    if (options.length <= 2) return;
-
-    const updatedOptions = options.filter(
-      (_, index) => index !== indexToRemove,
-    );
-    setOptions(updatedOptions);
-
-    const cleanedOptions = updatedOptions
-      .map((option) => option.trim())
-      .filter((option) => option !== "");
-
-    if (correctAnswer && !cleanedOptions.includes(correctAnswer)) {
-      setCorrectAnswer("");
-    }
-  };
-
-  const handleUpdate = async (id) => {
-    const cleanedOptions = options
-      .map((option) => option.trim())
-      .filter((option) => option !== "");
-
-    if (!subjectId) {
+  const handleUpdate = async (id, data) => {
+    const cleaned = data.options.map((o) => o.trim()).filter(Boolean);
+    if (!data.subjectId) {
       alert("Please select a subject.");
       return;
     }
-
-    if (!topicId) {
+    if (!data.topicId) {
       alert("Please select a topic.");
       return;
     }
-
-    if (!questionText.trim()) {
+    if (!data.questionText.trim()) {
       alert("Please enter the question text.");
       return;
     }
-
-    if (cleanedOptions.length < 2) {
+    if (cleaned.length < 2) {
       alert("Please provide at least two options.");
       return;
     }
-
-    if (!correctAnswer) {
+    if (!data.correctAnswer) {
       alert("Please select the correct answer.");
       return;
     }
-
-    if (!cleanedOptions.includes(correctAnswer)) {
+    if (!cleaned.includes(data.correctAnswer)) {
       alert("Correct answer must match one of the options.");
       return;
     }
-
-    if (!explanation.trim()) {
+    if (!data.explanation.trim()) {
       alert("Please enter the explanation.");
       return;
     }
-
     try {
       await api.put(`/api/questions/${id}`, {
-        subjectId,
-        topicId,
-        questionText: questionText.trim(),
-        options: cleanedOptions,
-        correctAnswer,
-        explanation: explanation.trim(),
+        ...data,
+        options: cleaned,
+        questionText: data.questionText.trim(),
+        explanation: data.explanation.trim(),
       });
-
       alert("Question updated successfully");
       cancelEdit();
       fetchQuestions();
-    } catch (error) {
-      console.error("Error updating question:", error);
+    } catch (e) {
+      console.error("Error updating question:", e);
       alert("Error updating question");
     }
   };
 
   const handleDelete = async (id) => {
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this question?",
-    );
-
-    if (!confirmed) return;
-
+    if (!window.confirm("Are you sure you want to delete this question?"))
+      return;
     try {
       await api.delete(`/api/questions/${id}`);
       alert("Question deleted successfully");
       fetchQuestions();
-      setSelectedQuestionIds((prev) =>
-        prev.filter((questionId) => questionId !== id),
-      );
-    } catch (error) {
-      console.error("Error deleting question:", error);
+      setSelectedIds((prev) => prev.filter((qid) => qid !== id));
+    } catch (e) {
       alert("Error deleting question");
     }
   };
 
-  const handleToggleQuestionSelection = (questionId) => {
-    setSelectedQuestionIds((prev) =>
-      prev.includes(questionId)
-        ? prev.filter((id) => id !== questionId)
-        : [...prev, questionId],
+  const toggleSelect = (id) =>
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
     );
-  };
-
-  const handleSelectAllFiltered = () => {
-    const allFilteredIds = filteredQuestions.map((question) => question._id);
-    setSelectedQuestionIds(allFilteredIds);
-  };
-
-  const handleClearSelection = () => {
-    setSelectedQuestionIds([]);
-  };
+  const handleSelectAll = () =>
+    setSelectedIds(filteredQuestions.map((q) => q._id));
+  const clearSelection = () => setSelectedIds([]);
 
   const handleSelectRange = () => {
-    const start = Number(rangeStart);
-    const end = Number(rangeEnd);
-
-    if (!start || !end) {
-      alert("Please enter both start and end numbers.");
+    const s = Number(rangeStart);
+    const e = Number(rangeEnd);
+    if (!s || !e || s < 1 || e < 1 || s > e) {
+      alert("Please enter a valid range.");
       return;
     }
-
-    if (start < 1 || end < 1) {
-      alert("Range numbers must be 1 or higher.");
-      return;
-    }
-
-    if (start > end) {
-      alert("Start number cannot be greater than end number.");
-      return;
-    }
-
-    const selectedRangeIds = filteredQuestions
-      .filter((_, index) => {
-        const displayNumber = index + 1;
-        return displayNumber >= start && displayNumber <= end;
-      })
-      .map((question) => question._id);
-
-    if (selectedRangeIds.length === 0) {
+    const ids = filteredQuestions
+      .filter((_, i) => i + 1 >= s && i + 1 <= e)
+      .map((q) => q._id);
+    if (!ids.length) {
       alert("No questions found in that range.");
       return;
     }
-
-    setSelectedQuestionIds(selectedRangeIds);
+    setSelectedIds(ids);
   };
 
   const handleDeleteSelected = async () => {
-    if (selectedQuestionIds.length === 0) {
+    if (!selectedIds.length) {
       alert("No questions selected.");
       return;
     }
-
-    const confirmed = window.confirm(
-      `Are you sure you want to delete ${selectedQuestionIds.length} selected question${
-        selectedQuestionIds.length === 1 ? "" : "s"
-      }?`,
-    );
-
-    if (!confirmed) return;
-
+    if (
+      !window.confirm(
+        `Delete ${selectedIds.length} question${selectedIds.length !== 1 ? "s" : ""}?`,
+      )
+    )
+      return;
     try {
       await Promise.all(
-        selectedQuestionIds.map((questionId) =>
-          api.delete(`/api/questions/${questionId}`),
-        ),
+        selectedIds.map((id) => api.delete(`/api/questions/${id}`)),
       );
-
       alert("Selected questions deleted successfully");
-      setSelectedQuestionIds([]);
+      setSelectedIds([]);
       setRangeStart("");
       setRangeEnd("");
       fetchQuestions();
-    } catch (error) {
-      console.error("Error deleting selected questions:", error);
+    } catch (e) {
       alert("Error deleting selected questions");
     }
   };
 
-  const currentValidOptions = options
-    .map((option) => option.trim())
-    .filter((option) => option !== "");
-
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background:
-          "linear-gradient(135deg, #f8fbff 0%, #eef4ff 50%, #f7f9fc 100%)",
-        padding: "32px 20px",
-      }}
-    >
-      <div style={{ maxWidth: "1000px", margin: "0 auto" }}>
-        <div style={{ marginBottom: "24px" }}>
-          <p
-            style={{
-              margin: 0,
-              color: "#64748b",
-              fontSize: "14px",
-              fontWeight: "600",
-            }}
-          >
-            Admin / Manage questions
-          </p>
-          <h1
-            style={{
-              margin: "10px 0 8px",
-              fontSize: "36px",
-              color: "#0f172a",
-            }}
-          >
-            Edit and delete questions
-          </h1>
-          <p
-            style={{
-              margin: 0,
-              color: "#475569",
-              fontSize: "16px",
-              lineHeight: "1.6",
-            }}
-          >
-            Filter by subject, topic, and keyword to manage large question banks
-            more easily.
-          </p>
-        </div>
+    <div style={styles.page}>
+      <div style={styles.inner}>
+        <div style={styles.breadcrumb}>Admin / Manage questions</div>
+        <h1 style={styles.pageTitle}>Edit & delete questions</h1>
+        <p style={styles.pageSub}>
+          Filter by subject, topic, and keyword to manage large question banks
+          more easily.
+        </p>
 
-        <div
-          style={{
-            backgroundColor: "white",
-            border: "1px solid #e2e8f0",
-            borderRadius: "20px",
-            padding: "28px",
-            boxShadow: "0 12px 30px rgba(15,23,42,0.06)",
-          }}
-        >
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-              gap: "14px",
-              marginBottom: "24px",
-            }}
-          >
+        <div style={styles.card}>
+          {/* Filters */}
+          <div style={styles.filtersRow}>
             <div>
-              <label
-                style={{
-                  display: "block",
-                  marginBottom: "8px",
-                  fontWeight: "600",
-                  color: "#0f172a",
-                }}
-              >
-                Filter by Subject
-              </label>
+              <label style={styles.fieldLabel}>Subject</label>
               <select
+                style={styles.select}
                 value={filterSubjectId}
                 onChange={(e) => setFilterSubjectId(e.target.value)}
-                style={{
-                  width: "100%",
-                  padding: "12px",
-                  borderRadius: "8px",
-                  border: "1px solid #cbd5e1",
-                  boxSizing: "border-box",
-                  backgroundColor: "white",
-                }}
               >
-                <option value="">All Subjects</option>
-                {subjects.map((subject) => (
-                  <option key={subject._id} value={subject._id}>
-                    {subject.name}
+                <option value="">All subjects</option>
+                {subjects.map((s) => (
+                  <option key={s._id} value={s._id}>
+                    {s.name}
                   </option>
                 ))}
               </select>
             </div>
-
             <div>
-              <label
-                style={{
-                  display: "block",
-                  marginBottom: "8px",
-                  fontWeight: "600",
-                  color: "#0f172a",
-                }}
-              >
-                Filter by Topic
-              </label>
+              <label style={styles.fieldLabel}>Topic</label>
               <select
+                style={styles.select}
                 value={filterTopicId}
                 onChange={(e) => setFilterTopicId(e.target.value)}
-                style={{
-                  width: "100%",
-                  padding: "12px",
-                  borderRadius: "8px",
-                  border: "1px solid #cbd5e1",
-                  boxSizing: "border-box",
-                  backgroundColor: "white",
-                }}
                 disabled={!filterSubjectId}
               >
                 <option value="">
-                  {filterSubjectId ? "All Topics" : "Select subject first"}
+                  {filterSubjectId ? "All topics" : "Select subject first"}
                 </option>
-                {topics.map((topic) => (
-                  <option key={topic._id} value={topic._id}>
-                    {topic.name}
+                {topics.map((t) => (
+                  <option key={t._id} value={t._id}>
+                    {t.name}
                   </option>
                 ))}
               </select>
             </div>
-
             <div>
-              <label
-                style={{
-                  display: "block",
-                  marginBottom: "8px",
-                  fontWeight: "600",
-                  color: "#0f172a",
-                }}
-              >
-                Search
-              </label>
+              <label style={styles.fieldLabel}>Search</label>
               <input
+                style={styles.input}
                 type="text"
-                placeholder="Search question, option, answer, explanation"
+                placeholder="Question, option, answer, explanation…"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                style={{
-                  width: "100%",
-                  padding: "12px",
-                  borderRadius: "8px",
-                  border: "1px solid #cbd5e1",
-                  boxSizing: "border-box",
-                }}
               />
             </div>
           </div>
 
-          <div
-            style={{
-              border: "1px solid #e2e8f0",
-              borderRadius: "14px",
-              padding: "16px",
-              marginBottom: "20px",
-              backgroundColor: "#f8fafc",
-            }}
-          >
-            <h3
-              style={{
-                marginTop: 0,
-                marginBottom: "12px",
-                color: "#0f172a",
-                fontSize: "18px",
-              }}
-            >
-              Bulk delete tools
-            </h3>
-
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
-                gap: "12px",
-                alignItems: "end",
-              }}
-            >
-              <div>
-                <label
-                  style={{
-                    display: "block",
-                    marginBottom: "8px",
-                    fontWeight: "600",
-                    color: "#0f172a",
-                  }}
-                >
-                  From
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  value={rangeStart}
-                  onChange={(e) => setRangeStart(e.target.value)}
-                  placeholder="1"
-                  style={{
-                    width: "100%",
-                    padding: "12px",
-                    borderRadius: "8px",
-                    border: "1px solid #cbd5e1",
-                    boxSizing: "border-box",
-                  }}
-                />
-              </div>
-
-              <div>
-                <label
-                  style={{
-                    display: "block",
-                    marginBottom: "8px",
-                    fontWeight: "600",
-                    color: "#0f172a",
-                  }}
-                >
-                  To
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  value={rangeEnd}
-                  onChange={(e) => setRangeEnd(e.target.value)}
-                  placeholder="20"
-                  style={{
-                    width: "100%",
-                    padding: "12px",
-                    borderRadius: "8px",
-                    border: "1px solid #cbd5e1",
-                    boxSizing: "border-box",
-                  }}
-                />
-              </div>
-
-              <button
-                type="button"
-                onClick={handleSelectRange}
-                style={{
-                  padding: "12px 16px",
-                  border: "1px solid #cbd5e1",
-                  borderRadius: "8px",
-                  backgroundColor: "white",
-                  cursor: "pointer",
-                  fontWeight: "600",
-                }}
-              >
-                Select Range
-              </button>
-
-              <button
-                type="button"
-                onClick={handleSelectAllFiltered}
-                style={{
-                  padding: "12px 16px",
-                  border: "1px solid #cbd5e1",
-                  borderRadius: "8px",
-                  backgroundColor: "white",
-                  cursor: "pointer",
-                  fontWeight: "600",
-                }}
-              >
-                Select All Filtered
-              </button>
-
-              <button
-                type="button"
-                onClick={handleClearSelection}
-                style={{
-                  padding: "12px 16px",
-                  border: "1px solid #cbd5e1",
-                  borderRadius: "8px",
-                  backgroundColor: "white",
-                  cursor: "pointer",
-                  fontWeight: "600",
-                }}
-              >
-                Clear Selection
-              </button>
-
-              <button
-                type="button"
-                onClick={handleDeleteSelected}
-                style={{
-                  padding: "12px 16px",
-                  border: "none",
-                  borderRadius: "8px",
-                  backgroundColor: "#dc2626",
-                  color: "white",
-                  cursor: "pointer",
-                  fontWeight: "600",
-                }}
-              >
-                Delete Selected
-              </button>
+          {/* Bulk tools */}
+          <div style={styles.bulkBar}>
+            <span style={styles.bulkLabel}>Bulk delete</span>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <input
+                style={styles.rangeInput}
+                type="number"
+                min="1"
+                placeholder="From"
+                value={rangeStart}
+                onChange={(e) => setRangeStart(e.target.value)}
+              />
+              <span style={styles.rangeSep}>—</span>
+              <input
+                style={styles.rangeInput}
+                type="number"
+                min="1"
+                placeholder="To"
+                value={rangeEnd}
+                onChange={(e) => setRangeEnd(e.target.value)}
+              />
             </div>
-
-            <p
-              style={{
-                marginTop: "12px",
-                marginBottom: 0,
-                color: "#64748b",
-                fontSize: "13px",
-              }}
+            <button style={styles.btn} onClick={handleSelectRange}>
+              Select range
+            </button>
+            <button style={styles.btn} onClick={handleSelectAll}>
+              Select all filtered
+            </button>
+            <button style={styles.btn} onClick={clearSelection}>
+              Clear
+            </button>
+            <button
+              style={{ ...styles.btn, ...styles.btnDanger }}
+              onClick={handleDeleteSelected}
             >
-              Selected: {selectedQuestionIds.length} question
-              {selectedQuestionIds.length === 1 ? "" : "s"}
-            </p>
+              Delete selected
+            </button>
           </div>
 
-          <p style={{ color: "#64748b", marginBottom: "18px" }}>
-            Showing {filteredQuestions.length} question
-            {filteredQuestions.length === 1 ? "" : "s"}
-          </p>
+          {/* Count bar */}
+          <div style={styles.countBar}>
+            <span style={styles.countBadge}>
+              Showing {filteredQuestions.length} question
+              {filteredQuestions.length !== 1 ? "s" : ""}
+            </span>
+            <span style={styles.selBadge}>{selectedIds.length} selected</span>
+          </div>
 
+          {/* Question list */}
           {filteredQuestions.length === 0 ? (
-            <p>No matching questions found.</p>
+            <div style={styles.empty}>No matching questions found.</div>
           ) : (
-            filteredQuestions.map((question, index) => (
-              <div
-                key={question._id}
-                style={{
-                  borderBottom: "1px solid #e2e8f0",
-                  padding: "18px 0",
-                }}
-              >
-                {editingId === question._id ? (
-                  <>
-                    <select
-                      value={subjectId}
-                      onChange={(e) => handleEditSubjectChange(e.target.value)}
-                      style={{
-                        width: "100%",
-                        padding: "12px",
-                        marginBottom: "10px",
-                        borderRadius: "8px",
-                        border: "1px solid #cbd5e1",
-                        boxSizing: "border-box",
-                        backgroundColor: "white",
-                      }}
-                    >
-                      <option value="">Select Subject</option>
-                      {subjects.map((subject) => (
-                        <option key={subject._id} value={subject._id}>
-                          {subject.name}
-                        </option>
-                      ))}
-                    </select>
-
-                    <select
-                      value={topicId}
-                      onChange={(e) => setTopicId(e.target.value)}
-                      style={{
-                        width: "100%",
-                        padding: "12px",
-                        marginBottom: "10px",
-                        borderRadius: "8px",
-                        border: "1px solid #cbd5e1",
-                        boxSizing: "border-box",
-                        backgroundColor: "white",
-                      }}
-                      disabled={!subjectId}
-                    >
-                      <option value="">
-                        {subjectId ? "Select Topic" : "Select subject first"}
-                      </option>
-                      {editTopics.map((topic) => (
-                        <option key={topic._id} value={topic._id}>
-                          {topic.name}
-                        </option>
-                      ))}
-                    </select>
-
-                    <textarea
-                      value={questionText}
-                      onChange={(e) => setQuestionText(e.target.value)}
-                      rows="3"
-                      placeholder="Question text"
-                      style={{
-                        width: "100%",
-                        padding: "12px",
-                        marginBottom: "10px",
-                        borderRadius: "8px",
-                        border: "1px solid #cbd5e1",
-                        boxSizing: "border-box",
-                        resize: "vertical",
-                      }}
-                    />
-
-                    {options.map((option, optionIndex) => (
-                      <div
-                        key={optionIndex}
-                        style={{
-                          display: "flex",
-                          gap: "10px",
-                          alignItems: "center",
-                          marginBottom: "10px",
-                        }}
-                      >
-                        <input
-                          type="text"
-                          value={option}
-                          onChange={(e) =>
-                            handleOptionChange(optionIndex, e.target.value)
-                          }
-                          placeholder={`Option ${optionIndex + 1}`}
-                          style={{
-                            flex: 1,
-                            padding: "12px",
-                            borderRadius: "8px",
-                            border: "1px solid #cbd5e1",
-                            boxSizing: "border-box",
-                          }}
-                        />
-                        {options.length > 2 && (
-                          <button
-                            type="button"
-                            onClick={() => removeOptionField(optionIndex)}
-                            style={{
-                              padding: "10px 14px",
-                              border: "1px solid #fecaca",
-                              borderRadius: "8px",
-                              backgroundColor: "#fff5f5",
-                              color: "#dc2626",
-                              cursor: "pointer",
-                            }}
-                          >
-                            Remove
-                          </button>
-                        )}
-                      </div>
-                    ))}
-
-                    <div style={{ marginBottom: "10px" }}>
-                      <button
-                        type="button"
-                        onClick={addOptionField}
-                        disabled={options.length >= 6}
-                        style={{
-                          padding: "10px 16px",
-                          border: "1px solid #cbd5e1",
-                          borderRadius: "8px",
-                          backgroundColor: "white",
-                          cursor:
-                            options.length >= 6 ? "not-allowed" : "pointer",
-                          opacity: options.length >= 6 ? 0.5 : 1,
-                        }}
-                      >
-                        Add Option
-                      </button>
-                    </div>
-
-                    <select
-                      value={correctAnswer}
-                      onChange={(e) => setCorrectAnswer(e.target.value)}
-                      style={{
-                        width: "100%",
-                        padding: "12px",
-                        marginBottom: "10px",
-                        borderRadius: "8px",
-                        border: "1px solid #cbd5e1",
-                        boxSizing: "border-box",
-                        backgroundColor: "white",
-                      }}
-                    >
-                      <option value="">Select Correct Answer</option>
-                      {currentValidOptions.map((option, optionIndex) => (
-                        <option key={optionIndex} value={option}>
-                          {option}
-                        </option>
-                      ))}
-                    </select>
-
-                    <textarea
-                      value={explanation}
-                      onChange={(e) => setExplanation(e.target.value)}
-                      rows="3"
-                      placeholder="Explanation"
-                      style={{
-                        width: "100%",
-                        padding: "12px",
-                        marginBottom: "10px",
-                        borderRadius: "8px",
-                        border: "1px solid #cbd5e1",
-                        boxSizing: "border-box",
-                        resize: "vertical",
-                      }}
-                    />
-
-                    <div
-                      style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}
-                    >
-                      <button
-                        onClick={() => handleUpdate(question._id)}
-                        style={{
-                          padding: "10px 18px",
-                          border: "none",
-                          borderRadius: "8px",
-                          backgroundColor: "#185FA5",
-                          color: "white",
-                          cursor: "pointer",
-                        }}
-                      >
-                        Save
-                      </button>
-                      <button
-                        onClick={cancelEdit}
-                        style={{
-                          padding: "10px 18px",
-                          border: "1px solid #cbd5e1",
-                          borderRadius: "8px",
-                          backgroundColor: "white",
-                          cursor: "pointer",
-                        }}
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </>
-                ) : (
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: "14px",
-                      alignItems: "flex-start",
-                    }}
-                  >
-                    <div style={{ paddingTop: "4px" }}>
-                      <input
-                        type="checkbox"
-                        checked={selectedQuestionIds.includes(question._id)}
-                        onChange={() =>
-                          handleToggleQuestionSelection(question._id)
-                        }
-                      />
-                    </div>
-
-                    <div style={{ flex: 1 }}>
-                      <p style={{ margin: "0 0 6px", color: "#64748b" }}>
-                        #{index + 1}
-                      </p>
-                      <p style={{ margin: "0 0 6px", color: "#64748b" }}>
-                        Subject: {question.subjectId?.name || "Unknown"}
-                      </p>
-                      <p style={{ margin: "0 0 8px", color: "#64748b" }}>
-                        Topic: {question.topicId?.name || "Unknown"}
-                      </p>
-                      <h3 style={{ margin: "0 0 10px", color: "#0f172a" }}>
-                        {question.questionText}
-                      </h3>
-                      <p style={{ margin: "0 0 10px", color: "#64748b" }}>
-                        Correct Answer: {question.correctAnswer}
-                      </p>
-
-                      <div
-                        style={{
-                          display: "flex",
-                          gap: "10px",
-                          flexWrap: "wrap",
-                        }}
-                      >
-                        <button
-                          onClick={() => startEdit(question)}
-                          style={{
-                            padding: "10px 18px",
-                            border: "none",
-                            borderRadius: "8px",
-                            backgroundColor: "#185FA5",
-                            color: "white",
-                            cursor: "pointer",
-                          }}
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDelete(question._id)}
-                          style={{
-                            padding: "10px 18px",
-                            border: "none",
-                            borderRadius: "8px",
-                            backgroundColor: "#dc2626",
-                            color: "white",
-                            cursor: "pointer",
-                          }}
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
+            filteredQuestions.map((q, i) => (
+              <QuestionItem
+                key={q._id}
+                question={q}
+                index={i}
+                isSelected={selectedIds.includes(q._id)}
+                isEditing={editingId === q._id}
+                onToggleSelect={toggleSelect}
+                onEdit={startEdit}
+                onDelete={handleDelete}
+                onUpdate={handleUpdate}
+                onCancelEdit={cancelEdit}
+                subjects={subjects}
+                editTopics={editTopics}
+                onEditSubjectChange={handleEditSubjectChange}
+              />
             ))
           )}
 
-          <div style={{ marginTop: "24px" }}>
+          <div style={styles.footerBar}>
             <button
+              style={{ ...styles.btn, ...styles.btnGhost }}
               onClick={() => navigate("/admin")}
-              style={{
-                padding: "12px 20px",
-                borderRadius: "10px",
-                border: "1px solid #cbd5e1",
-                backgroundColor: "white",
-                cursor: "pointer",
-              }}
             >
-              Back to Admin
+              ← Back to Admin
             </button>
           </div>
         </div>
