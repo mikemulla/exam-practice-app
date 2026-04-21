@@ -2,45 +2,81 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../lib/api";
 
-const S = {
-  page: {
-    maxWidth: "700px",
-    margin: "0 auto",
-    padding: "2rem 1rem 3rem",
-    fontFamily: "system-ui, sans-serif",
-  },
-  card: {
-    background: "#fff",
-    border: "0.5px solid rgba(0,0,0,0.08)",
-    borderRadius: "12px",
-    padding: "1.25rem 1.5rem",
-  },
-  btn: {
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: "6px",
-    padding: "10px 20px",
-    borderRadius: "8px",
-    fontSize: "13px",
-    fontWeight: "500",
-    cursor: "pointer",
-    border: "0.5px solid rgba(0,0,0,0.18)",
-    background: "transparent",
-    color: "#0f172a",
-  },
-  btnPrimary: {
-    background: "#185FA5",
-    color: "#E6F1FB",
-    border: "0.5px solid #185FA5",
-  },
-  btnDanger: {
-    background: "#fff5f5",
-    color: "#b91c1c",
-    border: "0.5px solid #fecaca",
-  },
+/* ─── Design tokens ─── */
+const T = {
+  bg: "#F5F4F0",
+  surface: "#FFFFFF",
+  surfaceAlt: "#F9F8F5",
+  border: "rgba(0,0,0,0.07)",
+  borderStrong: "rgba(0,0,0,0.12)",
+  ink: "#18180F",
+  inkMid: "#5C5C50",
+  inkFaint: "#9B9B88",
+  accent: "#1A4E2E",
+  accentLight: "#E8F2EC",
+  accentMid: "#2D7A4A",
+  danger: "#8B2020",
+  dangerLight: "#FBF0F0",
+  dangerBorder: "#E8C4C4",
+  warn: "#7A5A00",
+  warnLight: "#FDF6E3",
+  radius: "10px",
+  radiusSm: "6px",
+  radiusLg: "16px",
+  shadow: "0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)",
+  shadowMd: "0 2px 8px rgba(0,0,0,0.08), 0 8px 32px rgba(0,0,0,0.06)",
+  font: "'Lora', Georgia, serif",
+  fontSans: "'DM Sans', system-ui, sans-serif",
+  fontMono: "'DM Mono', monospace",
 };
 
+const injectFonts = () => {
+  if (document.getElementById("quiz-fonts")) return;
+  const link = document.createElement("link");
+  link.id = "quiz-fonts";
+  link.rel = "stylesheet";
+  link.href =
+    "https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap";
+  document.head.appendChild(link);
+};
+
+const globalCSS = `
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @keyframes progressFill {
+    from { transform: scaleX(0); }
+    to   { transform: scaleX(1); }
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+  .quiz-option:hover {
+    border-color: ${T.accentMid} !important;
+    background: ${T.accentLight} !important;
+  }
+  .quiz-btn:hover { opacity: 0.88; }
+  .quiz-btn:active { transform: scale(0.98); }
+  .quiz-link:hover { color: ${T.accentMid} !important; }
+  .exp-toggle:hover { color: ${T.accent} !important; }
+  .dot-nav:hover { transform: scale(1.3); }
+`;
+
+const injectStyles = () => {
+  if (document.getElementById("quiz-styles")) return;
+  const s = document.createElement("style");
+  s.id = "quiz-styles";
+  s.textContent = globalCSS;
+  document.head.appendChild(s);
+};
+
+/* ─── Helpers ─── */
 const shuffleArray = (arr) => {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
@@ -50,70 +86,131 @@ const shuffleArray = (arr) => {
   return a;
 };
 
-function ChevronLeft() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+const formatTime = (s) =>
+  `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
+
+/* ─── Tiny icons ─── */
+const Icon = {
+  left: () => (
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
       <path
         d="M10 12L6 8l4-4"
         stroke="currentColor"
-        strokeWidth="1.4"
+        strokeWidth="1.6"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
     </svg>
-  );
-}
-function ChevronRight() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+  ),
+  right: () => (
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
       <path
         d="M6 4l4 4-4 4"
         stroke="currentColor"
-        strokeWidth="1.4"
+        strokeWidth="1.6"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
     </svg>
-  );
-}
-function ClockIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-      <circle cx="8" cy="9" r="6" stroke="currentColor" strokeWidth="1.2" />
-      <path
-        d="M8 6v3l2 1.5"
-        stroke="currentColor"
-        strokeWidth="1.2"
-        strokeLinecap="round"
+  ),
+  clock: ({ warn }) => (
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+      <circle
+        cx="8"
+        cy="9"
+        r="6"
+        stroke={warn ? T.danger : T.inkMid}
+        strokeWidth="1.3"
       />
       <path
-        d="M6 1h4"
-        stroke="currentColor"
-        strokeWidth="1.2"
+        d="M8 6.5v2.5l1.5 1"
+        stroke={warn ? T.danger : T.inkMid}
+        strokeWidth="1.3"
         strokeLinecap="round"
       />
     </svg>
-  );
-}
+  ),
+  check: () => (
+    <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+      <path
+        d="M1.5 6l3 3 6-6"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  ),
+  x: () => (
+    <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+      <path
+        d="M2.5 2.5l7 7M9.5 2.5l-7 7"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+      />
+    </svg>
+  ),
+  chevron: ({ open }) => (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 12 12"
+      fill="none"
+      style={{
+        transition: "transform 0.25s",
+        transform: open ? "rotate(90deg)" : "rotate(0deg)",
+      }}
+    >
+      <path
+        d="M4.5 3l3 3-3 3"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  ),
+  trophy: () => (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <path
+        d="M8 21h8M12 17v4M7 4H4a1 1 0 00-1 1v2a4 4 0 004 4h.5M17 4h3a1 1 0 011 1v2a4 4 0 01-4 4h-.5"
+        stroke={T.accent}
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+      <path
+        d="M7 4h10v6a5 5 0 01-10 0V4z"
+        stroke={T.accent}
+        strokeWidth="1.6"
+      />
+    </svg>
+  ),
+};
 
+/* ─── Badge ─── */
 function Badge({ variant, children }) {
-  const map = {
-    correct: { bg: "#EAF3DE", color: "#27500A" },
-    incorrect: { bg: "#FCEBEB", color: "#791F1F" },
-    info: { bg: "#E6F1FB", color: "#0C447C" },
+  const variants = {
+    correct: { bg: "#E4F2E9", color: T.accent, border: "#B8DDC3" },
+    incorrect: { bg: T.dangerLight, color: T.danger, border: T.dangerBorder },
+    info: { bg: T.accentLight, color: T.accent, border: "#B8DDC3" },
+    neutral: { bg: "#F0EFEA", color: T.inkMid, border: T.border },
   };
-  const c = map[variant] || map.info;
+  const c = variants[variant] || variants.neutral;
   return (
     <span
       style={{
         display: "inline-flex",
         alignItems: "center",
         fontSize: "11px",
+        fontFamily: T.fontSans,
         fontWeight: "500",
-        padding: "3px 9px",
+        padding: "3px 10px",
         borderRadius: "999px",
         background: c.bg,
         color: c.color,
+        border: `1px solid ${c.border}`,
+        letterSpacing: "0.01em",
         flexShrink: 0,
       }}
     >
@@ -122,111 +219,146 @@ function Badge({ variant, children }) {
   );
 }
 
+/* ─── Button ─── */
+function Btn({ variant = "ghost", children, onClick, disabled, style = {} }) {
+  const base = {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "6px",
+    padding: "9px 18px",
+    borderRadius: T.radius,
+    fontSize: "13px",
+    fontFamily: T.fontSans,
+    fontWeight: "500",
+    cursor: disabled ? "not-allowed" : "pointer",
+    border: "none",
+    transition: "opacity 0.15s, transform 0.1s",
+    opacity: disabled ? 0.4 : 1,
+    letterSpacing: "0.01em",
+  };
+  const variants = {
+    primary: { background: T.accent, color: "#fff" },
+    ghost: {
+      background: "transparent",
+      color: T.inkMid,
+      border: `1px solid ${T.borderStrong}`,
+    },
+    danger: {
+      background: T.dangerLight,
+      color: T.danger,
+      border: `1px solid ${T.dangerBorder}`,
+    },
+  };
+  return (
+    <button
+      className="quiz-btn"
+      onClick={!disabled ? onClick : undefined}
+      style={{ ...base, ...variants[variant], ...style }}
+    >
+      {children}
+    </button>
+  );
+}
+
+/* ─── Review option row ─── */
 function ReviewOption({ option, isCorrect, isUserAnswer }) {
   if (!isCorrect && !isUserAnswer) return null;
-
-  const st = isCorrect
-    ? { bg: "#EAF3DE", border: "#C0DD97", color: "#27500A", dot: "#3B6D11" }
-    : { bg: "#FCEBEB", border: "#F7C1C1", color: "#791F1F", dot: "#A32D2D" };
-
+  const isWrong = isUserAnswer && !isCorrect;
+  const color = isWrong ? T.danger : T.accent;
+  const bg = isWrong ? T.dangerLight : "#E4F2E9";
+  const border = isWrong ? T.dangerBorder : "#B8DDC3";
   const label =
     isCorrect && isUserAnswer
-      ? "Your answer ✓"
+      ? "Your answer · correct"
       : isCorrect
         ? "Correct answer"
-        : "Your answer";
+        : "Your answer · incorrect";
 
   return (
     <div
       style={{
         display: "flex",
         alignItems: "center",
-        gap: "12px",
-        padding: "9px 14px",
-        borderRadius: "8px",
+        gap: "10px",
+        padding: "9px 12px",
+        borderRadius: T.radiusSm,
         marginBottom: "6px",
-        background: st.bg,
-        border: `0.5px solid ${st.border}`,
-        color: st.color,
+        background: bg,
+        border: `1px solid ${border}`,
+        color,
       }}
     >
-      <div
+      <span
         style={{
           width: "18px",
           height: "18px",
           borderRadius: "50%",
           flexShrink: 0,
-          background: st.dot,
+          background: color,
+          color: "#fff",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
         }}
       >
-        {isCorrect ? (
-          <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-            <path
-              d="M1.5 5l2.5 2.5 4.5-4.5"
-              stroke="#EAF3DE"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        ) : (
-          <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-            <path
-              d="M2.5 2.5l5 5M7.5 2.5l-5 5"
-              stroke="#FCEBEB"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-            />
-          </svg>
-        )}
-      </div>
-      <span style={{ fontSize: "13px", flex: 1 }}>{option}</span>
-      <span style={{ fontSize: "11px", opacity: 0.8 }}>{label}</span>
+        {isCorrect ? <Icon.check /> : <Icon.x />}
+      </span>
+      <span style={{ fontSize: "13px", fontFamily: T.fontSans, flex: 1 }}>
+        {option}
+      </span>
+      <span
+        style={{
+          fontSize: "10.5px",
+          fontFamily: T.fontSans,
+          opacity: 0.75,
+          whiteSpace: "nowrap",
+        }}
+      >
+        {label}
+      </span>
     </div>
   );
 }
 
+/* ─── Explanation toggle ─── */
 function ExplanationToggle({ text }) {
   const [open, setOpen] = useState(false);
   return (
-    <div style={{ marginTop: "0.75rem" }}>
+    <div style={{ marginTop: "12px" }}>
       <button
+        className="exp-toggle"
         onClick={() => setOpen(!open)}
         style={{
           display: "flex",
           alignItems: "center",
-          gap: "6px",
+          gap: "5px",
           background: "none",
           border: "none",
           cursor: "pointer",
           padding: 0,
           fontSize: "12px",
-          color: "#64748b",
+          fontFamily: T.fontSans,
+          color: T.inkFaint,
+          transition: "color 0.15s",
         }}
       >
-        <span
-          style={{
-            display: "inline-block",
-            fontSize: "10px",
-            transform: open ? "rotate(90deg)" : "rotate(0deg)",
-            transition: "transform 0.2s",
-          }}
-        >
-          ▶
-        </span>
-        Show explanation
+        <Icon.chevron open={open} />
+        {open ? "Hide" : "Show"} explanation
       </button>
       {open && (
         <p
           style={{
             fontSize: "13px",
-            color: "#64748b",
-            lineHeight: "1.65",
-            marginTop: "0.625rem",
-            whiteSpace: "pre-wrap",
+            fontFamily: T.fontSans,
+            color: T.inkMid,
+            lineHeight: "1.7",
+            marginTop: "10px",
+            padding: "12px 14px",
+            background: T.surfaceAlt,
+            borderRadius: T.radiusSm,
+            borderLeft: `3px solid ${T.accentMid}`,
+            animation: "fadeIn 0.2s ease",
           }}
         >
           {text}
@@ -236,34 +368,53 @@ function ExplanationToggle({ text }) {
   );
 }
 
+/* ─── Question review card ─── */
 function QuestionReviewCard({ question, index, userAnswer }) {
   const isCorrect = userAnswer === question.correctAnswer;
   return (
-    <div style={{ ...S.card, marginBottom: "0.75rem" }}>
+    <div
+      style={{
+        background: T.surface,
+        border: `1px solid ${T.border}`,
+        borderRadius: T.radiusLg,
+        padding: "1.25rem 1.5rem",
+        marginBottom: "10px",
+        boxShadow: T.shadow,
+        animation: `fadeUp 0.3s ease ${Math.min(index * 0.03, 0.3)}s both`,
+      }}
+    >
       <div
         style={{
           display: "flex",
           justifyContent: "space-between",
           alignItems: "flex-start",
           gap: "12px",
-          marginBottom: "0.875rem",
+          marginBottom: "14px",
         }}
       >
         <p
           style={{
             fontSize: "14px",
-            lineHeight: "1.55",
-            color: "#0f172a",
+            fontFamily: T.font,
+            lineHeight: "1.65",
+            color: T.ink,
             flex: 1,
           }}
         >
-          <span style={{ color: "#94a3b8", marginRight: "5px" }}>
-            {index + 1}.
+          <span
+            style={{
+              fontFamily: T.fontMono,
+              fontSize: "11px",
+              color: T.inkFaint,
+              marginRight: "7px",
+            }}
+          >
+            {String(index + 1).padStart(2, "0")}
           </span>
           {question.questionText}
         </p>
         <Badge variant={isCorrect ? "correct" : "incorrect"}>
-          {isCorrect ? "Correct" : "Incorrect"}
+          {isCorrect ? "✓ Correct" : "✗ Incorrect"}
         </Badge>
       </div>
       {question.options.map((opt, i) => (
@@ -279,6 +430,47 @@ function QuestionReviewCard({ question, index, userAnswer }) {
   );
 }
 
+/* ─── Stat cell ─── */
+function StatCell({ value, label, accent }) {
+  return (
+    <div
+      style={{
+        background: T.surfaceAlt,
+        borderRadius: T.radius,
+        padding: "1rem 0.75rem",
+        textAlign: "center",
+        border: `1px solid ${T.border}`,
+      }}
+    >
+      <div
+        style={{
+          fontSize: "24px",
+          fontFamily: T.font,
+          fontWeight: "600",
+          color: accent || T.ink,
+          lineHeight: 1.1,
+        }}
+      >
+        {value}
+      </div>
+      <div
+        style={{
+          fontSize: "11px",
+          fontFamily: T.fontSans,
+          color: T.inkFaint,
+          marginTop: "4px",
+          letterSpacing: "0.03em",
+        }}
+      >
+        {label}
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   Main component
+═══════════════════════════════════════════════ */
 function SubjectTestPage() {
   const { subjectId, topicId } = useParams();
   const navigate = useNavigate();
@@ -293,6 +485,11 @@ function SubjectTestPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [timeLeft, setTimeLeft] = useState(300);
+
+  useEffect(() => {
+    injectFonts();
+    injectStyles();
+  }, []);
 
   const defaultDuration = subject?.duration || 300;
 
@@ -384,16 +581,16 @@ function SubjectTestPage() {
     ? ((currentQuestionIndex + 1) / questions.length) * 100
     : 0;
   const breadcrumb = isTopicMode
-    ? `${subject?.name} / ${topic?.name || ""}`
+    ? `${subject?.name} · ${topic?.name || ""}`
     : subject?.name || "";
-  const formatTime = (s) =>
-    `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
 
   const getPerformanceMessage = () => {
     if (!questions.length) return "";
-    if (score === questions.length) return "Excellent performance";
-    if (score === 0) return "You need to review this topic carefully";
-    if (score >= questions.length / 2) return "Good job, keep improving";
+    const pct = score / questions.length;
+    if (pct === 1) return "Perfect score";
+    if (pct === 0) return "Keep studying";
+    if (pct >= 0.8) return "Excellent work";
+    if (pct >= 0.5) return "Good progress";
     return "Keep practicing";
   };
 
@@ -411,9 +608,7 @@ function SubjectTestPage() {
 
   const handleStopTest = () => {
     if (
-      window.confirm(
-        "Are you sure you want to stop? Unanswered questions will count as wrong.",
-      )
+      window.confirm("Stop test? Unanswered questions will count as incorrect.")
     ) {
       setShowResults(true);
     }
@@ -427,174 +622,207 @@ function SubjectTestPage() {
     setShowResults(true);
   };
 
-  if (isLoading) {
-    return (
-      <div style={{ ...S.page, textAlign: "center", paddingTop: "6rem" }}>
-        <p style={{ fontSize: "14px", color: "#64748b" }}>Loading test...</p>
+  /* ── shared page shell ── */
+  const page = (children) => (
+    <div
+      style={{
+        minHeight: "100vh",
+        background: T.bg,
+        fontFamily: T.fontSans,
+        color: T.ink,
+      }}
+    >
+      <div
+        style={{
+          maxWidth: "720px",
+          margin: "0 auto",
+          padding: "2.5rem 1.25rem 4rem",
+        }}
+      >
+        {children}
       </div>
-    );
-  }
+    </div>
+  );
 
-  if (errorMessage) {
-    return (
-      <div style={S.page}>
-        <div style={S.card}>
-          <p
-            style={{ marginBottom: "1rem", color: "#64748b", fontSize: "14px" }}
-          >
-            {errorMessage}
-          </p>
-          <button onClick={() => navigate("/user")} style={S.btn}>
-            Back to subjects
-          </button>
-        </div>
-      </div>
+  /* ── Loading ── */
+  if (isLoading)
+    return page(
+      <div style={{ textAlign: "center", paddingTop: "5rem" }}>
+        <div
+          style={{
+            width: "36px",
+            height: "36px",
+            borderRadius: "50%",
+            border: `2px solid ${T.accentLight}`,
+            borderTop: `2px solid ${T.accent}`,
+            animation: "pulse 1s linear infinite",
+            margin: "0 auto 12px",
+          }}
+        />
+        <p style={{ fontSize: "13px", color: T.inkFaint }}>
+          Loading questions…
+        </p>
+      </div>,
     );
-  }
+
+  /* ── Error ── */
+  if (errorMessage)
+    return page(
+      <div
+        style={{
+          background: T.surface,
+          border: `1px solid ${T.border}`,
+          borderRadius: T.radiusLg,
+          padding: "2rem",
+          boxShadow: T.shadow,
+        }}
+      >
+        <p style={{ marginBottom: "1rem", color: T.inkMid, fontSize: "14px" }}>
+          {errorMessage}
+        </p>
+        <Btn onClick={() => navigate("/user")}>← Back to subjects</Btn>
+      </div>,
+    );
 
   if (!subject) return null;
 
-  if (questions.length === 0) {
-    return (
-      <div style={S.page}>
-        <div style={S.card}>
-          <p style={{ marginBottom: "0.5rem", fontWeight: "500" }}>
-            {breadcrumb}
-          </p>
-          <p style={{ color: "#64748b", fontSize: "14px" }}>
-            No questions available for this test yet.
-          </p>
-        </div>
-      </div>
+  /* ── Empty ── */
+  if (questions.length === 0)
+    return page(
+      <div
+        style={{
+          background: T.surface,
+          border: `1px solid ${T.border}`,
+          borderRadius: T.radiusLg,
+          padding: "2rem",
+          boxShadow: T.shadow,
+        }}
+      >
+        <p style={{ fontWeight: "500", marginBottom: "6px" }}>{breadcrumb}</p>
+        <p style={{ color: T.inkFaint, fontSize: "14px" }}>
+          No questions available for this test yet.
+        </p>
+      </div>,
     );
-  }
 
-  /* ── Results view ── */
+  /* ══════════════════════════════════════
+     RESULTS VIEW
+  ══════════════════════════════════════ */
   if (showResults) {
     const timeUsed = defaultDuration - timeLeft;
     const percentage = Math.round((score / questions.length) * 100);
 
-    return (
-      <div style={S.page}>
+    return page(
+      <>
         {/* Score card */}
         <div
           style={{
-            ...S.card,
-            textAlign: "center",
+            background: T.surface,
+            border: `1px solid ${T.border}`,
+            borderRadius: T.radiusLg,
             padding: "2rem",
             marginBottom: "1.25rem",
+            boxShadow: T.shadowMd,
+            animation: "fadeUp 0.4s ease",
           }}
         >
+          {/* Header */}
           <div
             style={{
-              width: "60px",
-              height: "60px",
-              borderRadius: "50%",
-              background: "#E6F1FB",
               display: "flex",
               alignItems: "center",
-              justifyContent: "center",
-              margin: "0 auto 1rem",
+              gap: "14px",
+              marginBottom: "1.5rem",
             }}
           >
-            <svg width="26" height="26" viewBox="0 0 32 32" fill="none">
-              <path
-                d="M8 16l5 5 11-11"
-                stroke="#185FA5"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
+            <div
+              style={{
+                width: "48px",
+                height: "48px",
+                borderRadius: "12px",
+                background: T.accentLight,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+              }}
+            >
+              <Icon.trophy />
+            </div>
+            <div>
+              <p
+                style={{
+                  fontSize: "11px",
+                  fontFamily: T.fontSans,
+                  color: T.inkFaint,
+                  fontWeight: "500",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.07em",
+                  marginBottom: "2px",
+                }}
+              >
+                {breadcrumb}
+              </p>
+              <h2
+                style={{
+                  fontSize: "20px",
+                  fontFamily: T.font,
+                  fontWeight: "600",
+                  color: T.ink,
+                }}
+              >
+                {getPerformanceMessage()}
+              </h2>
+            </div>
           </div>
-          <p
-            style={{
-              fontSize: "11px",
-              fontWeight: "500",
-              color: "#94a3b8",
-              textTransform: "uppercase",
-              letterSpacing: "0.05em",
-              marginBottom: "5px",
-            }}
-          >
-            {breadcrumb}
-          </p>
-          <h2
-            style={{
-              fontSize: "20px",
-              fontWeight: "500",
-              color: "#0f172a",
-              marginBottom: "4px",
-            }}
-          >
-            {getPerformanceMessage()}
-          </h2>
-          <p style={{ fontSize: "13px", color: "#64748b" }}>
-            {isTopicMode ? "Topic test" : "Subject test"} complete
-          </p>
 
+          {/* Stats */}
           <div
             style={{
               display: "grid",
               gridTemplateColumns: "repeat(3,1fr)",
-              gap: "10px",
-              marginTop: "1.5rem",
+              gap: "8px",
+              marginBottom: "1.5rem",
             }}
           >
-            {[
-              { val: `${percentage}%`, label: "Score", color: "#185FA5" },
-              {
-                val: `${score} / ${questions.length}`,
-                label: "Correct",
-                color: "#0f172a",
-              },
-              {
-                val: formatTime(timeUsed),
-                label: "Time used",
-                color: "#0f172a",
-              },
-            ].map(({ val, label, color }) => (
-              <div
-                key={label}
-                style={{
-                  background: "#f8f9fb",
-                  borderRadius: "8px",
-                  padding: "0.875rem",
-                }}
-              >
-                <div style={{ fontSize: "22px", fontWeight: "500", color }}>
-                  {val}
-                </div>
-                <div
-                  style={{
-                    fontSize: "11px",
-                    color: "#64748b",
-                    marginTop: "2px",
-                  }}
-                >
-                  {label}
-                </div>
-              </div>
-            ))}
+            <StatCell
+              value={`${percentage}%`}
+              label="Score"
+              accent={T.accent}
+            />
+            <StatCell
+              value={`${score} / ${questions.length}`}
+              label="Correct"
+            />
+            <StatCell value={formatTime(timeUsed)} label="Time used" />
           </div>
 
-          <div style={{ marginTop: "1.25rem" }}>
+          {/* Progress bar */}
+          <div>
             <div
               style={{
                 display: "flex",
                 justifyContent: "space-between",
                 fontSize: "11px",
-                color: "#94a3b8",
+                fontFamily: T.fontSans,
+                color: T.inkFaint,
                 marginBottom: "6px",
               }}
             >
               <span>Performance</span>
-              <span>{percentage}%</span>
+              <span
+                style={{
+                  color: percentage >= 50 ? T.accent : T.danger,
+                  fontWeight: "500",
+                }}
+              >
+                {percentage}%
+              </span>
             </div>
             <div
               style={{
-                height: "6px",
-                background: "#f1f5f9",
+                height: "5px",
+                background: "#ECEAE3",
                 borderRadius: "999px",
                 overflow: "hidden",
               }}
@@ -603,45 +831,65 @@ function SubjectTestPage() {
                 style={{
                   width: `${percentage}%`,
                   height: "100%",
-                  background: "#185FA5",
+                  background: percentage >= 50 ? T.accent : T.danger,
                   borderRadius: "999px",
+                  transition: "width 0.6s ease",
                 }}
               />
             </div>
           </div>
         </div>
 
-        {/* Question overview dots */}
+        {/* Question map */}
         <div
           style={{
-            display: "flex",
-            gap: "5px",
-            flexWrap: "wrap",
+            background: T.surface,
+            border: `1px solid ${T.border}`,
+            borderRadius: T.radius,
+            padding: "1rem 1.25rem",
             marginBottom: "1.25rem",
+            boxShadow: T.shadow,
           }}
         >
-          {questions.map((q, i) => {
-            const correct = selectedAnswers[q._id] === q.correctAnswer;
-            return (
-              <span
-                key={q._id}
-                style={{
-                  width: "30px",
-                  height: "30px",
-                  borderRadius: "7px",
-                  background: correct ? "#EAF3DE" : "#FCEBEB",
-                  color: correct ? "#27500A" : "#791F1F",
-                  fontSize: "12px",
-                  fontWeight: "500",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                {i + 1}
-              </span>
-            );
-          })}
+          <p
+            style={{
+              fontSize: "11px",
+              fontFamily: T.fontSans,
+              color: T.inkFaint,
+              fontWeight: "500",
+              textTransform: "uppercase",
+              letterSpacing: "0.07em",
+              marginBottom: "10px",
+            }}
+          >
+            Question overview
+          </p>
+          <div style={{ display: "flex", gap: "5px", flexWrap: "wrap" }}>
+            {questions.map((q, i) => {
+              const correct = selectedAnswers[q._id] === q.correctAnswer;
+              return (
+                <span
+                  key={q._id}
+                  style={{
+                    width: "28px",
+                    height: "28px",
+                    borderRadius: "7px",
+                    background: correct ? "#E4F2E9" : T.dangerLight,
+                    color: correct ? T.accent : T.danger,
+                    fontSize: "11px",
+                    fontFamily: T.fontMono,
+                    fontWeight: "500",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    border: `1px solid ${correct ? "#B8DDC3" : T.dangerBorder}`,
+                  }}
+                >
+                  {i + 1}
+                </span>
+              );
+            })}
+          </div>
         </div>
 
         {/* Per-question review */}
@@ -660,29 +908,28 @@ function SubjectTestPage() {
             gap: "8px",
             justifyContent: "center",
             flexWrap: "wrap",
-            marginTop: "1.5rem",
+            marginTop: "1.75rem",
           }}
         >
-          <button
-            onClick={handleRetakeTest}
-            style={{ ...S.btn, ...S.btnPrimary }}
-          >
+          <Btn variant="primary" onClick={handleRetakeTest}>
             Retake test
-          </button>
-          <button
-            onClick={() => navigate(`/subject/${subject._id}/topics`)}
-            style={S.btn}
-          >
-            Back to topics
-          </button>
+          </Btn>
+          <Btn onClick={() => navigate(`/subject/${subject._id}/topics`)}>
+            ← Back to topics
+          </Btn>
         </div>
-      </div>
+      </>,
     );
   }
 
-  /* ── Test view ── */
-  return (
-    <div style={S.page}>
+  /* ══════════════════════════════════════
+     TEST VIEW
+  ══════════════════════════════════════ */
+  const timeWarn = timeLeft <= 60;
+
+  return page(
+    <>
+      {/* Top bar */}
       <div
         style={{
           display: "flex",
@@ -690,86 +937,103 @@ function SubjectTestPage() {
           justifyContent: "space-between",
           gap: "12px",
           flexWrap: "wrap",
-          marginBottom: "0.25rem",
+          marginBottom: "1.5rem",
+          animation: "fadeUp 0.3s ease",
         }}
       >
         <div>
           <p
             style={{
-              fontSize: "12px",
-              color: "#64748b",
+              fontSize: "11px",
+              color: T.inkFaint,
               fontWeight: "500",
               textTransform: "uppercase",
-              letterSpacing: "0.05em",
-              marginBottom: "3px",
+              letterSpacing: "0.07em",
+              marginBottom: "4px",
             }}
           >
             {breadcrumb}
           </p>
-          <h2 style={{ fontSize: "19px", fontWeight: "500", color: "#0f172a" }}>
+          <h2
+            style={{
+              fontSize: "22px",
+              fontFamily: T.font,
+              fontWeight: "600",
+              color: T.ink,
+            }}
+          >
             {isTopicMode ? "Topic test" : "Subject test"}
           </h2>
         </div>
-        <div
-          style={{
-            display: "flex",
-            gap: "8px",
-            alignItems: "center",
-            flexWrap: "wrap",
-          }}
-        >
+        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
           <div
             style={{
               display: "inline-flex",
               alignItems: "center",
-              gap: "7px",
-              padding: "8px 14px",
-              borderRadius: "8px",
-              background: "#f8f9fb",
-              border: "0.5px solid rgba(0,0,0,0.1)",
+              gap: "6px",
+              padding: "7px 13px",
+              borderRadius: T.radius,
+              background: timeWarn ? T.dangerLight : T.surface,
+              border: `1px solid ${timeWarn ? T.dangerBorder : T.border}`,
               fontSize: "14px",
+              fontFamily: T.fontMono,
               fontWeight: "500",
-              color: timeLeft <= 30 ? "#A32D2D" : "#0f172a",
-              transition: "color 0.3s",
+              color: timeWarn ? T.danger : T.ink,
+              transition: "all 0.3s",
             }}
           >
-            <ClockIcon />
+            <Icon.clock warn={timeWarn} />
             {formatTime(timeLeft)}
           </div>
-          <button onClick={handleStopTest} style={{ ...S.btn, ...S.btnDanger }}>
-            Stop test
-          </button>
+          <Btn variant="danger" onClick={handleStopTest}>
+            Stop
+          </Btn>
         </div>
       </div>
 
-      <div style={{ margin: "1.25rem 0" }}>
+      {/* Progress */}
+      <div style={{ marginBottom: "1.5rem", animation: "fadeUp 0.35s ease" }}>
         <div
           style={{
             display: "flex",
             justifyContent: "space-between",
             fontSize: "12px",
-            color: "#64748b",
-            marginBottom: "7px",
+            fontFamily: T.fontSans,
+            color: T.inkFaint,
+            marginBottom: "8px",
           }}
         >
           <span>
             Question{" "}
-            <span style={{ fontWeight: "500", color: "#0f172a" }}>
+            <span
+              style={{
+                fontWeight: "600",
+                color: T.ink,
+                fontFamily: T.fontMono,
+              }}
+            >
               {currentQuestionIndex + 1}
             </span>{" "}
             of {questions.length}
           </span>
           <span>
             Answered{" "}
-            <span style={{ fontWeight: "500", color: "#0f172a" }}>
-              {answeredCount} / {questions.length}
+            <span
+              style={{
+                fontWeight: "600",
+                color: T.ink,
+                fontFamily: T.fontMono,
+              }}
+            >
+              {answeredCount}
             </span>
+            /{questions.length}
           </span>
         </div>
         <div
           style={{
             height: "4px",
-            background: "#e9ecef",
+            background: "#ECEAE3",
             borderRadius: "999px",
             overflow: "hidden",
           }}
@@ -778,32 +1042,58 @@ function SubjectTestPage() {
             style={{
               width: `${progressPercent}%`,
               height: "100%",
-              background: "#185FA5",
+              background: T.accent,
               borderRadius: "999px",
-              transition: "width 0.3s",
+              transition: "width 0.4s cubic-bezier(0.4,0,0.2,1)",
             }}
           />
         </div>
       </div>
 
-      <div style={S.card}>
-        <Badge variant="info">Question {currentQuestionIndex + 1}</Badge>
+      {/* Question card */}
+      <div
+        style={{
+          background: T.surface,
+          border: `1px solid ${T.border}`,
+          borderRadius: T.radiusLg,
+          padding: "1.75rem",
+          boxShadow: T.shadowMd,
+          animation: `fadeUp 0.3s ease`,
+          key: currentQuestionIndex,
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            marginBottom: "1.25rem",
+          }}
+        >
+          <Badge variant="neutral">
+            Q{String(currentQuestionIndex + 1).padStart(2, "0")}
+          </Badge>
+        </div>
+
         <p
           style={{
             fontSize: "15px",
-            lineHeight: "1.65",
-            color: "#0f172a",
-            marginTop: "0.75rem",
+            fontFamily: T.font,
+            lineHeight: "1.75",
+            color: T.ink,
+            marginBottom: "1.5rem",
           }}
         >
           {currentQuestion.questionText}
         </p>
-        <div style={{ marginTop: "1.25rem" }}>
+
+        <div>
           {currentQuestion.options.map((option, i) => {
             const isSelected = selectedAnswers[currentQuestion._id] === option;
             return (
               <label
                 key={i}
+                className="quiz-option"
                 onClick={() =>
                   setSelectedAnswers((prev) => ({
                     ...prev,
@@ -814,124 +1104,124 @@ function SubjectTestPage() {
                   display: "flex",
                   alignItems: "center",
                   gap: "12px",
-                  padding: "12px 16px",
-                  borderRadius: "8px",
+                  padding: "11px 15px",
+                  borderRadius: T.radius,
                   cursor: "pointer",
                   fontSize: "14px",
-                  marginBottom: "8px",
-                  border: isSelected
-                    ? "0.5px solid #185FA5"
-                    : "0.5px solid rgba(0,0,0,0.1)",
-                  background: isSelected ? "#E6F1FB" : "transparent",
-                  color: isSelected ? "#0C447C" : "#0f172a",
-                  transition: "border-color 0.15s, background 0.15s",
+                  fontFamily: T.fontSans,
+                  marginBottom: "7px",
+                  border: `1px solid ${isSelected ? T.accentMid : T.border}`,
+                  background: isSelected ? T.accentLight : "transparent",
+                  color: isSelected ? T.accent : T.ink,
+                  transition:
+                    "border-color 0.15s, background 0.15s, color 0.15s",
                 }}
               >
                 <div
                   style={{
-                    width: "18px",
-                    height: "18px",
+                    width: "17px",
+                    height: "17px",
                     borderRadius: "50%",
                     flexShrink: 0,
-                    border: isSelected ? "none" : "0.5px solid rgba(0,0,0,0.2)",
-                    background: isSelected ? "#185FA5" : "transparent",
+                    border: `1.5px solid ${isSelected ? T.accent : T.borderStrong}`,
+                    background: isSelected ? T.accent : "transparent",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
+                    transition: "all 0.15s",
                   }}
                 >
                   {isSelected && (
                     <div
                       style={{
-                        width: "8px",
-                        height: "8px",
-                        background: "#E6F1FB",
+                        width: "6px",
+                        height: "6px",
+                        background: "#fff",
                         borderRadius: "50%",
                       }}
                     />
                   )}
                 </div>
-                {option}
+                <span style={{ flex: 1 }}>{option}</span>
+                {isSelected && (
+                  <span
+                    style={{
+                      fontSize: "11px",
+                      color: T.accentMid,
+                      fontWeight: "500",
+                    }}
+                  >
+                    Selected
+                  </span>
+                )}
               </label>
             );
           })}
         </div>
       </div>
 
+      {/* Navigation */}
       <div
         style={{
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          marginTop: "1rem",
-          gap: "10px",
+          marginTop: "1.25rem",
         }}
       >
-        <button
+        <Btn
           onClick={() => setCurrentQuestionIndex((p) => p - 1)}
           disabled={currentQuestionIndex === 0}
-          style={{
-            ...S.btn,
-            opacity: currentQuestionIndex === 0 ? 0.4 : 1,
-            cursor: currentQuestionIndex === 0 ? "not-allowed" : "pointer",
-          }}
         >
-          <ChevronLeft /> Back
-        </button>
+          <Icon.left /> Back
+        </Btn>
 
-        <div style={{ display: "flex", gap: "5px" }}>
-          {questions.slice(0, Math.min(questions.length, 10)).map((q, i) => (
-            <div
-              key={i}
-              style={{
-                width: "8px",
-                height: "8px",
-                borderRadius: "50%",
-                background:
-                  i === currentQuestionIndex
-                    ? "#185FA5"
-                    : selectedAnswers[q._id]
-                      ? "rgba(24,95,165,0.4)"
-                      : "rgba(0,0,0,0.12)",
-                transition: "background 0.2s",
-              }}
-            />
-          ))}
+        {/* Dot nav */}
+        <div style={{ display: "flex", gap: "5px", alignItems: "center" }}>
+          {questions.slice(0, Math.min(questions.length, 12)).map((q, i) => {
+            const isActive = i === currentQuestionIndex;
+            const isAnswered = Boolean(selectedAnswers[q._id]);
+            return (
+              <div
+                key={i}
+                className="dot-nav"
+                onClick={() => setCurrentQuestionIndex(i)}
+                style={{
+                  width: isActive ? "20px" : "7px",
+                  height: "7px",
+                  borderRadius: "999px",
+                  background: isActive
+                    ? T.accent
+                    : isAnswered
+                      ? `${T.accent}55`
+                      : "#D0CFC6",
+                  cursor: "pointer",
+                  transition: "all 0.25s cubic-bezier(0.4,0,0.2,1)",
+                }}
+              />
+            );
+          })}
         </div>
 
         {currentQuestionIndex < questions.length - 1 ? (
-          <button
+          <Btn
+            variant="primary"
             onClick={() => setCurrentQuestionIndex((p) => p + 1)}
             disabled={!selectedAnswers[currentQuestion._id]}
-            style={{
-              ...S.btn,
-              ...S.btnPrimary,
-              opacity: !selectedAnswers[currentQuestion._id] ? 0.4 : 1,
-              cursor: !selectedAnswers[currentQuestion._id]
-                ? "not-allowed"
-                : "pointer",
-            }}
           >
-            Next <ChevronRight />
-          </button>
+            Next <Icon.right />
+          </Btn>
         ) : (
-          <button
+          <Btn
+            variant="primary"
             onClick={handleSubmit}
             disabled={!selectedAnswers[currentQuestion._id]}
-            style={{
-              ...S.btn,
-              ...S.btnPrimary,
-              opacity: !selectedAnswers[currentQuestion._id] ? 0.4 : 1,
-              cursor: !selectedAnswers[currentQuestion._id]
-                ? "not-allowed"
-                : "pointer",
-            }}
           >
             Submit
-          </button>
+          </Btn>
         )}
       </div>
-    </div>
+    </>,
   );
 }
 
