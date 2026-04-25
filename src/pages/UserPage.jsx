@@ -221,6 +221,21 @@ function UserPage() {
         <div style={{ maxWidth: "1080px", margin: "0 auto" }}>
           {/* page header */}
           <div style={{ marginBottom: "2rem" }}>
+            <button
+              onClick={() => navigate("/request-subject")}
+              style={{
+                padding: "12px 18px",
+                border: "none",
+                borderRadius: "10px",
+                backgroundColor: "#185FA5",
+                color: "white",
+                fontWeight: "600",
+                cursor: "pointer",
+                marginTop: "18px",
+              }}
+            >
+              Request a Subject
+            </button>
             <p
               style={{
                 fontSize: "11px",

@@ -10,6 +10,7 @@ import BulkImportQuestionsPage from "./pages/BulkImportQuestionsPage";
 import ManageSubjectsPage from "./pages/ManageSubjectsPage";
 import ManageQuestionsPage from "./pages/ManageQuestionsPage";
 import SubjectTestPage from "./pages/SubjectTestPage";
+import SubjectRequestPage from "./pages/SubjectRequestPage";
 import TopicSelectionPage from "./pages/TopicSelectionPage";
 
 function App() {
@@ -22,6 +23,7 @@ function App() {
         <Route path="/add-subject" element={<AddSubjectPage />} />
         <Route path="/add-question" element={<AddQuestionPage />} />
         <Route path="/add-topic" element={<AddTopicPage />} />
+        <Route path="/request-subject" element={<SubjectRequestPage />} />
         <Route
           path="/subject/:subjectId/topics"
           element={<TopicSelectionPage />}
