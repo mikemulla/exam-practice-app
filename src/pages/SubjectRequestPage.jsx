@@ -2,6 +2,17 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../lib/api";
 
+const MAX_FILE_SIZE = 15 * 1024 * 1024; // 5MB
+
+const allowedTypes = [
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "text/plain",
+  "image/jpeg",
+  "image/png",
+];
+
 function ChevronLeft() {
   return (
     <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -50,6 +61,7 @@ function Field({ label, hint, children }) {
 
 function SubjectRequestPage() {
   const navigate = useNavigate();
+
   const [subject, setSubject] = useState("");
   const [topic, setTopic] = useState("");
   const [timer, setTimer] = useState(10);
@@ -59,25 +71,79 @@ function SubjectRequestPage() {
   const [success, setSuccess] = useState(false);
   const [fileError, setFileError] = useState("");
 
+  const validateAndSetFile = (selectedFile, inputElement = null) => {
+    if (!selectedFile) return;
+
+    if (selectedFile.size > MAX_FILE_SIZE) {
+      setFileError("File is too large. Maximum allowed size is 5MB.");
+      setFile(null);
+
+      if (inputElement) {
+        inputElement.value = "";
+      }
+
+      return;
+    }
+
+    if (!allowedTypes.includes(selectedFile.type)) {
+      setFileError(
+        "Unsupported file type. Please upload PDF, DOC, DOCX, TXT, JPG, or PNG.",
+      );
+      setFile(null);
+
+      if (inputElement) {
+        inputElement.value = "";
+      }
+
+      return;
+    }
+
+    setFileError("");
+    setFile(selectedFile);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setDragOver(false);
+
+    const droppedFile = e.dataTransfer.files[0];
+    validateAndSetFile(droppedFile);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (fileError) {
+      alert("Please fix the file upload issue before submitting.");
+      return;
+    }
+
     const formData = new FormData();
-    formData.append("subject", subject);
-    formData.append("topic", topic);
+    formData.append("subject", subject.trim());
+    formData.append("topic", topic.trim());
     formData.append("timer", timer);
-    if (file) formData.append("file", file);
+
+    if (file) {
+      formData.append("file", file);
+    }
 
     try {
       setIsSubmitting(true);
+
       await api.post("/api/requests/subject-request", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
       });
+
       setSuccess(true);
+
       setTimeout(() => {
         setSubject("");
         setTopic("");
         setTimer(10);
         setFile(null);
+        setFileError("");
         setSuccess(false);
       }, 2200);
     } catch (error) {
@@ -88,77 +154,81 @@ function SubjectRequestPage() {
     }
   };
 
-  const validateAndSetFile = (selected, inputRef) => {
-    if (!selected) return;
-    if (selected.size > 5 * 1024 * 1024) {
-      setFileError("File is too large. Maximum file size is 5 MB.");
-      if (inputRef) inputRef.value = "";
-      setFile(null);
-      return;
-    }
-    setFileError("");
-    setFile(selected);
-  };
-
-  const handleDrop = (e) => {
-    e.preventDefault();
-    setDragOver(false);
-    const dropped = e.dataTransfer.files[0];
-    validateAndSetFile(dropped, null);
-  };
-
   return (
     <>
       <style>{`
         @keyframes fadeUp {
-          from { opacity: 0; transform: translateY(12px); }
-          to   { opacity: 1; transform: translateY(0); }
+           from  { opacity: 0; transform: translateY(12px); }
+          to { opacity: 1; transform: translateY(0); }
         }
+
         @keyframes successPop {
-          0%   { transform: scale(0.92); opacity: 0; }
-          60%  { transform: scale(1.03); }
+          0% { transform: scale(0.92); opacity: 0; }
+          60% { transform: scale(1.03); }
           100% { transform: scale(1); opacity: 1; }
         }
-        .page-enter { animation: fadeUp 0.35s ease both; }
-        .card-enter { animation: fadeUp 0.4s ease 0.05s both; }
-        .success-banner { animation: successPop 0.35s ease both; }
-        input[type="number"]::-webkit-inner-spin-button,
-        input[type="number"]::-webkit-outer-spin-button { opacity: 1; }
-        input:focus, textarea:focus { outline: none; }
+
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+
+        .page-enter {
+          animation: fadeUp 0.35s ease both;
+        }
+
+        .card-enter {
+          animation: fadeUp 0.4s ease 0.05s both;
+        }
+
+        .success-banner {
+          animation: successPop 0.35s ease both;
+        }
+
+        input:focus {
+          outline: none;
+        }
+
+        @media (max-width: 640px) {
+          .subject-request-card {
+            padding: 1.25rem !important;
+          }
+
+          .subject-request-actions {
+            flex-direction: column !important;
+          }
+
+          .subject-request-actions button {
+            width: 100% !important;
+          }
+        }
       `}</style>
 
       <div style={S.page}>
         <div style={S.inner}>
-          {/* breadcrumb + back */}
           <div className="page-enter" style={S.topBar}>
             <button onClick={() => navigate("/user")} style={S.backBtn}>
               <ChevronLeft />
               Back
             </button>
+
             <span style={S.breadcrumb}>Dashboard / Subject request</span>
           </div>
 
-          {/* heading */}
-          <div
-            className="page-enter"
-            style={{ ...S.pageHeader, animationDelay: "0.04s" }}
-          >
+          <div className="page-enter" style={S.pageHeader}>
             <h1 style={S.heading}>Request a Subject</h1>
             <p style={S.subheading}>
               Tell the admin the subject, topic, and preferred test timer.
-              Attach a file if you have reference material.
+              Attach a reference file if you have one.
             </p>
           </div>
 
-          {/* success banner */}
           {success && (
             <div className="success-banner" style={S.successBanner}>
               <span style={{ fontSize: "16px" }}>✓</span>
-              Request sent successfully!
+              Request sent successfully.
             </div>
           )}
 
-          {/* file error banner */}
           {fileError && (
             <div style={S.errorBanner}>
               <span style={{ fontSize: "15px" }}>⚠</span>
@@ -166,8 +236,7 @@ function SubjectRequestPage() {
             </div>
           )}
 
-          {/* card */}
-          <div className="card-enter" style={S.card}>
+          <div className="card-enter subject-request-card" style={S.card}>
             <form onSubmit={handleSubmit}>
               <div style={S.twoCol}>
                 <Field label="Subject" hint="Required">
@@ -183,6 +252,7 @@ function SubjectRequestPage() {
                       Object.assign(e.target.style, {
                         borderColor: "rgba(0,0,0,0.12)",
                         boxShadow: "none",
+                        background: "#fafafa",
                       })
                     }
                   />
@@ -201,6 +271,7 @@ function SubjectRequestPage() {
                       Object.assign(e.target.style, {
                         borderColor: "rgba(0,0,0,0.12)",
                         boxShadow: "none",
+                        background: "#fafafa",
                       })
                     }
                   />
@@ -220,12 +291,12 @@ function SubjectRequestPage() {
                     Object.assign(e.target.style, {
                       borderColor: "rgba(0,0,0,0.12)",
                       boxShadow: "none",
+                      background: "#fafafa",
                     })
                   }
                 />
               </Field>
 
-              {/* file drop zone */}
               <Field label="Reference file" hint="Optional">
                 <div
                   onDragOver={(e) => {
@@ -252,27 +323,35 @@ function SubjectRequestPage() {
                   <input
                     id="file-input"
                     type="file"
+                    accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png"
                     style={{ display: "none" }}
                     onChange={(e) => {
-                      const selected = e.target.files[0];
-                      validateAndSetFile(selected, e.target);
+                      const selectedFile = e.target.files[0];
+                      validateAndSetFile(selectedFile, e.target);
                     }}
                   />
+
                   <UploadIcon />
+
                   {file ? (
                     <div style={{ textAlign: "center" }}>
                       <p style={S.fileName}>{file.name}</p>
-                      <p style={S.fileHint}>Click to replace</p>
+                      <p style={S.fileHint}>
+                        {(file.size / (1024 * 1024)).toFixed(2)} MB, click to
+                        replace
+                      </p>
                     </div>
                   ) : (
                     <div style={{ textAlign: "center" }}>
                       <p style={S.dropLabel}>
-                        Drag & drop or{" "}
+                        Drag and drop or{" "}
                         <span style={{ color: "#185FA5", fontWeight: "600" }}>
                           browse
                         </span>
                       </p>
-                      <p style={S.fileHint}>PDF, DOCX, images · max 15 MB</p>
+                      <p style={S.fileHint}>
+                        PDF, DOC, DOCX, TXT, JPG, PNG, max 15MB
+                      </p>
                     </div>
                   )}
                 </div>
@@ -280,8 +359,7 @@ function SubjectRequestPage() {
 
               <div style={S.divider} />
 
-              {/* actions */}
-              <div style={S.actions}>
+              <div className="subject-request-actions" style={S.actions}>
                 <button
                   type="submit"
                   disabled={isSubmitting}
@@ -299,7 +377,8 @@ function SubjectRequestPage() {
                         gap: "8px",
                       }}
                     >
-                      <span style={S.spinner} /> Sending…
+                      <span style={S.spinner} />
+                      Sending...
                     </span>
                   ) : (
                     "Send Request"
@@ -324,7 +403,6 @@ function SubjectRequestPage() {
 
 export default SubjectRequestPage;
 
-/* ─── styles ─── */
 const S = {
   page: {
     minHeight: "100vh",
@@ -339,6 +417,7 @@ const S = {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
+    gap: "12px",
     marginBottom: "1.75rem",
   },
   backBtn: {
