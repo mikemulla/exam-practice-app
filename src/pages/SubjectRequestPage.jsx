@@ -272,7 +272,7 @@ function SubjectRequestPage() {
                           browse
                         </span>
                       </p>
-                      <p style={S.fileHint}>PDF, DOCX, images · max 5 MB</p>
+                      <p style={S.fileHint}>PDF, DOCX, images · max 15 MB</p>
                     </div>
                   )}
                 </div>
