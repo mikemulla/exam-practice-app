@@ -57,6 +57,7 @@ function SubjectRequestPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [fileError, setFileError] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -87,18 +88,30 @@ function SubjectRequestPage() {
     }
   };
 
+  const validateAndSetFile = (selected, inputRef) => {
+    if (!selected) return;
+    if (selected.size > 5 * 1024 * 1024) {
+      setFileError("File is too large. Maximum file size is 5 MB.");
+      if (inputRef) inputRef.value = "";
+      setFile(null);
+      return;
+    }
+    setFileError("");
+    setFile(selected);
+  };
+
   const handleDrop = (e) => {
     e.preventDefault();
     setDragOver(false);
     const dropped = e.dataTransfer.files[0];
-    if (dropped) setFile(dropped);
+    validateAndSetFile(dropped, null);
   };
 
   return (
     <>
       <style>{`
         @keyframes fadeUp {
-           from  { opacity: 0; transform: translateY(12px); }
+          from { opacity: 0; transform: translateY(12px); }
           to   { opacity: 1; transform: translateY(0); }
         }
         @keyframes successPop {
@@ -111,7 +124,7 @@ function SubjectRequestPage() {
         .success-banner { animation: successPop 0.35s ease both; }
         input[type="number"]::-webkit-inner-spin-button,
         input[type="number"]::-webkit-outer-spin-button { opacity: 1; }
-        input: focus, textarea: focus { outline: none; }
+        input:focus, textarea:focus { outline: none; }
       `}</style>
 
       <div style={S.page}>
@@ -142,6 +155,14 @@ function SubjectRequestPage() {
             <div className="success-banner" style={S.successBanner}>
               <span style={{ fontSize: "16px" }}>✓</span>
               Request sent successfully!
+            </div>
+          )}
+
+          {/* file error banner */}
+          {fileError && (
+            <div style={S.errorBanner}>
+              <span style={{ fontSize: "15px" }}>⚠</span>
+              {fileError}
             </div>
           )}
 
@@ -232,7 +253,10 @@ function SubjectRequestPage() {
                     id="file-input"
                     type="file"
                     style={{ display: "none" }}
-                    onChange={(e) => setFile(e.target.files[0])}
+                    onChange={(e) => {
+                      const selected = e.target.files[0];
+                      validateAndSetFile(selected, e.target);
+                    }}
                   />
                   <UploadIcon />
                   {file ? (
@@ -248,7 +272,7 @@ function SubjectRequestPage() {
                           browse
                         </span>
                       </p>
-                      <p style={S.fileHint}>PDF, DOCX, images accepted</p>
+                      <p style={S.fileHint}>PDF, DOCX, images · max 5 MB</p>
                     </div>
                   )}
                 </div>
@@ -353,6 +377,19 @@ const S = {
     lineHeight: "1.65",
     margin: 0,
     maxWidth: "500px",
+  },
+  errorBanner: {
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+    padding: "12px 16px",
+    borderRadius: "10px",
+    background: "#fef2f2",
+    border: "0.5px solid #fca5a5",
+    color: "#b91c1c",
+    fontSize: "14px",
+    fontWeight: "500",
+    marginBottom: "1rem",
   },
   successBanner: {
     display: "flex",
