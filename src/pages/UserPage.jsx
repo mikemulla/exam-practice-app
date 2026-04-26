@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import api from "../lib/api";
 import { useNavigate } from "react-router-dom";
-import Header from "../components/Header";
 
 /* ─── tiny icons ─── */
 function BookIcon() {
@@ -223,12 +222,13 @@ function UserPage() {
         }
       `}</style>
 
-      <Header />
-
       <div style={S.page}>
         <div style={S.inner}>
           {/* ── page header ── */}
           <div className="header-fade" style={S.pageHeader}>
+            <button onClick={() => navigate(-1)} style={S.backBtn}>
+              ← Back
+            </button>
             <div style={S.eyebrow}>User dashboard</div>
             <div style={S.headingRow}>
               <h1 style={S.heading}>Choose a subject</h1>
@@ -329,6 +329,21 @@ const S = {
     lineHeight: "1.65",
     maxWidth: "520px",
     margin: 0,
+  },
+  backBtn: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "6px",
+    marginBottom: "1.25rem",
+    padding: "7px 14px",
+    border: "0.5px solid rgba(0,0,0,0.12)",
+    borderRadius: "8px",
+    background: "#fff",
+    color: "#334155",
+    fontSize: "13px",
+    fontWeight: "500",
+    cursor: "pointer",
+    transition: "border-color 0.15s, box-shadow 0.15s",
   },
   requestBtn: {
     padding: "9px 16px",

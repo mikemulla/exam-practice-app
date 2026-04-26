@@ -1,396 +1,236 @@
 import { useNavigate } from "react-router-dom";
-import Header from "../components/Header";
+
 function AdminPage() {
   const navigate = useNavigate();
 
+  const handleLogout = () => {
+    localStorage.removeItem("adminToken");
+
+    navigate("/admin-login");
+  };
+
   const cardStyle = {
     backgroundColor: "white",
+
     border: "1px solid #e2e8f0",
+
     borderRadius: "18px",
-    padding: "24px",
+
+    padding: "22px",
+
     boxShadow: "0 12px 30px rgba(15,23,42,0.06)",
   };
 
-  const primaryButton = {
-    padding: "14px 20px",
-    border: "none",
-    borderRadius: "10px",
-    backgroundColor: "#185FA5",
-    color: "white",
-    fontSize: "15px",
-    fontWeight: "600",
-    cursor: "pointer",
+  const buttonStyle = {
     width: "100%",
-  };
 
-  const secondaryButton = {
     padding: "14px 20px",
-    border: "1px solid #cbd5e1",
+
+    border: "none",
+
     borderRadius: "10px",
-    backgroundColor: "white",
-    color: "#0f172a",
+
+    backgroundColor: "#185FA5",
+
+    color: "white",
+
     fontSize: "15px",
+
     fontWeight: "600",
+
     cursor: "pointer",
-    width: "100%",
   };
 
   return (
-    <>
-      <Header />
-      <div
-        style={{
-          minHeight: "100vh",
-          background:
-            "linear-gradient(135deg, #f8fbff 0%, #eef4ff 50%, #f7f9fc 100%)",
-          padding: "32px 20px",
-        }}
-      >
-        <div style={{ maxWidth: "1100px", margin: "0 auto" }}>
-          <div style={{ marginBottom: "28px" }}>
+    <div
+      style={{
+        minHeight: "100vh",
+
+        background:
+          "linear-gradient(135deg, #f8fbff 0%, #eef4ff 50%, #f7f9fc 100%)",
+
+        padding: "32px 20px",
+      }}
+    >
+      <div style={{ maxWidth: "1050px", margin: "0 auto" }}>
+        <div
+          style={{
+            display: "flex",
+
+            justifyContent: "space-between",
+
+            gap: "16px",
+
+            alignItems: "center",
+
+            flexWrap: "wrap",
+
+            marginBottom: "28px",
+          }}
+        >
+          <div>
             <p
               style={{
                 margin: 0,
+
                 color: "#64748b",
+
                 fontSize: "14px",
+
                 fontWeight: "600",
               }}
             >
-              Admin workspace
+              Admin dashboard
             </p>
+
             <h1
               style={{
                 margin: "10px 0 8px",
+
                 fontSize: "40px",
+
                 color: "#0f172a",
               }}
             >
-              Manage your exam platform
+              Manage exam content
             </h1>
+
             <p
               style={{
                 margin: 0,
+
                 color: "#475569",
-                fontSize: "17px",
+
                 lineHeight: "1.6",
-                maxWidth: "700px",
               }}
             >
-              Add subjects, create question banks, and control how each test is
-              delivered to users.
+              Create subjects, topics, questions, and manage your question bank.
             </p>
           </div>
 
-          <div
+          <button
+            onClick={handleLogout}
             style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-              gap: "20px",
+              padding: "12px 18px",
+
+              borderRadius: "10px",
+
+              border: "1px solid #fecaca",
+
+              backgroundColor: "#fff5f5",
+
+              color: "#b91c1c",
+
+              fontWeight: "700",
+
+              cursor: "pointer",
             }}
           >
-            <div style={cardStyle}>
-              <div
-                style={{
-                  width: "52px",
-                  height: "52px",
-                  borderRadius: "14px",
-                  backgroundColor: "#e7f0ff",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "22px",
-                  marginBottom: "16px",
-                }}
-              >
-                📘
-              </div>
-              <h2 style={{ margin: "0 0 10px", color: "#0f172a" }}>
-                Add Subject
-              </h2>
-              <p
-                style={{
-                  margin: "0 0 20px",
-                  color: "#64748b",
-                  lineHeight: "1.6",
-                  fontSize: "15px",
-                }}
-              >
-                Create a new subject and set the default duration for the test.
-              </p>
-              <button
-                onClick={() => navigate("/add-subject")}
-                style={primaryButton}
-              >
-                Open Subject Setup
-              </button>
-            </div>
+            Logout
+          </button>
+        </div>
 
-            <div style={cardStyle}>
-              <div
-                style={{
-                  width: "52px",
-                  height: "52px",
-                  borderRadius: "14px",
-                  backgroundColor: "#eefbf3",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "22px",
-                  marginBottom: "16px",
-                }}
-              >
-                ✍️
-              </div>
-              <h2 style={{ margin: "0 0 10px", color: "#0f172a" }}>
-                Add Question
-              </h2>
-              <p
-                style={{
-                  margin: "0 0 20px",
-                  color: "#64748b",
-                  lineHeight: "1.6",
-                  fontSize: "15px",
-                }}
-              >
-                Add question text, multiple options, correct answers, and
-                explanations for each subject.
-              </p>
-              <button
-                onClick={() => navigate("/add-question")}
-                style={secondaryButton}
-              >
-                Open Question Builder
-              </button>
-            </div>
+        <div
+          style={{
+            display: "grid",
 
-            <div style={cardStyle}>
-              <div
-                style={{
-                  width: "52px",
-                  height: "52px",
-                  borderRadius: "14px",
-                  backgroundColor: "#f3e8ff",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "22px",
-                  marginBottom: "16px",
-                }}
-              >
-                📥
-              </div>
-              <h2 style={{ margin: "0 0 10px", color: "#0f172a" }}>
-                Bulk Import
-              </h2>
-              <p
-                style={{
-                  margin: "0 0 20px",
-                  color: "#64748b",
-                  lineHeight: "1.6",
-                  fontSize: "15px",
-                }}
-              >
-                Paste a JSON array and import many questions into one subject at
-                once.
-              </p>
-              <button
-                onClick={() => navigate("/bulk-import-questions")}
-                style={secondaryButton}
-              >
-                Open Bulk Import
-              </button>
-            </div>
+            gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
 
-            <div style={cardStyle}>
-              <div
-                style={{
-                  width: "52px",
-                  height: "52px",
-                  borderRadius: "14px",
-                  backgroundColor: "#e7f0ff",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "22px",
-                  marginBottom: "16px",
-                }}
-              >
-                🛠️
-              </div>
-              <h2 style={{ margin: "0 0 10px", color: "#0f172a" }}>
-                Manage Subjects
-              </h2>
-              <p
-                style={{
-                  margin: "0 0 20px",
-                  color: "#64748b",
-                  lineHeight: "1.6",
-                  fontSize: "15px",
-                }}
-              >
-                Edit subject names, adjust timer duration, or delete subjects
-                you no longer need.
-              </p>
-              <button
-                onClick={() => navigate("/manage-subjects")}
-                style={secondaryButton}
-              >
-                Open Subject Manager
-              </button>
-            </div>
+            gap: "18px",
+          }}
+        >
+          <div style={cardStyle}>
+            <h2>Add Subject</h2>
 
-            <div style={cardStyle}>
-              <div
-                style={{
-                  width: "52px",
-                  height: "52px",
-                  borderRadius: "14px",
-                  backgroundColor: "#eefbf3",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "22px",
-                  marginBottom: "16px",
-                }}
-              >
-                🧾
-              </div>
-              <h2 style={{ margin: "0 0 10px", color: "#0f172a" }}>
-                Manage Questions
-              </h2>
-              <p
-                style={{
-                  margin: "0 0 20px",
-                  color: "#64748b",
-                  lineHeight: "1.6",
-                  fontSize: "15px",
-                }}
-              >
-                Edit existing questions, update answers and explanations, or
-                remove unwanted items.
-              </p>
-              <button
-                onClick={() => navigate("/manage-questions")}
-                style={secondaryButton}
-              >
-                Open Question Manager
-              </button>
-            </div>
+            <p style={{ color: "#64748b" }}>Create a subject and set timer.</p>
 
-            <div style={cardStyle}>
-              <div
-                style={{
-                  width: "52px",
-                  height: "52px",
-                  borderRadius: "14px",
-                  backgroundColor: "#f0fdf4",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "22px",
-                  marginBottom: "16px",
-                }}
-              >
-                🗂️
-              </div>
-              <h2 style={{ margin: "0 0 10px", color: "#0f172a" }}>
-                Add Topic
-              </h2>
-              <p
-                style={{
-                  margin: "0 0 20px",
-                  color: "#64748b",
-                  lineHeight: "1.6",
-                  fontSize: "15px",
-                }}
-              >
-                Create topic groups under a subject so questions can be
-                organized better.
-              </p>
-              <button
-                onClick={() => navigate("/add-topic")}
-                style={secondaryButton}
-              >
-                Open Topic Setup
-              </button>
-            </div>
+            <button
+              onClick={() => navigate("/add-subject")}
+              style={buttonStyle}
+            >
+              Add Subject
+            </button>
+          </div>
 
-            <div style={cardStyle}>
-              <div
-                style={{
-                  width: "52px",
-                  height: "52px",
-                  borderRadius: "14px",
-                  backgroundColor: "#fff7ed",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "22px",
-                  marginBottom: "16px",
-                }}
-              >
-                🧭
-              </div>
-              <h2 style={{ margin: "0 0 10px", color: "#0f172a" }}>
-                Manage Topics
-              </h2>
-              <p
-                style={{
-                  margin: "0 0 20px",
-                  color: "#64748b",
-                  lineHeight: "1.6",
-                  fontSize: "15px",
-                }}
-              >
-                Edit topic names, move them between subjects, or remove topics
-                you no longer need.
-              </p>
-              <button
-                onClick={() => navigate("/manage-topics")}
-                style={secondaryButton}
-              >
-                Open Topic Manager
-              </button>
-            </div>
+          <div style={cardStyle}>
+            <h2>Add Topic</h2>
 
-            <div style={cardStyle}>
-              <div
-                style={{
-                  width: "52px",
-                  height: "52px",
-                  borderRadius: "14px",
-                  backgroundColor: "#fff6e8",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "22px",
-                  marginBottom: "16px",
-                }}
-              >
-                ⚙️
-              </div>
-              <h2 style={{ margin: "0 0 10px", color: "#0f172a" }}>
-                Platform Control
-              </h2>
-              <p
-                style={{
-                  margin: "0 0 20px",
-                  color: "#64748b",
-                  lineHeight: "1.6",
-                  fontSize: "15px",
-                }}
-              >
-                Expand later with analytics, user progress, question review, and
-                timing controls.
-              </p>
-              <button onClick={() => navigate("/")} style={secondaryButton}>
-                Back to Home
-              </button>
-            </div>
+            <p style={{ color: "#64748b" }}>Create topics under subjects.</p>
+
+            <button onClick={() => navigate("/add-topic")} style={buttonStyle}>
+              Add Topic
+            </button>
+          </div>
+
+          <div style={cardStyle}>
+            <h2>Add Question</h2>
+
+            <p style={{ color: "#64748b" }}>Add one question manually.</p>
+
+            <button
+              onClick={() => navigate("/add-question")}
+              style={buttonStyle}
+            >
+              Add Question
+            </button>
+          </div>
+
+          <div style={cardStyle}>
+            <h2>Bulk Import</h2>
+
+            <p style={{ color: "#64748b" }}>Import many questions at once.</p>
+
+            <button
+              onClick={() => navigate("/bulk-import")}
+              style={buttonStyle}
+            >
+              Bulk Import
+            </button>
+          </div>
+
+          <div style={cardStyle}>
+            <h2>Manage Subjects</h2>
+
+            <p style={{ color: "#64748b" }}>Edit or delete subjects.</p>
+
+            <button
+              onClick={() => navigate("/manage-subjects")}
+              style={buttonStyle}
+            >
+              Manage Subjects
+            </button>
+          </div>
+
+          <div style={cardStyle}>
+            <h2>Manage Topics</h2>
+
+            <p style={{ color: "#64748b" }}>Edit or delete topics.</p>
+
+            <button
+              onClick={() => navigate("/manage-topics")}
+              style={buttonStyle}
+            >
+              Manage Topics
+            </button>
+          </div>
+
+          <div style={cardStyle}>
+            <h2>Manage Questions</h2>
+
+            <p style={{ color: "#64748b" }}>
+              Edit, delete, or bulk delete questions.
+            </p>
+
+            <button
+              onClick={() => navigate("/manage-questions")}
+              style={buttonStyle}
+            >
+              Manage Questions
+            </button>
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }
 

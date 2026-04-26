@@ -220,7 +220,7 @@ function HomePage() {
                 Start practicing <ArrowRight />
               </button>
               <button
-                onClick={() => navigate("/admin")}
+                onClick={() => navigate("/admin-login")}
                 style={{
                   padding: "11px 22px",
                   borderRadius: "8px",
