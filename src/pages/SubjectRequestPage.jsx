@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../lib/api";
 
-const MAX_FILE_SIZE = 15 * 1024 * 1024; // 5MB
+const MAX_FILE_SIZE = 15 * 1024 * 1024;
 
 const allowedTypes = [
   "application/pdf",
@@ -16,13 +16,7 @@ const allowedTypes = [
 function ChevronLeft() {
   return (
     <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-      <path
-        d="M9 3L5 7l4 4"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+      <path d="M9 3L5 7l4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -30,19 +24,16 @@ function ChevronLeft() {
 function UploadIcon() {
   return (
     <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-      <path
-        d="M11 14V4M7 8l4-4 4 4"
-        stroke="#185FA5"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M4 17h14"
-        stroke="#185FA5"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
+      <path d="M11 14V4M7 8l4-4 4 4" stroke="#185FA5" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M4 17h14" stroke="#185FA5" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function HomeIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+      <path d="M1.5 6.5L6.5 2l5 4.5V11.5a.5.5 0 01-.5.5H8.5v-3h-3v3H2a.5.5 0 01-.5-.5V6.5z" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -75,26 +66,16 @@ function SubjectRequestPage() {
     if (!selectedFile) return;
 
     if (selectedFile.size > MAX_FILE_SIZE) {
-      setFileError("File is too large. Maximum allowed size is 5MB.");
+      setFileError("File is too large. Maximum allowed size is 15MB.");
       setFile(null);
-
-      if (inputElement) {
-        inputElement.value = "";
-      }
-
+      if (inputElement) inputElement.value = "";
       return;
     }
 
     if (!allowedTypes.includes(selectedFile.type)) {
-      setFileError(
-        "Unsupported file type. Please upload PDF, DOC, DOCX, TXT, JPG, or PNG.",
-      );
+      setFileError("Unsupported file type. Please upload PDF, DOC, DOCX, TXT, JPG, or PNG.");
       setFile(null);
-
-      if (inputElement) {
-        inputElement.value = "";
-      }
-
+      if (inputElement) inputElement.value = "";
       return;
     }
 
@@ -105,9 +86,7 @@ function SubjectRequestPage() {
   const handleDrop = (e) => {
     e.preventDefault();
     setDragOver(false);
-
-    const droppedFile = e.dataTransfer.files[0];
-    validateAndSetFile(droppedFile);
+    validateAndSetFile(e.dataTransfer.files[0]);
   };
 
   const handleSubmit = async (e) => {
@@ -122,22 +101,15 @@ function SubjectRequestPage() {
     formData.append("subject", subject.trim());
     formData.append("topic", topic.trim());
     formData.append("timer", timer);
-
-    if (file) {
-      formData.append("file", file);
-    }
+    if (file) formData.append("file", file);
 
     try {
       setIsSubmitting(true);
-
       await api.post("/api/requests/subject-request", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
+        headers: { "Content-Type": "multipart/form-data" },
       });
 
       setSuccess(true);
-
       setTimeout(() => {
         setSubject("");
         setTopic("");
@@ -158,48 +130,25 @@ function SubjectRequestPage() {
     <>
       <style>{`
         @keyframes fadeUp {
-           from  { opacity: 0; transform: translateY(12px); }
+          from { opacity: 0; transform: translateY(12px); }
           to { opacity: 1; transform: translateY(0); }
         }
-
         @keyframes successPop {
           0% { transform: scale(0.92); opacity: 0; }
           60% { transform: scale(1.03); }
           100% { transform: scale(1); opacity: 1; }
         }
-
         @keyframes spin {
           to { transform: rotate(360deg); }
         }
-
-        .page-enter {
-          animation: fadeUp 0.35s ease both;
-        }
-
-        .card-enter {
-          animation: fadeUp 0.4s ease 0.05s both;
-        }
-
-        .success-banner {
-          animation: successPop 0.35s ease both;
-        }
-
-        input:focus {
-          outline: none;
-        }
-
+        .page-enter { animation: fadeUp 0.35s ease both; }
+        .card-enter { animation: fadeUp 0.4s ease 0.05s both; }
+        .success-banner { animation: successPop 0.35s ease both; }
+        input:focus { outline: none; }
         @media (max-width: 640px) {
-          .subject-request-card {
-            padding: 1.25rem !important;
-          }
-
-          .subject-request-actions {
-            flex-direction: column !important;
-          }
-
-          .subject-request-actions button {
-            width: 100% !important;
-          }
+          .subject-request-card { padding: 1.25rem !important; }
+          .subject-request-actions { flex-direction: column !important; }
+          .subject-request-actions button { width: 100% !important; }
         }
       `}</style>
 
@@ -210,15 +159,13 @@ function SubjectRequestPage() {
               <ChevronLeft />
               Back
             </button>
-
             <span style={S.breadcrumb}>Dashboard / Subject request</span>
           </div>
 
           <div className="page-enter" style={S.pageHeader}>
             <h1 style={S.heading}>Request a Subject</h1>
             <p style={S.subheading}>
-              Tell the admin the subject, topic, and preferred test timer.
-              Attach a reference file if you have one.
+              Tell the admin the subject, topic, and preferred test timer. Attach a reference file if you have one.
             </p>
           </div>
 
@@ -248,13 +195,7 @@ function SubjectRequestPage() {
                     required
                     style={S.input}
                     onFocus={(e) => Object.assign(e.target.style, S.inputFocus)}
-                    onBlur={(e) =>
-                      Object.assign(e.target.style, {
-                        borderColor: "rgba(0,0,0,0.12)",
-                        boxShadow: "none",
-                        background: "#fafafa",
-                      })
-                    }
+                    onBlur={(e) => Object.assign(e.target.style, { borderColor: "rgba(0,0,0,0.12)", boxShadow: "none", background: "#fafafa" })}
                   />
                 </Field>
 
@@ -267,13 +208,7 @@ function SubjectRequestPage() {
                     required
                     style={S.input}
                     onFocus={(e) => Object.assign(e.target.style, S.inputFocus)}
-                    onBlur={(e) =>
-                      Object.assign(e.target.style, {
-                        borderColor: "rgba(0,0,0,0.12)",
-                        boxShadow: "none",
-                        background: "#fafafa",
-                      })
-                    }
+                    onBlur={(e) => Object.assign(e.target.style, { borderColor: "rgba(0,0,0,0.12)", boxShadow: "none", background: "#fafafa" })}
                   />
                 </Field>
               </div>
@@ -287,37 +222,20 @@ function SubjectRequestPage() {
                   required
                   style={{ ...S.input, maxWidth: "160px" }}
                   onFocus={(e) => Object.assign(e.target.style, S.inputFocus)}
-                  onBlur={(e) =>
-                    Object.assign(e.target.style, {
-                      borderColor: "rgba(0,0,0,0.12)",
-                      boxShadow: "none",
-                      background: "#fafafa",
-                    })
-                  }
+                  onBlur={(e) => Object.assign(e.target.style, { borderColor: "rgba(0,0,0,0.12)", boxShadow: "none", background: "#fafafa" })}
                 />
               </Field>
 
               <Field label="Reference file" hint="Optional">
                 <div
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    setDragOver(true);
-                  }}
+                  onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
                   onDragLeave={() => setDragOver(false)}
                   onDrop={handleDrop}
                   onClick={() => document.getElementById("file-input").click()}
                   style={{
                     ...S.dropZone,
-                    borderColor: dragOver
-                      ? "#185FA5"
-                      : file
-                        ? "#185FA5"
-                        : "rgba(0,0,0,0.12)",
-                    background: dragOver
-                      ? "#E6F1FB"
-                      : file
-                        ? "#f0f7ff"
-                        : "#fafafa",
+                    borderColor: dragOver ? "#185FA5" : file ? "#185FA5" : "rgba(0,0,0,0.12)",
+                    background: dragOver ? "#E6F1FB" : file ? "#f0f7ff" : "#fafafa",
                   }}
                 >
                   <input
@@ -325,33 +243,18 @@ function SubjectRequestPage() {
                     type="file"
                     accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png"
                     style={{ display: "none" }}
-                    onChange={(e) => {
-                      const selectedFile = e.target.files[0];
-                      validateAndSetFile(selectedFile, e.target);
-                    }}
+                    onChange={(e) => validateAndSetFile(e.target.files[0], e.target)}
                   />
-
                   <UploadIcon />
-
                   {file ? (
                     <div style={{ textAlign: "center" }}>
                       <p style={S.fileName}>{file.name}</p>
-                      <p style={S.fileHint}>
-                        {(file.size / (1024 * 1024)).toFixed(2)} MB, click to
-                        replace
-                      </p>
+                      <p style={S.fileHint}>{(file.size / (1024 * 1024)).toFixed(2)} MB · click to replace</p>
                     </div>
                   ) : (
                     <div style={{ textAlign: "center" }}>
-                      <p style={S.dropLabel}>
-                        Drag and drop or{" "}
-                        <span style={{ color: "#185FA5", fontWeight: "600" }}>
-                          browse
-                        </span>
-                      </p>
-                      <p style={S.fileHint}>
-                        PDF, DOC, DOCX, TXT, JPG, PNG, max 15MB
-                      </p>
+                      <p style={S.dropLabel}>Drag and drop or <span style={{ color: "#185FA5", fontWeight: "600" }}>browse</span></p>
+                      <p style={S.fileHint}>PDF, DOC, DOCX, TXT, JPG, PNG · max 15MB</p>
                     </div>
                   )}
                 </div>
@@ -363,20 +266,10 @@ function SubjectRequestPage() {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  style={{
-                    ...S.submitBtn,
-                    opacity: isSubmitting ? 0.7 : 1,
-                    cursor: isSubmitting ? "not-allowed" : "pointer",
-                  }}
+                  style={{ ...S.submitBtn, opacity: isSubmitting ? 0.7 : 1, cursor: isSubmitting ? "not-allowed" : "pointer" }}
                 >
                   {isSubmitting ? (
-                    <span
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px",
-                      }}
-                    >
+                    <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                       <span style={S.spinner} />
                       Sending...
                     </span>
@@ -387,10 +280,11 @@ function SubjectRequestPage() {
 
                 <button
                   type="button"
-                  onClick={() => navigate("/user")}
-                  style={S.cancelBtn}
+                  onClick={() => navigate("/")}
+                  style={S.homeBtn}
                 >
-                  Cancel
+                  <HomeIcon />
+                  Back Home
                 </button>
               </div>
             </form>
@@ -409,10 +303,7 @@ const S = {
     background: "#f8f9fb",
     padding: "2rem 1.25rem 4rem",
   },
-  inner: {
-    maxWidth: "680px",
-    margin: "0 auto",
-  },
+  inner: { maxWidth: "680px", margin: "0 auto" },
   topBar: {
     display: "flex",
     alignItems: "center",
@@ -440,9 +331,7 @@ const S = {
     textTransform: "uppercase",
     letterSpacing: "0.07em",
   },
-  pageHeader: {
-    marginBottom: "1.5rem",
-  },
+  pageHeader: { marginBottom: "1.5rem" },
   heading: {
     fontSize: "clamp(22px, 3.5vw, 28px)",
     fontWeight: "600",
@@ -495,25 +384,15 @@ const S = {
     gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
     gap: "0 1.25rem",
   },
-  field: {
-    marginBottom: "1.25rem",
-  },
+  field: { marginBottom: "1.25rem" },
   labelRow: {
     display: "flex",
     alignItems: "baseline",
     gap: "8px",
     marginBottom: "6px",
   },
-  label: {
-    fontSize: "13px",
-    fontWeight: "600",
-    color: "#0f172a",
-  },
-  hint: {
-    fontSize: "11px",
-    color: "#94a3b8",
-    fontWeight: "500",
-  },
+  label: { fontSize: "13px", fontWeight: "600", color: "#0f172a" },
+  hint: { fontSize: "11px", color: "#94a3b8", fontWeight: "500" },
   input: {
     width: "100%",
     padding: "10px 13px",
@@ -541,11 +420,7 @@ const S = {
     cursor: "pointer",
     transition: "border-color 0.15s, background 0.15s",
   },
-  dropLabel: {
-    fontSize: "13px",
-    color: "#475569",
-    margin: "0 0 2px",
-  },
+  dropLabel: { fontSize: "13px", color: "#475569", margin: "0 0 2px" },
   fileName: {
     fontSize: "13px",
     fontWeight: "600",
@@ -553,21 +428,13 @@ const S = {
     margin: "0 0 2px",
     wordBreak: "break-all",
   },
-  fileHint: {
-    fontSize: "11px",
-    color: "#94a3b8",
-    margin: 0,
-  },
+  fileHint: { fontSize: "11px", color: "#94a3b8", margin: 0 },
   divider: {
     height: "0.5px",
     background: "rgba(0,0,0,0.07)",
     margin: "0.5rem 0 1.5rem",
   },
-  actions: {
-    display: "flex",
-    gap: "10px",
-    flexWrap: "wrap",
-  },
+  actions: { display: "flex", gap: "10px", flexWrap: "wrap" },
   submitBtn: {
     padding: "10px 22px",
     border: "none",
@@ -580,8 +447,12 @@ const S = {
     alignItems: "center",
     gap: "8px",
     letterSpacing: "-0.01em",
+    cursor: "pointer",
   },
-  cancelBtn: {
+  homeBtn: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "6px",
     padding: "10px 18px",
     border: "0.5px solid rgba(0,0,0,0.15)",
     borderRadius: "8px",
