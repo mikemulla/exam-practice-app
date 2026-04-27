@@ -219,21 +219,6 @@ function HomePage() {
               >
                 Start practicing <ArrowRight />
               </button>
-              <button
-                onClick={() => navigate("/admin-login")}
-                style={{
-                  padding: "11px 22px",
-                  borderRadius: "8px",
-                  fontSize: "14px",
-                  fontWeight: "500",
-                  cursor: "pointer",
-                  background: "#fff",
-                  color: "#0f172a",
-                  border: "0.5px solid rgba(0,0,0,0.18)",
-                }}
-              >
-                Go to admin
-              </button>
             </div>
 
             {/* feature strip */}
