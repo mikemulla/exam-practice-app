@@ -228,6 +228,21 @@ function AdminPage() {
               Manage Questions
             </button>
           </div>
+
+          <div style={cardStyle}>
+            <h2>Subject Requests</h2>
+
+            <p style={{ color: "#64748b" }}>
+              View requests submitted by users.
+            </p>
+
+            <button
+              onClick={() => navigate("/admin-requests")}
+              style={buttonStyle}
+            >
+              View Requests
+            </button>
+          </div>
         </div>
       </div>
     </div>

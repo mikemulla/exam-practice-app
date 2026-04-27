@@ -14,6 +14,7 @@ import SubjectRequestPage from "./pages/SubjectRequestPage";
 import TopicSelectionPage from "./pages/TopicSelectionPage";
 import AdminLoginPage from "./pages/AdminLoginPage";
 import ProtectedAdminRoute from "./components/ProtectedAdminRoute";
+import AdminRequestsPage from "./pages/AdminRequestdPage";
 
 function App() {
   return (
@@ -93,7 +94,14 @@ function App() {
             </ProtectedAdminRoute>
           }
         />
-
+        <Route
+          path="/admin-requests"
+          element={
+            <ProtectedAdminRoute>
+              <AdminRequestsPage />
+            </ProtectedAdminRoute>
+          }
+        />
         <Route
           path="/manage-questions"
           element={
