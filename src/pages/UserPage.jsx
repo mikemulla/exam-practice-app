@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import api from "../lib/api";
 import { useNavigate } from "react-router-dom";
 
-/* ─── tiny icons ─── */
 function BookIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
@@ -67,14 +66,13 @@ function LayersIcon() {
   );
 }
 
-/* ─── skeleton loader ─── */
 function SkeletonCard() {
   return (
     <div style={S.card}>
       <style>{`
         @keyframes shimmer {
           0%   { background-position: -400px 0 }
-          100% { background-position: 400px 0 }
+          100% { background-position:  400px 0 }
         }
         .shimmer {
           background: linear-gradient(90deg, #f1f5f9 25%, #e8edf4 50%, #f1f5f9 75%);
@@ -106,7 +104,6 @@ function SkeletonCard() {
   );
 }
 
-/* ─── subject card ─── */
 function SubjectCard({ subject, topicCount, index, onViewTopics }) {
   const [hovered, setHovered] = useState(false);
   const minutes = Math.floor((subject.duration || 300) / 60);
@@ -126,15 +123,10 @@ function SubjectCard({ subject, topicCount, index, onViewTopics }) {
       }}
       className="subject-card-enter"
     >
-      {/* icon bubble */}
       <div style={S.iconBubble}>
         <BookIcon />
       </div>
-
-      {/* subject name */}
       <p style={S.subjectName}>{subject.name}</p>
-
-      {/* meta row */}
       <div style={S.metaRow}>
         <span style={S.metaPill}>
           <ClockIcon />
@@ -150,17 +142,10 @@ function SubjectCard({ subject, topicCount, index, onViewTopics }) {
           Timed
         </span>
       </div>
-
-      {/* divider */}
       <div style={S.divider} />
-
-      {/* cta */}
       <button
         onClick={onViewTopics}
-        style={{
-          ...S.cta,
-          background: hovered ? "#1453901" : "#185FA5",
-        }}
+        style={{ ...S.cta, background: hovered ? "#145390" : "#185FA5" }}
       >
         <span>View topics</span>
         <span style={S.ctaArrow}>
@@ -171,29 +156,65 @@ function SubjectCard({ subject, topicCount, index, onViewTopics }) {
   );
 }
 
-/* ─── page ─── */
 function UserPage() {
   const [subjects, setSubjects] = useState([]);
   const [topics, setTopics] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [userInfo, setUserInfo] = useState({});
   const navigate = useNavigate();
 
   useEffect(() => {
+    const info = JSON.parse(localStorage.getItem("userInfo") || "{}");
+    setUserInfo(info);
+
     const fetchData = async () => {
       try {
         setIsLoading(true);
-        const [subjectsRes, topicsRes] = await Promise.all([
-          api.get("/api/subjects"),
-          api.get("/api/topics"),
-        ]);
-        setSubjects(subjectsRes.data);
-        setTopics(topicsRes.data);
+
+        const token = localStorage.getItem("userToken");
+
+        if (!token) {
+          navigate("/user-login");
+          return;
+        }
+
+        const subjectsRes = await api.get("/api/subjects", {
+          _tokenType: "user",
+        });
+
+        const subjectsData = Array.isArray(subjectsRes.data)
+          ? subjectsRes.data
+          : Array.isArray(subjectsRes.data?.subjects)
+            ? subjectsRes.data.subjects
+            : Array.isArray(subjectsRes.data?.data)
+              ? subjectsRes.data.data
+              : [];
+
+        const allTopics = await Promise.all(
+          subjectsData.map((subject) =>
+            api
+              .get(`/api/topics/subject/${subject._id}`, {
+                _tokenType: "user",
+              })
+              .then((res) => {
+                if (Array.isArray(res.data)) return res.data;
+                if (Array.isArray(res.data?.topics)) return res.data.topics;
+                if (Array.isArray(res.data?.data)) return res.data.data;
+                return [];
+              })
+              .catch(() => []),
+          ),
+        );
+
+        setSubjects(subjectsData);
+        setTopics(allTopics.flat());
       } catch (err) {
         console.error("Error fetching dashboard data:", err);
       } finally {
         setIsLoading(false);
       }
     };
+
     fetchData();
   }, []);
 
@@ -206,6 +227,8 @@ function UserPage() {
     return counts;
   }, [topics]);
 
+  const courseName = userInfo.course?.name || userInfo.courseName || null;
+
   return (
     <>
       <style>{`
@@ -217,16 +240,16 @@ function UserPage() {
           animation: fadeUp 0.35s ease both;
           transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
         }
-        .header-fade {
-          animation: fadeUp 0.4s ease both;
-        }
+        .header-fade { animation: fadeUp 0.4s ease both; }
       `}</style>
 
       <div style={S.page}>
         <div style={S.inner}>
-          {/* ── page header ── */}
           <div className="header-fade" style={S.pageHeader}>
-            <button onClick={() => navigate(-1)} style={S.backBtn}>
+            <button
+              onClick={() => navigate("/user-dashboard")}
+              style={S.backBtn}
+            >
               ← Back
             </button>
             <div style={S.eyebrow}>User dashboard</div>
@@ -243,9 +266,19 @@ function UserPage() {
               Pick a subject below, choose a topic or take the full test, then
               get instant review with explanations after submission.
             </p>
+            {/* Show course/level context */}
+            {(courseName || userInfo.level) && (
+              <div style={S.contextRow}>
+                {courseName && (
+                  <span style={S.contextPill}>📚 {courseName}</span>
+                )}
+                {userInfo.level && (
+                  <span style={S.contextPill}>🎓 {userInfo.level} Level</span>
+                )}
+              </div>
+            )}
           </div>
 
-          {/* ── grid ── */}
           {isLoading ? (
             <div style={S.grid}>
               {[...Array(6)].map((_, i) => (
@@ -255,10 +288,12 @@ function UserPage() {
           ) : subjects.length === 0 ? (
             <div style={S.emptyState}>
               <div style={S.emptyIcon}>📚</div>
-              <p style={S.emptyTitle}>No subjects yet</p>
+              <p style={S.emptyTitle}>No subjects available</p>
               <p style={S.emptyBody}>
-                Ask the admin to create subjects, topics, and questions before
-                you start practicing.
+                No subjects have been assigned to your course and level yet. Ask
+                the admin to add subjects for{" "}
+                {courseName ? `${courseName}` : "your course"}
+                {userInfo.level ? ` — ${userInfo.level} Level` : ""}.
               </p>
             </div>
           ) : (
@@ -284,22 +319,14 @@ function UserPage() {
 
 export default UserPage;
 
-/* ─── styles ─── */
 const S = {
   page: {
     minHeight: "100vh",
     background: "#f8f9fb",
     padding: "2.5rem 1.25rem 4rem",
   },
-  inner: {
-    maxWidth: "1080px",
-    margin: "0 auto",
-  },
-
-  /* header */
-  pageHeader: {
-    marginBottom: "2rem",
-  },
+  inner: { maxWidth: "1080px", margin: "0 auto" },
+  pageHeader: { marginBottom: "2rem" },
   eyebrow: {
     fontSize: "11px",
     fontWeight: "600",
@@ -330,6 +357,23 @@ const S = {
     maxWidth: "520px",
     margin: 0,
   },
+  contextRow: {
+    display: "flex",
+    gap: "8px",
+    flexWrap: "wrap",
+    marginTop: "12px",
+  },
+  contextPill: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "4px",
+    padding: "4px 12px",
+    borderRadius: "999px",
+    background: "#E6F1FB",
+    color: "#185FA5",
+    fontSize: "12px",
+    fontWeight: "500",
+  },
   backBtn: {
     display: "inline-flex",
     alignItems: "center",
@@ -343,7 +387,6 @@ const S = {
     fontSize: "13px",
     fontWeight: "500",
     cursor: "pointer",
-    transition: "border-color 0.15s, box-shadow 0.15s",
   },
   requestBtn: {
     padding: "9px 16px",
@@ -355,17 +398,12 @@ const S = {
     fontWeight: "500",
     cursor: "pointer",
     whiteSpace: "nowrap",
-    transition: "border-color 0.15s, box-shadow 0.15s",
   },
-
-  /* grid */
   grid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 260px), 1fr))",
     gap: "14px",
   },
-
-  /* card */
   card: {
     background: "#fff",
     borderRadius: "14px",
@@ -393,8 +431,6 @@ const S = {
     textTransform: "capitalize",
     letterSpacing: "-0.01em",
   },
-
-  /* meta */
   metaRow: {
     display: "flex",
     gap: "6px",
@@ -412,14 +448,11 @@ const S = {
     fontSize: "11px",
     fontWeight: "500",
   },
-
   divider: {
     height: "0.5px",
     background: "rgba(0,0,0,0.07)",
     marginBottom: "1.125rem",
   },
-
-  /* cta */
   cta: {
     marginTop: "auto",
     width: "100%",
@@ -428,7 +461,6 @@ const S = {
     fontSize: "13px",
     fontWeight: "600",
     cursor: "pointer",
-    background: "#185FA5",
     color: "#fff",
     border: "none",
     display: "flex",
@@ -437,13 +469,7 @@ const S = {
     transition: "background 0.15s",
     letterSpacing: "-0.01em",
   },
-  ctaArrow: {
-    display: "flex",
-    alignItems: "center",
-    opacity: 0.8,
-  },
-
-  /* empty */
+  ctaArrow: { display: "flex", alignItems: "center", opacity: 0.8 },
   emptyState: {
     background: "#fff",
     border: "0.5px solid rgba(0,0,0,0.08)",
@@ -451,10 +477,7 @@ const S = {
     padding: "3.5rem 2rem",
     textAlign: "center",
   },
-  emptyIcon: {
-    fontSize: "32px",
-    marginBottom: "1rem",
-  },
+  emptyIcon: { fontSize: "32px", marginBottom: "1rem" },
   emptyTitle: {
     fontSize: "15px",
     fontWeight: "600",

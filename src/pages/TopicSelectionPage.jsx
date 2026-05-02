@@ -16,16 +16,31 @@ function TopicSelectionPage() {
       try {
         setIsLoading(true);
 
+        const token = localStorage.getItem("userToken");
+
+        if (!token) {
+          navigate("/user-login");
+          return;
+        }
+
         const [subjectResponse, topicsResponse, questionsResponse] =
           await Promise.all([
-            api.get(`/api/subjects/${subjectId}`),
-            api.get(`/api/topics/subject/${subjectId}`),
-            api.get(`/api/questions/subject/${subjectId}`),
+            api.get(`/api/subjects/${subjectId}`, { _tokenType: "user" }),
+            api.get(`/api/topics/subject/${subjectId}`, { _tokenType: "user" }),
+            api.get(`/api/questions/subject/${subjectId}`, { _tokenType: "user" }),
           ]);
 
-        setSubject(subjectResponse.data);
-        setTopics(topicsResponse.data);
-        setSubjectQuestions(questionsResponse.data);
+        const subjectData = subjectResponse.data?.subject || subjectResponse.data;
+        const topicsData = Array.isArray(topicsResponse.data)
+          ? topicsResponse.data
+          : topicsResponse.data?.topics || [];
+        const questionsData = Array.isArray(questionsResponse.data)
+          ? questionsResponse.data
+          : questionsResponse.data?.questions || [];
+
+        setSubject(subjectData);
+        setTopics(topicsData);
+        setSubjectQuestions(questionsData);
       } catch (error) {
         console.error("Error loading topics:", error);
       } finally {
@@ -39,7 +54,9 @@ function TopicSelectionPage() {
   const topicQuestionCounts = useMemo(() => {
     const counts = {};
 
-    subjectQuestions.forEach((question) => {
+    const questions = Array.isArray(subjectQuestions) ? subjectQuestions : [];
+
+    questions.forEach((question) => {
       const currentTopicId = question.topicId?._id || question.topicId;
 
       if (currentTopicId) {
@@ -50,7 +67,7 @@ function TopicSelectionPage() {
     return counts;
   }, [subjectQuestions]);
 
-  const totalQuestionCount = subjectQuestions.length;
+  const totalQuestionCount = Array.isArray(subjectQuestions) ? subjectQuestions.length : 0;
 
   if (isLoading) {
     return (
@@ -119,13 +136,13 @@ function TopicSelectionPage() {
               fontSize: "14px",
             }}
           >
-            {topics.length} topic{topics.length === 1 ? "" : "s"} available,{" "}
+            {Array.isArray(topics) ? topics.length : 0} topic{Array.isArray(topics) && topics.length === 1 ? "" : "s"} available,{" "}
             {totalQuestionCount} total question
             {totalQuestionCount === 1 ? "" : "s"}
           </p>
         </div>
 
-        {topics.length === 0 && (
+        {(!Array.isArray(topics) || topics.length === 0) && (
           <div
             style={{
               marginBottom: "20px",
@@ -240,7 +257,7 @@ function TopicSelectionPage() {
             </button>
           </div>
 
-          {topics.map((topic) => {
+          {(Array.isArray(topics) ? topics : []).map((topic) => {
             const topicCount = topicQuestionCounts[topic._id] || 0;
 
             return (

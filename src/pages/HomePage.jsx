@@ -123,7 +123,7 @@ const stats = [
 
 function HomePage() {
   const navigate = useNavigate();
-
+  const userToken = localStorage.getItem("userToken");
   return (
     <>
       <div style={{ minHeight: "100vh", background: "#f8f9fb" }}>
@@ -205,7 +205,9 @@ function HomePage() {
               }}
             >
               <button
-                onClick={() => navigate("/user")}
+                onClick={() =>
+                  navigate(userToken ? "/user-dashboard" : "/user-login")
+                }
                 style={{
                   padding: "11px 22px",
                   borderRadius: "8px",

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../lib/api";
 
@@ -485,6 +485,8 @@ function SubjectTestPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [timeLeft, setTimeLeft] = useState(300);
+  const [reviewMode, setReviewMode] = useState("all");
+  const resultSavedRef = useRef(false);
 
   useEffect(() => {
     injectFonts();
@@ -498,19 +500,27 @@ function SubjectTestPage() {
       try {
         setIsLoading(true);
         setErrorMessage("");
+        const token = localStorage.getItem("userToken");
+
+        if (!token) {
+          navigate("/user-login");
+          return;
+        }
+
+        const userRequest = { _tokenType: "user" };
+
         if (isTopicMode) {
           const [topicResponse, questionsResponse] = await Promise.all([
-            api.get("/api/topics"),
-            api.get(`/api/questions/topic/${topicId}`),
+            api.get(`/api/topics/${topicId}`, userRequest),
+            api.get(`/api/questions/topic/${topicId}`, userRequest),
           ]);
-          const selectedTopic = topicResponse.data.find(
-            (t) => t._id === topicId,
-          );
+          const selectedTopic = topicResponse.data;
           if (!selectedTopic) throw new Error("Topic not found");
           const resolvedSubjectId =
             selectedTopic.subjectId?._id || selectedTopic.subjectId;
           const subjectResponse = await api.get(
             `/api/subjects/${resolvedSubjectId}`,
+            userRequest,
           );
           const unique = Array.from(
             new Map(questionsResponse.data.map((q) => [q._id, q])).values(),
@@ -524,8 +534,8 @@ function SubjectTestPage() {
           );
         } else {
           const [subjectResponse, questionsResponse] = await Promise.all([
-            api.get(`/api/subjects/${subjectId}`),
-            api.get(`/api/questions/subject/${subjectId}`),
+            api.get(`/api/subjects/${subjectId}`, userRequest),
+            api.get(`/api/questions/subject/${subjectId}`, userRequest),
           ]);
           const unique = Array.from(
             new Map(questionsResponse.data.map((q) => [q._id, q])).values(),
@@ -541,6 +551,8 @@ function SubjectTestPage() {
         setCurrentQuestionIndex(0);
         setSelectedAnswers({});
         setShowResults(false);
+        setReviewMode("all");
+        resultSavedRef.current = false;
       } catch (err) {
         console.error(err);
         setErrorMessage("Unable to load this test right now.");
@@ -549,7 +561,7 @@ function SubjectTestPage() {
       }
     };
     fetchPageData();
-  }, [subjectId, topicId, isTopicMode]);
+  }, [subjectId, topicId, isTopicMode, navigate]);
 
   useEffect(() => {
     if (!subject) return;
@@ -575,6 +587,37 @@ function SubjectTestPage() {
     [questions, selectedAnswers],
   );
 
+  useEffect(() => {
+    if (!showResults || resultSavedRef.current || !subject || questions.length === 0) {
+      return;
+    }
+
+    const saveResult = async () => {
+      try {
+        resultSavedRef.current = true;
+        const timeUsed = Math.max(0, (subject.duration || 300) - timeLeft);
+
+        await api.post(
+          "/api/results",
+          {
+            subjectId: subject._id,
+            topicId: isTopicMode ? topicId : null,
+            score,
+            total: questions.length,
+            timeTaken: timeUsed,
+            mode: isTopicMode ? "topic" : "subject",
+          },
+          { _tokenType: "user" },
+        );
+      } catch (error) {
+        resultSavedRef.current = false;
+        console.error("Failed to save result:", error);
+      }
+    };
+
+    saveResult();
+  }, [showResults, subject, questions.length, score, timeLeft, isTopicMode, topicId]);
+
   const currentQuestion = questions[currentQuestionIndex];
   const answeredCount = Object.keys(selectedAnswers).length;
   const progressPercent = questions.length
@@ -595,6 +638,8 @@ function SubjectTestPage() {
   };
 
   const handleRetakeTest = () => {
+    resultSavedRef.current = false;
+    setReviewMode("all");
     setQuestions(
       shuffleArray(
         questions.map((q) => ({ ...q, options: shuffleArray(q.options) })),
@@ -709,8 +754,12 @@ function SubjectTestPage() {
      RESULTS VIEW
   ══════════════════════════════════════ */
   if (showResults) {
-    const timeUsed = defaultDuration - timeLeft;
+    const timeUsed = Math.max(0, defaultDuration - timeLeft);
     const percentage = Math.round((score / questions.length) * 100);
+    const wrongQuestions = questions.filter(
+      (question) => selectedAnswers[question._id] !== question.correctAnswer,
+    );
+    const reviewQuestions = reviewMode === "wrong" ? wrongQuestions : questions;
 
     return page(
       <>
@@ -893,14 +942,51 @@ function SubjectTestPage() {
         </div>
 
         {/* Per-question review */}
-        {questions.map((question, index) => (
-          <QuestionReviewCard
-            key={question._id}
-            question={question}
-            index={index}
-            userAnswer={selectedAnswers[question._id]}
-          />
-        ))}
+        <div
+          style={{
+            display: "flex",
+            gap: "8px",
+            flexWrap: "wrap",
+            marginBottom: "1rem",
+          }}
+        >
+          <Btn
+            variant={reviewMode === "all" ? "primary" : "secondary"}
+            onClick={() => setReviewMode("all")}
+          >
+            All questions
+          </Btn>
+          <Btn
+            variant={reviewMode === "wrong" ? "primary" : "secondary"}
+            onClick={() => setReviewMode("wrong")}
+          >
+            Wrong answers only ({wrongQuestions.length})
+          </Btn>
+        </div>
+
+        {reviewMode === "wrong" && wrongQuestions.length === 0 ? (
+          <div
+            style={{
+              background: T.accentLight,
+              border: "1px solid #B8DDC3",
+              borderRadius: T.radiusLg,
+              padding: "1.25rem",
+              color: T.accent,
+              marginBottom: "1rem",
+            }}
+          >
+            Perfect score. No wrong answers to review.
+          </div>
+        ) : (
+          reviewQuestions.map((question) => (
+            <QuestionReviewCard
+              key={question._id}
+              question={question}
+              index={questions.findIndex((q) => q._id === question._id)}
+              userAnswer={selectedAnswers[question._id]}
+            />
+          ))
+        )}
 
         <div
           style={{
@@ -1052,6 +1138,7 @@ function SubjectTestPage() {
 
       {/* Question card */}
       <div
+        key={currentQuestionIndex}
         style={{
           background: T.surface,
           border: `1px solid ${T.border}`,
@@ -1059,7 +1146,6 @@ function SubjectTestPage() {
           padding: "1.75rem",
           boxShadow: T.shadowMd,
           animation: `fadeUp 0.3s ease`,
-          key: currentQuestionIndex,
         }}
       >
         <div

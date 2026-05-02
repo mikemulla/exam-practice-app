@@ -2,6 +2,14 @@ import { useEffect, useState } from "react";
 import api from "../lib/api";
 import { useNavigate } from "react-router-dom";
 
+const apiArray = (payload, key) => {
+  if (Array.isArray(payload)) return payload;
+  if (key && Array.isArray(payload?.[key])) return payload[key];
+  if (Array.isArray(payload?.data)) return payload.data;
+  return [];
+};
+
+
 function AddTopicPage() {
   const navigate = useNavigate();
 
@@ -12,8 +20,11 @@ function AddTopicPage() {
   useEffect(() => {
     const fetchSubjects = async () => {
       try {
-        const response = await api.get("/api/subjects");
-        setSubjects(response.data);
+        const adminToken = localStorage.getItem("adminToken");
+        const response = await api.get("/api/subjects/admin/all", {
+          headers: { Authorization: `Bearer ${adminToken}` },
+        });
+        setSubjects(apiArray(response.data, "subjects"));
       } catch (error) {
         console.error("Error fetching subjects:", error);
       }
@@ -31,10 +42,18 @@ function AddTopicPage() {
     }
 
     try {
-      await api.post("/api/topics", {
-        subjectId,
-        name: topicName,
-      });
+      const adminToken = localStorage.getItem("adminToken");
+
+      await api.post(
+        "/api/topics",
+        {
+          subjectId,
+          name: topicName,
+        },
+        {
+          headers: { Authorization: `Bearer ${adminToken}` },
+        },
+      );
 
       alert("Topic saved successfully");
       setSubjectId("");

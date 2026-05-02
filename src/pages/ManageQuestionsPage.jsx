@@ -2,6 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 import api from "../lib/api";
 import { useNavigate } from "react-router-dom";
 
+const apiArray = (payload, key) => {
+  if (Array.isArray(payload)) return payload;
+  if (key && Array.isArray(payload?.[key])) return payload[key];
+  if (Array.isArray(payload?.data)) return payload.data;
+  return [];
+};
+
+
 const styles = {
   page: {
     minHeight: "100vh",
@@ -515,8 +523,12 @@ function ManageQuestionsPage() {
 
   const fetchQuestions = async () => {
     try {
-      const res = await api.get("/api/questions");
-      setQuestions(res.data);
+      const res = await api.get("/api/questions/admin/all", {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("adminToken")}`,
+        },
+      });
+      setQuestions(apiArray(res.data, "questions"));
     } catch (e) {
       console.error("Error fetching questions:", e);
     }
@@ -525,8 +537,12 @@ function ManageQuestionsPage() {
   useEffect(() => {
     const fetchSubjects = async () => {
       try {
-        const res = await api.get("/api/subjects");
-        setSubjects(res.data);
+        const res = await api.get("/api/subjects/admin/all", {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("adminToken")}`,
+          },
+        });
+        setSubjects(apiArray(res.data, "subjects"));
       } catch (e) {
         console.error("Error fetching subjects:", e);
       }
@@ -544,7 +560,7 @@ function ManageQuestionsPage() {
       }
       try {
         const res = await api.get(`/api/topics/subject/${filterSubjectId}`);
-        setTopics(res.data);
+        setTopics(apiArray(res.data, "topics"));
         setFilterTopicId("");
       } catch (e) {
         console.error("Error fetching filter topics:", e);
@@ -588,7 +604,7 @@ function ManageQuestionsPage() {
     }
     try {
       const res = await api.get(`/api/topics/subject/${newSubjectId}`);
-      setEditTopics(res.data);
+      setEditTopics(apiArray(res.data, "topics"));
     } catch (e) {
       console.error("Error fetching edit topics:", e);
       setEditTopics([]);
@@ -601,7 +617,7 @@ function ManageQuestionsPage() {
     if (sid) {
       try {
         const res = await api.get(`/api/topics/subject/${sid}`);
-        setEditTopics(res.data);
+        setEditTopics(apiArray(res.data, "topics"));
       } catch (e) {
         setEditTopics([]);
       }
@@ -644,12 +660,20 @@ function ManageQuestionsPage() {
       return;
     }
     try {
-      await api.put(`/api/questions/${id}`, {
-        ...data,
-        options: cleaned,
-        questionText: data.questionText.trim(),
-        explanation: data.explanation.trim(),
-      });
+      await api.put(
+        `/api/questions/${id}`,
+        {
+          ...data,
+          options: cleaned,
+          questionText: data.questionText.trim(),
+          explanation: data.explanation.trim(),
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("adminToken")}`,
+          },
+        },
+      );
       alert("Question updated successfully");
       cancelEdit();
       fetchQuestions();
@@ -663,7 +687,11 @@ function ManageQuestionsPage() {
     if (!window.confirm("Are you sure you want to delete this question?"))
       return;
     try {
-      await api.delete(`/api/questions/${id}`);
+      await api.delete(`/api/questions/${id}`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("adminToken")}`,
+        },
+      });
       alert("Question deleted successfully");
       fetchQuestions();
       setSelectedIds((prev) => prev.filter((qid) => qid !== id));
@@ -710,7 +738,13 @@ function ManageQuestionsPage() {
       return;
     try {
       await Promise.all(
-        selectedIds.map((id) => api.delete(`/api/questions/${id}`)),
+        selectedIds.map((id) =>
+          api.delete(`/api/questions/${id}`, {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("adminToken")}`,
+            },
+          }),
+        ),
       );
       alert("Selected questions deleted successfully");
       setSelectedIds([]);

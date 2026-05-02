@@ -2,6 +2,14 @@ import { useEffect, useState } from "react";
 import api from "../lib/api";
 import { useNavigate } from "react-router-dom";
 
+const apiArray = (payload, key) => {
+  if (Array.isArray(payload)) return payload;
+  if (key && Array.isArray(payload?.[key])) return payload[key];
+  if (Array.isArray(payload?.data)) return payload.data;
+  return [];
+};
+
+
 function AddQuestionPage() {
   const navigate = useNavigate();
 
@@ -19,8 +27,9 @@ function AddQuestionPage() {
   useEffect(() => {
     const fetchSubjects = async () => {
       try {
-        const response = await api.get("/api/subjects");
-        setSubjects(response.data);
+        const adminToken = localStorage.getItem("adminToken");
+        const response = await api.get("/api/subjects/admin/all", { _tokenType: "admin" });
+        setSubjects(apiArray(response.data, "subjects"));
       } catch (error) {
         console.error("Error fetching subjects:", error);
       }
@@ -38,8 +47,9 @@ function AddQuestionPage() {
       }
 
       try {
-        const response = await api.get(`/api/topics/subject/${subjectId}`);
-        setTopics(response.data);
+        const adminToken = localStorage.getItem("adminToken");
+        const response = await api.get(`/api/topics/subject/${subjectId}`, { _tokenType: "admin" });
+        setTopics(apiArray(response.data, "topics"));
         setTopicId("");
       } catch (error) {
         console.error("Error fetching topics:", error);
@@ -112,14 +122,22 @@ function AddQuestionPage() {
     }
 
     try {
-      await api.post("/api/questions", {
-        subjectId,
-        topicId,
-        questionText,
-        options: cleanedOptions,
-        correctAnswer,
-        explanation,
-      });
+      const adminToken = localStorage.getItem("adminToken");
+
+      await api.post(
+        "/api/questions",
+        {
+          subjectId,
+          topicId,
+          questionText,
+          options: cleanedOptions,
+          correctAnswer,
+          explanation,
+        },
+        {
+          headers: { Authorization: `Bearer ${adminToken}` },
+        },
+      );
 
       alert("Question saved successfully");
 

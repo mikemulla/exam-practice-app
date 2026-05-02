@@ -2,6 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 import api from "../lib/api";
 import { useNavigate } from "react-router-dom";
 
+const apiArray = (payload, key) => {
+  if (Array.isArray(payload)) return payload;
+  if (key && Array.isArray(payload?.[key])) return payload[key];
+  if (Array.isArray(payload?.data)) return payload.data;
+  return [];
+};
+
+
 function ManageTopicsPage() {
   const navigate = useNavigate();
 
@@ -17,8 +25,12 @@ function ManageTopicsPage() {
 
   const fetchTopics = async () => {
     try {
-      const response = await api.get("/api/topics");
-      setTopics(response.data);
+      const response = await api.get("/api/topics/admin/all", {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("adminToken")}`,
+        },
+      });
+      setTopics(apiArray(response.data, "topics"));
     } catch (error) {
       console.error("Error fetching topics:", error);
     }
@@ -26,8 +38,12 @@ function ManageTopicsPage() {
 
   const fetchSubjects = async () => {
     try {
-      const response = await api.get("/api/subjects");
-      setSubjects(response.data);
+      const response = await api.get("/api/subjects/admin/all", {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("adminToken")}`,
+        },
+      });
+      setSubjects(apiArray(response.data, "subjects"));
     } catch (error) {
       console.error("Error fetching subjects:", error);
     }
@@ -35,8 +51,12 @@ function ManageTopicsPage() {
 
   const fetchQuestions = async () => {
     try {
-      const response = await api.get("/api/questions");
-      setQuestions(response.data);
+      const response = await api.get("/api/questions/admin/all", {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("adminToken")}`,
+        },
+      });
+      setQuestions(apiArray(response.data, "questions"));
     } catch (error) {
       console.error("Error fetching questions:", error);
     }
@@ -85,10 +105,18 @@ function ManageTopicsPage() {
 
   const handleUpdate = async (id) => {
     try {
-      await api.put(`/api/topics/${id}`, {
-        subjectId,
-        name: topicName,
-      });
+      await api.put(
+        `/api/topics/${id}`,
+        {
+          subjectId,
+          name: topicName,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("adminToken")}`,
+          },
+        },
+      );
 
       alert("Topic updated successfully");
       cancelEdit();
@@ -107,7 +135,11 @@ function ManageTopicsPage() {
     if (!confirmed) return;
 
     try {
-      await api.delete(`/api/topics/${id}`);
+      await api.delete(`/api/topics/${id}`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("adminToken")}`,
+        },
+      });
       alert("Topic deleted successfully");
       fetchTopics();
       fetchQuestions();

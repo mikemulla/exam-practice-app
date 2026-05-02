@@ -16,7 +16,13 @@ const allowedTypes = [
 function ChevronLeft() {
   return (
     <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-      <path d="M9 3L5 7l4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d="M9 3L5 7l4 4"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
@@ -24,8 +30,19 @@ function ChevronLeft() {
 function UploadIcon() {
   return (
     <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-      <path d="M11 14V4M7 8l4-4 4 4" stroke="#185FA5" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M4 17h14" stroke="#185FA5" strokeWidth="1.5" strokeLinecap="round" />
+      <path
+        d="M11 14V4M7 8l4-4 4 4"
+        stroke="#185FA5"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M4 17h14"
+        stroke="#185FA5"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
@@ -33,7 +50,13 @@ function UploadIcon() {
 function HomeIcon() {
   return (
     <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-      <path d="M1.5 6.5L6.5 2l5 4.5V11.5a.5.5 0 01-.5.5H8.5v-3h-3v3H2a.5.5 0 01-.5-.5V6.5z" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d="M1.5 6.5L6.5 2l5 4.5V11.5a.5.5 0 01-.5.5H8.5v-3h-3v3H2a.5.5 0 01-.5-.5V6.5z"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
@@ -73,7 +96,9 @@ function SubjectRequestPage() {
     }
 
     if (!allowedTypes.includes(selectedFile.type)) {
-      setFileError("Unsupported file type. Please upload PDF, DOC, DOCX, TXT, JPG, or PNG.");
+      setFileError(
+        "Unsupported file type. Please upload PDF, DOC, DOCX, TXT, JPG, or PNG.",
+      );
       setFile(null);
       if (inputElement) inputElement.value = "";
       return;
@@ -106,6 +131,7 @@ function SubjectRequestPage() {
     try {
       setIsSubmitting(true);
       await api.post("/api/requests/subject-request", formData, {
+        _tokenType: "user",
         headers: { "Content-Type": "multipart/form-data" },
       });
 
@@ -165,7 +191,8 @@ function SubjectRequestPage() {
           <div className="page-enter" style={S.pageHeader}>
             <h1 style={S.heading}>Request a Subject</h1>
             <p style={S.subheading}>
-              Tell the admin the subject, topic, and preferred test timer. Attach a reference file if you have one.
+              Tell the admin the subject, topic, and preferred test timer.
+              Attach a reference file if you have one.
             </p>
           </div>
 
@@ -195,7 +222,13 @@ function SubjectRequestPage() {
                     required
                     style={S.input}
                     onFocus={(e) => Object.assign(e.target.style, S.inputFocus)}
-                    onBlur={(e) => Object.assign(e.target.style, { borderColor: "rgba(0,0,0,0.12)", boxShadow: "none", background: "#fafafa" })}
+                    onBlur={(e) =>
+                      Object.assign(e.target.style, {
+                        borderColor: "rgba(0,0,0,0.12)",
+                        boxShadow: "none",
+                        background: "#fafafa",
+                      })
+                    }
                   />
                 </Field>
 
@@ -208,7 +241,13 @@ function SubjectRequestPage() {
                     required
                     style={S.input}
                     onFocus={(e) => Object.assign(e.target.style, S.inputFocus)}
-                    onBlur={(e) => Object.assign(e.target.style, { borderColor: "rgba(0,0,0,0.12)", boxShadow: "none", background: "#fafafa" })}
+                    onBlur={(e) =>
+                      Object.assign(e.target.style, {
+                        borderColor: "rgba(0,0,0,0.12)",
+                        boxShadow: "none",
+                        background: "#fafafa",
+                      })
+                    }
                   />
                 </Field>
               </div>
@@ -222,20 +261,37 @@ function SubjectRequestPage() {
                   required
                   style={{ ...S.input, maxWidth: "160px" }}
                   onFocus={(e) => Object.assign(e.target.style, S.inputFocus)}
-                  onBlur={(e) => Object.assign(e.target.style, { borderColor: "rgba(0,0,0,0.12)", boxShadow: "none", background: "#fafafa" })}
+                  onBlur={(e) =>
+                    Object.assign(e.target.style, {
+                      borderColor: "rgba(0,0,0,0.12)",
+                      boxShadow: "none",
+                      background: "#fafafa",
+                    })
+                  }
                 />
               </Field>
 
               <Field label="Reference file" hint="Optional">
                 <div
-                  onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setDragOver(true);
+                  }}
                   onDragLeave={() => setDragOver(false)}
                   onDrop={handleDrop}
                   onClick={() => document.getElementById("file-input").click()}
                   style={{
                     ...S.dropZone,
-                    borderColor: dragOver ? "#185FA5" : file ? "#185FA5" : "rgba(0,0,0,0.12)",
-                    background: dragOver ? "#E6F1FB" : file ? "#f0f7ff" : "#fafafa",
+                    borderColor: dragOver
+                      ? "#185FA5"
+                      : file
+                        ? "#185FA5"
+                        : "rgba(0,0,0,0.12)",
+                    background: dragOver
+                      ? "#E6F1FB"
+                      : file
+                        ? "#f0f7ff"
+                        : "#fafafa",
                   }}
                 >
                   <input
@@ -243,18 +299,30 @@ function SubjectRequestPage() {
                     type="file"
                     accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png"
                     style={{ display: "none" }}
-                    onChange={(e) => validateAndSetFile(e.target.files[0], e.target)}
+                    onChange={(e) =>
+                      validateAndSetFile(e.target.files[0], e.target)
+                    }
                   />
                   <UploadIcon />
                   {file ? (
                     <div style={{ textAlign: "center" }}>
                       <p style={S.fileName}>{file.name}</p>
-                      <p style={S.fileHint}>{(file.size / (1024 * 1024)).toFixed(2)} MB · click to replace</p>
+                      <p style={S.fileHint}>
+                        {(file.size / (1024 * 1024)).toFixed(2)} MB · click to
+                        replace
+                      </p>
                     </div>
                   ) : (
                     <div style={{ textAlign: "center" }}>
-                      <p style={S.dropLabel}>Drag and drop or <span style={{ color: "#185FA5", fontWeight: "600" }}>browse</span></p>
-                      <p style={S.fileHint}>PDF, DOC, DOCX, TXT, JPG, PNG · max 15MB</p>
+                      <p style={S.dropLabel}>
+                        Drag and drop or{" "}
+                        <span style={{ color: "#185FA5", fontWeight: "600" }}>
+                          browse
+                        </span>
+                      </p>
+                      <p style={S.fileHint}>
+                        PDF, DOC, DOCX, TXT, JPG, PNG · max 15MB
+                      </p>
                     </div>
                   )}
                 </div>
@@ -266,10 +334,20 @@ function SubjectRequestPage() {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  style={{ ...S.submitBtn, opacity: isSubmitting ? 0.7 : 1, cursor: isSubmitting ? "not-allowed" : "pointer" }}
+                  style={{
+                    ...S.submitBtn,
+                    opacity: isSubmitting ? 0.7 : 1,
+                    cursor: isSubmitting ? "not-allowed" : "pointer",
+                  }}
                 >
                   {isSubmitting ? (
-                    <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <span
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                      }}
+                    >
                       <span style={S.spinner} />
                       Sending...
                     </span>

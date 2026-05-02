@@ -2,6 +2,14 @@ import { useEffect, useState } from "react";
 import api from "../lib/api";
 import { useNavigate } from "react-router-dom";
 
+const apiArray = (payload, key) => {
+  if (Array.isArray(payload)) return payload;
+  if (key && Array.isArray(payload?.[key])) return payload[key];
+  if (Array.isArray(payload?.data)) return payload.data;
+  return [];
+};
+
+
 function BulkImportQuestionsPage() {
   const navigate = useNavigate();
 
@@ -15,8 +23,11 @@ function BulkImportQuestionsPage() {
   useEffect(() => {
     const fetchSubjects = async () => {
       try {
-        const response = await api.get("/api/subjects");
-        setSubjects(response.data);
+        const adminToken = localStorage.getItem("adminToken");
+        const response = await api.get("/api/subjects/admin/all", {
+          headers: { Authorization: `Bearer ${adminToken}` },
+        });
+        setSubjects(apiArray(response.data, "subjects"));
       } catch (error) {
         console.error("Error fetching subjects:", error);
       }
@@ -34,8 +45,11 @@ function BulkImportQuestionsPage() {
       }
 
       try {
-        const response = await api.get(`/api/topics/subject/${subjectId}`);
-        setTopics(response.data);
+        const adminToken = localStorage.getItem("adminToken");
+        const response = await api.get(`/api/topics/subject/${subjectId}`, {
+          headers: { Authorization: `Bearer ${adminToken}` },
+        });
+        setTopics(apiArray(response.data, "topics"));
         setTopicId("");
       } catch (error) {
         console.error("Error fetching topics:", error);
@@ -47,16 +61,16 @@ function BulkImportQuestionsPage() {
 
   const sampleJson = `[
   {
-    "questionText": "What is 2 + 2?",
-    "options": ["2", "3", "4", "5"],
+    "questionText" : "What is 2 + 2?",
+    "options"      : ["2", "3", "4", "5"],
     "correctAnswer": "4",
-    "explanation": "2 + 2 equals 4."
+    "explanation"  : "2 + 2 equals 4."
   },
   {
-    "questionText": "What is the capital of France?",
-    "options": ["Berlin", "Madrid", "Paris", "Rome"],
+    "questionText" : "What is the capital of France?",
+    "options"      : ["Berlin", "Madrid", "Paris", "Rome"],
     "correctAnswer": "Paris",
-    "explanation": "Paris is the capital of France."
+    "explanation"  : "Paris is the capital of France."
   }
 ]`;
 
@@ -142,10 +156,18 @@ function BulkImportQuestionsPage() {
     try {
       setIsSubmitting(true);
 
-      const response = await api.post("/api/questions/bulk", {
-        subjectId,
-        questions: normalizedQuestions,
-      });
+      const adminToken = localStorage.getItem("adminToken");
+
+      const response = await api.post(
+        "/api/questions/bulk",
+        {
+          subjectId,
+          questions: normalizedQuestions,
+        },
+        {
+          headers: { Authorization: `Bearer ${adminToken}` },
+        },
+      );
 
       alert(response.data.message || "Questions imported successfully");
       setJsonInput("");

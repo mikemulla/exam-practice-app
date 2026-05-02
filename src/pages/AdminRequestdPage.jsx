@@ -2,6 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../lib/api";
 
+const apiArray = (payload, key) => {
+  if (Array.isArray(payload)) return payload;
+  if (key && Array.isArray(payload?.[key])) return payload[key];
+  if (Array.isArray(payload?.data)) return payload.data;
+  return [];
+};
+
+
 const S = {
   page: {
     minHeight: "100vh",
@@ -140,8 +148,11 @@ function AdminRequestsPage() {
   const fetchRequests = async () => {
     try {
       setIsLoading(true);
-      const { data } = await api.get("/api/requests");
-      setRequests(data);
+      const adminToken = localStorage.getItem("adminToken");
+      const { data } = await api.get("/api/requests", {
+        headers: { Authorization: `Bearer ${adminToken}` },
+      });
+      setRequests(apiArray(data, "requests"));
     } catch (err) {
       console.error("Error fetching requests:", err);
       alert("Failed to load requests");
@@ -162,7 +173,10 @@ function AdminRequestsPage() {
 
   const markReviewed = async (id) => {
     try {
-      await api.put(`/api/requests/${id}/reviewed`);
+      const adminToken = localStorage.getItem("adminToken");
+      await api.put(`/api/requests/${id}/reviewed`, null, {
+        headers: { Authorization: `Bearer ${adminToken}` },
+      });
       fetchRequests();
     } catch (err) {
       console.error("Error marking request reviewed:", err);
@@ -174,7 +188,10 @@ function AdminRequestsPage() {
     if (!window.confirm("Are you sure you want to delete this request?"))
       return;
     try {
-      await api.delete(`/api/requests/${id}`);
+      const adminToken = localStorage.getItem("adminToken");
+      await api.delete(`/api/requests/${id}`, {
+        headers: { Authorization: `Bearer ${adminToken}` },
+      });
       fetchRequests();
     } catch (err) {
       console.error("Error deleting request:", err);
