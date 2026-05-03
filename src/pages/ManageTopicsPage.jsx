@@ -14,10 +14,13 @@ function ManageTopicsPage() {
   const navigate = useNavigate();
 
   const [topics, setTopics] = useState([]);
+  const [courses, setCourses] = useState([]);
   const [subjects, setSubjects] = useState([]);
   const [questions, setQuestions] = useState([]);
   const [editingId, setEditingId] = useState(null);
 
+  const [filterCourseId, setFilterCourseId] = useState("");
+  const [filterLevel, setFilterLevel] = useState("");
   const [filterSubjectId, setFilterSubjectId] = useState("");
 
   const [subjectId, setSubjectId] = useState("");
@@ -34,11 +37,29 @@ function ManageTopicsPage() {
     }
   };
 
-  const fetchSubjects = async () => {
+  const fetchCourses = async () => {
     try {
-      const response = await api.get("/api/subjects/admin/all", {
+      const response = await api.get("/api/courses", {
         _tokenType: "admin",
       });
+      setCourses(apiArray(response.data, "courses"));
+    } catch (error) {
+      console.error("Error fetching courses:", error);
+    }
+  };
+
+  const fetchSubjects = async () => {
+    if (!filterCourseId || !filterLevel) {
+      setSubjects([]);
+      setFilterSubjectId("");
+      return;
+    }
+
+    try {
+      const response = await api.get(
+        `/api/subjects/admin/all?courseId=${filterCourseId}&level=${filterLevel}&limit=100`,
+        { _tokenType: "admin" },
+      );
       setSubjects(apiArray(response.data, "subjects"));
     } catch (error) {
       console.error("Error fetching subjects:", error);
@@ -58,18 +79,26 @@ function ManageTopicsPage() {
 
   useEffect(() => {
     fetchTopics();
-    fetchSubjects();
+    fetchCourses();
     fetchQuestions();
   }, []);
 
+  useEffect(() => {
+    fetchSubjects();
+  }, [filterCourseId, filterLevel]);
+
   const filteredTopics = useMemo(() => {
     return topics.filter((topic) => {
-      return (
-        !filterSubjectId ||
-        (topic.subjectId?._id || topic.subjectId) === filterSubjectId
-      );
+      const topicSubjectId = topic.subjectId?._id || topic.subjectId;
+      const topicCourseId = topic.subjectId?.courseId?._id || topic.subjectId?.courseId || "";
+      const topicLevel = topic.subjectId?.level || "";
+
+      if (filterCourseId && topicCourseId !== filterCourseId) return false;
+      if (filterLevel && Number(topicLevel) !== Number(filterLevel)) return false;
+      if (filterSubjectId && topicSubjectId !== filterSubjectId) return false;
+      return true;
     });
-  }, [topics, filterSubjectId]);
+  }, [topics, filterCourseId, filterLevel, filterSubjectId]);
 
   const questionCountsByTopic = useMemo(() => {
     const counts = {};
@@ -182,20 +211,93 @@ function ManageTopicsPage() {
             boxShadow: "0 12px 30px rgba(15,23,42,0.06)",
           }}
         >
-          <div style={{ marginBottom: "24px", maxWidth: "320px" }}>
-            <label
-              style={{
-                display: "block",
-                marginBottom: "8px",
-                fontWeight: "600",
-                color: "#0f172a",
-              }}
-            >
-              Filter by Subject
-            </label>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+              gap: "16px",
+              marginBottom: "24px",
+            }}
+          >
+            <div>
+              <label
+                style={{
+                  display: "block",
+                  marginBottom: "8px",
+                  fontWeight: "600",
+                  color: "#0f172a",
+                }}
+              >
+                Filter by Course
+              </label>
+              <select
+                value={filterCourseId}
+                onChange={(e) => setFilterCourseId(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "12px",
+                  borderRadius: "8px",
+                  border: "1px solid #cbd5e1",
+                  backgroundColor: "white",
+                  boxSizing: "border-box",
+                }}
+              >
+                <option value="">Select Course</option>
+                {courses.map((course) => (
+                  <option key={course._id} value={course._id}>
+                    {course.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label
+                style={{
+                  display: "block",
+                  marginBottom: "8px",
+                  fontWeight: "600",
+                  color: "#0f172a",
+                }}
+              >
+                Filter by Level
+              </label>
+              <select
+                value={filterLevel}
+                onChange={(e) => setFilterLevel(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "12px",
+                  borderRadius: "8px",
+                  border: "1px solid #cbd5e1",
+                  backgroundColor: "white",
+                  boxSizing: "border-box",
+                }}
+              >
+                <option value="">Select Level</option>
+                {[100, 200, 300, 400, 500, 600].map((levelOption) => (
+                  <option key={levelOption} value={levelOption}>
+                    {levelOption} Level
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label
+                style={{
+                  display: "block",
+                  marginBottom: "8px",
+                  fontWeight: "600",
+                  color: "#0f172a",
+                }}
+              >
+                Filter by Subject
+              </label>
             <select
               value={filterSubjectId}
               onChange={(e) => setFilterSubjectId(e.target.value)}
+              disabled={!filterCourseId || !filterLevel}
               style={{
                 width: "100%",
                 padding: "12px",
@@ -205,13 +307,14 @@ function ManageTopicsPage() {
                 boxSizing: "border-box",
               }}
             >
-              <option value="">All Subjects</option>
+              <option value="">{filterCourseId && filterLevel ? "All Subjects" : "Select course and level first"}</option>
               {subjects.map((subject) => (
                 <option key={subject._id} value={subject._id}>
                   {subject.name}
                 </option>
               ))}
             </select>
+            </div>
           </div>
 
           <p style={{ color: "#64748b", marginBottom: "18px" }}>

@@ -13,9 +13,12 @@ const apiArray = (payload, key) => {
 function AddQuestionPage() {
   const navigate = useNavigate();
 
+  const [courses, setCourses] = useState([]);
   const [subjects, setSubjects] = useState([]);
   const [topics, setTopics] = useState([]);
 
+  const [courseId, setCourseId] = useState("");
+  const [level, setLevel] = useState("");
   const [subjectId, setSubjectId] = useState("");
   const [topicId, setTopicId] = useState("");
   const [questionText, setQuestionText] = useState("");
@@ -25,9 +28,34 @@ function AddQuestionPage() {
   const [explanation, setExplanation] = useState("");
 
   useEffect(() => {
-    const fetchSubjects = async () => {
+    const fetchCourses = async () => {
       try {
-        const response = await api.get("/api/subjects/admin/all", { _tokenType: "admin" });
+        const response = await api.get("/api/courses", { _tokenType: "admin" });
+        setCourses(apiArray(response.data, "courses"));
+      } catch (error) {
+        console.error("Error fetching courses:", error);
+      }
+    };
+
+    fetchCourses();
+  }, []);
+
+  useEffect(() => {
+    const fetchSubjects = async () => {
+      setSubjectId("");
+      setTopicId("");
+      if (typeof setTopics === "function") setTopics([]);
+
+      if (!courseId || !level) {
+        setSubjects([]);
+        return;
+      }
+
+      try {
+        const response = await api.get(
+          `/api/subjects/admin/all?courseId=${courseId}&level=${level}&limit=100`,
+          { _tokenType: "admin" },
+        );
         setSubjects(apiArray(response.data, "subjects"));
       } catch (error) {
         console.error("Error fetching subjects:", error);
@@ -35,7 +63,7 @@ function AddQuestionPage() {
     };
 
     fetchSubjects();
-  }, []);
+  }, [courseId, level]);
 
   useEffect(() => {
     const fetchTopics = async () => {
@@ -208,6 +236,76 @@ function AddQuestionPage() {
           }}
         >
           <form onSubmit={handleSubmit}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "16px", marginBottom: "20px" }}>
+              <div>
+                <label
+                  style={{
+                    display: "block",
+                    marginBottom: "8px",
+                    fontWeight: "600",
+                    color: "#0f172a",
+                  }}
+                >
+                  Course
+                </label>
+                <select
+                  value={courseId}
+                  onChange={(e) => setCourseId(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "14px 16px",
+                    borderRadius: "10px",
+                    border: "1px solid #cbd5e1",
+                    fontSize: "15px",
+                    backgroundColor: "white",
+                    boxSizing: "border-box",
+                  }}
+                  required
+                >
+                  <option value="">Select Course</option>
+                  {courses.map((course) => (
+                    <option key={course._id} value={course._id}>
+                      {course.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label
+                  style={{
+                    display: "block",
+                    marginBottom: "8px",
+                    fontWeight: "600",
+                    color: "#0f172a",
+                  }}
+                >
+                  Level
+                </label>
+                <select
+                  value={level}
+                  onChange={(e) => setLevel(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "14px 16px",
+                    borderRadius: "10px",
+                    border: "1px solid #cbd5e1",
+                    fontSize: "15px",
+                    backgroundColor: "white",
+                    boxSizing: "border-box",
+                  }}
+                  required
+                >
+                  <option value="">Select Level</option>
+                  {[100, 200, 300, 400, 500, 600].map((levelOption) => (
+                    <option key={levelOption} value={levelOption}>
+                      {levelOption} Level
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
             <div
               style={{
                 display: "grid",

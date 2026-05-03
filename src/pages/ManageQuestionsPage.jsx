@@ -508,11 +508,14 @@ function ManageQuestionsPage() {
   const navigate = useNavigate();
 
   const [questions, setQuestions] = useState([]);
+  const [courses, setCourses] = useState([]);
   const [subjects, setSubjects] = useState([]);
   const [topics, setTopics] = useState([]);
   const [editTopics, setEditTopics] = useState([]);
   const [editingId, setEditingId] = useState(null);
 
+  const [filterCourseId, setFilterCourseId] = useState("");
+  const [filterLevel, setFilterLevel] = useState("");
   const [filterSubjectId, setFilterSubjectId] = useState("");
   const [filterTopicId, setFilterTopicId] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
@@ -533,19 +536,43 @@ function ManageQuestionsPage() {
   };
 
   useEffect(() => {
-    const fetchSubjects = async () => {
+    const fetchCourses = async () => {
       try {
-        const res = await api.get("/api/subjects/admin/all", {
-            _tokenType: "admin",
-          });
+        const res = await api.get("/api/courses", { _tokenType: "admin" });
+        setCourses(apiArray(res.data, "courses"));
+      } catch (e) {
+        console.error("Error fetching courses:", e);
+      }
+    };
+
+    fetchQuestions();
+    fetchCourses();
+  }, []);
+
+  useEffect(() => {
+    const fetchSubjects = async () => {
+      setFilterSubjectId("");
+      setFilterTopicId("");
+      setTopics([]);
+
+      if (!filterCourseId || !filterLevel) {
+        setSubjects([]);
+        return;
+      }
+
+      try {
+        const res = await api.get(
+          `/api/subjects/admin/all?courseId=${filterCourseId}&level=${filterLevel}&limit=100`,
+          { _tokenType: "admin" },
+        );
         setSubjects(apiArray(res.data, "subjects"));
       } catch (e) {
         console.error("Error fetching subjects:", e);
       }
     };
-    fetchQuestions();
+
     fetchSubjects();
-  }, []);
+  }, [filterCourseId, filterLevel]);
 
   useEffect(() => {
     const fetchFilterTopics = async () => {
@@ -575,6 +602,11 @@ function ManageQuestionsPage() {
     return questions.filter((q) => {
       const sid = q.subjectId?._id || q.subjectId;
       const tid = q.topicId?._id || q.topicId;
+      const subjectCourseId = q.subjectId?.courseId?._id || q.subjectId?.courseId || "";
+      const subjectLevel = q.subjectId?.level || "";
+
+      if (filterCourseId && subjectCourseId !== filterCourseId) return false;
+      if (filterLevel && Number(subjectLevel) !== Number(filterLevel)) return false;
       if (filterSubjectId && sid !== filterSubjectId) return false;
       if (filterTopicId && tid !== filterTopicId) return false;
       const s = searchTerm.trim().toLowerCase();
@@ -591,7 +623,7 @@ function ManageQuestionsPage() {
       }
       return true;
     });
-  }, [questions, filterSubjectId, filterTopicId, searchTerm]);
+  }, [questions, filterCourseId, filterLevel, filterSubjectId, filterTopicId, searchTerm]);
 
   const handleEditSubjectChange = async (newSubjectId) => {
     if (!newSubjectId) {
@@ -762,13 +794,44 @@ function ManageQuestionsPage() {
           {/* Filters */}
           <div style={styles.filtersRow}>
             <div>
+              <label style={styles.fieldLabel}>Course</label>
+              <select
+                style={styles.select}
+                value={filterCourseId}
+                onChange={(e) => setFilterCourseId(e.target.value)}
+              >
+                <option value="">Select course</option>
+                {courses.map((course) => (
+                  <option key={course._id} value={course._id}>
+                    {course.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label style={styles.fieldLabel}>Level</label>
+              <select
+                style={styles.select}
+                value={filterLevel}
+                onChange={(e) => setFilterLevel(e.target.value)}
+              >
+                <option value="">Select level</option>
+                {[100, 200, 300, 400, 500, 600].map((levelOption) => (
+                  <option key={levelOption} value={levelOption}>
+                    {levelOption} Level
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
               <label style={styles.fieldLabel}>Subject</label>
               <select
                 style={styles.select}
                 value={filterSubjectId}
                 onChange={(e) => setFilterSubjectId(e.target.value)}
+                disabled={!filterCourseId || !filterLevel}
               >
-                <option value="">All subjects</option>
+                <option value="">{filterCourseId && filterLevel ? "All subjects" : "Select course and level first"}</option>
                 {subjects.map((s) => (
                   <option key={s._id} value={s._id}>
                     {s.name}
@@ -799,7 +862,7 @@ function ManageQuestionsPage() {
               <input
                 style={styles.input}
                 type="text"
-                placeholder="Question, option, answer, explanation…"
+                placeholder="Question, option, answer, explanation"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -818,7 +881,7 @@ function ManageQuestionsPage() {
                 value={rangeStart}
                 onChange={(e) => setRangeStart(e.target.value)}
               />
-              <span style={styles.rangeSep}>—</span>
+              <span style={styles.rangeSep}>to</span>
               <input
                 style={styles.rangeInput}
                 type="number"

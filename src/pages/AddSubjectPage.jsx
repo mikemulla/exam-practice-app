@@ -21,7 +21,7 @@ function AddSubjectPage() {
   useEffect(() => {
     const fetchCourses = async () => {
       try {
-        const response = await api.get("/api/courses");
+        const response = await api.get("/api/courses", { _tokenType: "admin" });
         setCourses(apiArray(response.data, "courses"));
       } catch (error) {
         console.error("Error fetching courses:", error);

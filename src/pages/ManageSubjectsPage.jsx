@@ -4,7 +4,52 @@ import { useNavigate } from "react-router-dom";
 
 const apiArray = (payload, key) => {
   if (Array.isArray(payload)) return payload;
-  if (key && Array.isArray(payload?.[key])) return payload[key];
+  if (key && Array.isArray(payload?.[
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+              gap: "16px",
+              marginBottom: "24px",
+            }}
+          >
+            <div>
+              <label style={{ display: "block", marginBottom: "8px", fontWeight: "600", color: "#0f172a" }}>
+                Filter by Course
+              </label>
+              <select
+                value={filterCourseId}
+                onChange={(e) => setFilterCourseId(e.target.value)}
+                style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #cbd5e1", backgroundColor: "white", boxSizing: "border-box" }}
+              >
+                <option value="">All Courses</option>
+                {courses.map((course) => (
+                  <option key={course._id} value={course._id}>
+                    {course.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label style={{ display: "block", marginBottom: "8px", fontWeight: "600", color: "#0f172a" }}>
+                Filter by Level
+              </label>
+              <select
+                value={filterLevel}
+                onChange={(e) => setFilterLevel(e.target.value)}
+                style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #cbd5e1", backgroundColor: "white", boxSizing: "border-box" }}
+              >
+                <option value="">All Levels</option>
+                {[100, 200, 300, 400, 500, 600].map((levelOption) => (
+                  <option key={levelOption} value={levelOption}>
+                    {levelOption} Level
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+key])) return payload[key];
   if (Array.isArray(payload?.data)) return payload.data;
   return [];
 };
@@ -18,6 +63,9 @@ function ManageSubjectsPage() {
   const [questions, setQuestions] = useState([]);
   const [courses, setCourses] = useState([]);
 
+  const [filterCourseId, setFilterCourseId] = useState("");
+  const [filterLevel, setFilterLevel] = useState("");
+
   const [editingId, setEditingId] = useState(null);
   const [editName, setEditName] = useState("");
   const [editDurationMinutes, setEditDurationMinutes] = useState(5);
@@ -28,9 +76,14 @@ function ManageSubjectsPage() {
     try {
       const [subjectsRes, topicsRes, questionsRes, coursesRes] =
         await Promise.all([
-          api.get("/api/subjects/admin/all", {
-            _tokenType: "admin",
-          }),
+          api.get(
+            `/api/subjects/admin/all?${new URLSearchParams({
+              ...(filterCourseId ? { courseId: filterCourseId } : {}),
+              ...(filterLevel ? { level: filterLevel } : {}),
+              limit: "100",
+            }).toString()}`,
+            { _tokenType: "admin" },
+          ),
           api.get("/api/topics/admin/all", {
             _tokenType: "admin",
           }),
@@ -52,7 +105,7 @@ function ManageSubjectsPage() {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [filterCourseId, filterLevel]);
 
   const topicCountsBySubject = useMemo(() => {
     const counts = {};

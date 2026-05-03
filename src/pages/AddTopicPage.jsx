@@ -13,16 +13,39 @@ const apiArray = (payload, key) => {
 function AddTopicPage() {
   const navigate = useNavigate();
 
+  const [courses, setCourses] = useState([]);
   const [subjects, setSubjects] = useState([]);
+  const [courseId, setCourseId] = useState("");
+  const [level, setLevel] = useState("");
   const [subjectId, setSubjectId] = useState("");
   const [topicName, setTopicName] = useState("");
 
   useEffect(() => {
-    const fetchSubjects = async () => {
+    const fetchCourses = async () => {
       try {
-        const response = await api.get("/api/subjects/admin/all", {
-          _tokenType: "admin",
-        });
+        const response = await api.get("/api/courses", { _tokenType: "admin" });
+        setCourses(apiArray(response.data, "courses"));
+      } catch (error) {
+        console.error("Error fetching courses:", error);
+      }
+    };
+
+    fetchCourses();
+  }, []);
+
+  useEffect(() => {
+    const fetchSubjects = async () => {
+      setSubjectId("");
+      if (!courseId || !level) {
+        setSubjects([]);
+        return;
+      }
+
+      try {
+        const response = await api.get(
+          `/api/subjects/admin/all?courseId=${courseId}&level=${level}&limit=100`,
+          { _tokenType: "admin" },
+        );
         setSubjects(apiArray(response.data, "subjects"));
       } catch (error) {
         console.error("Error fetching subjects:", error);
@@ -30,7 +53,7 @@ function AddTopicPage() {
     };
 
     fetchSubjects();
-  }, []);
+  }, [courseId, level]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -113,6 +136,76 @@ function AddTopicPage() {
           }}
         >
           <form onSubmit={handleSubmit}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "16px", marginBottom: "20px" }}>
+              <div>
+                <label
+                  style={{
+                    display: "block",
+                    marginBottom: "8px",
+                    fontWeight: "600",
+                    color: "#0f172a",
+                  }}
+                >
+                  Course
+                </label>
+                <select
+                  value={courseId}
+                  onChange={(e) => setCourseId(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "14px 16px",
+                    borderRadius: "10px",
+                    border: "1px solid #cbd5e1",
+                    fontSize: "15px",
+                    backgroundColor: "white",
+                    boxSizing: "border-box",
+                  }}
+                  required
+                >
+                  <option value="">Select Course</option>
+                  {courses.map((course) => (
+                    <option key={course._id} value={course._id}>
+                      {course.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label
+                  style={{
+                    display: "block",
+                    marginBottom: "8px",
+                    fontWeight: "600",
+                    color: "#0f172a",
+                  }}
+                >
+                  Level
+                </label>
+                <select
+                  value={level}
+                  onChange={(e) => setLevel(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "14px 16px",
+                    borderRadius: "10px",
+                    border: "1px solid #cbd5e1",
+                    fontSize: "15px",
+                    backgroundColor: "white",
+                    boxSizing: "border-box",
+                  }}
+                  required
+                >
+                  <option value="">Select Level</option>
+                  {[100, 200, 300, 400, 500, 600].map((levelOption) => (
+                    <option key={levelOption} value={levelOption}>
+                      {levelOption} Level
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
             <div style={{ marginBottom: "20px" }}>
               <label
                 style={{
@@ -137,8 +230,9 @@ function AddTopicPage() {
                   boxSizing: "border-box",
                 }}
                 required
+                disabled={!courseId || !level}
               >
-                <option value="">Select Subject</option>
+                <option value="">{courseId && level ? "Select Subject" : "Select course and level first"}</option>
                 {subjects.map((subject) => (
                   <option key={subject._id} value={subject._id}>
                     {subject.name}
