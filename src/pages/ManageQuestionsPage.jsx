@@ -524,9 +524,7 @@ function ManageQuestionsPage() {
   const fetchQuestions = async () => {
     try {
       const res = await api.get("/api/questions/admin/all", {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("adminToken")}`,
-        },
+        _tokenType: "admin",
       });
       setQuestions(apiArray(res.data, "questions"));
     } catch (e) {
@@ -538,10 +536,8 @@ function ManageQuestionsPage() {
     const fetchSubjects = async () => {
       try {
         const res = await api.get("/api/subjects/admin/all", {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("adminToken")}`,
-          },
-        });
+            _tokenType: "admin",
+          });
         setSubjects(apiArray(res.data, "subjects"));
       } catch (e) {
         console.error("Error fetching subjects:", e);
@@ -559,7 +555,7 @@ function ManageQuestionsPage() {
         return;
       }
       try {
-        const res = await api.get(`/api/topics/subject/${filterSubjectId}`);
+        const res = await api.get(`/api/topics/admin/all?subjectId=${filterSubjectId}`, { _tokenType: "admin" });
         setTopics(apiArray(res.data, "topics"));
         setFilterTopicId("");
       } catch (e) {
@@ -603,7 +599,7 @@ function ManageQuestionsPage() {
       return;
     }
     try {
-      const res = await api.get(`/api/topics/subject/${newSubjectId}`);
+      const res = await api.get(`/api/topics/admin/all?subjectId=${newSubjectId}`, { _tokenType: "admin" });
       setEditTopics(apiArray(res.data, "topics"));
     } catch (e) {
       console.error("Error fetching edit topics:", e);
@@ -616,7 +612,7 @@ function ManageQuestionsPage() {
     setEditingId(question._id);
     if (sid) {
       try {
-        const res = await api.get(`/api/topics/subject/${sid}`);
+        const res = await api.get(`/api/topics/admin/all?subjectId=${sid}`, { _tokenType: "admin" });
         setEditTopics(apiArray(res.data, "topics"));
       } catch (e) {
         setEditTopics([]);
@@ -688,9 +684,7 @@ function ManageQuestionsPage() {
       return;
     try {
       await api.delete(`/api/questions/${id}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("adminToken")}`,
-        },
+        _tokenType: "admin",
       });
       alert("Question deleted successfully");
       fetchQuestions();
@@ -740,9 +734,7 @@ function ManageQuestionsPage() {
       await Promise.all(
         selectedIds.map((id) =>
           api.delete(`/api/questions/${id}`, {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("adminToken")}`,
-            },
+            _tokenType: "admin",
           }),
         ),
       );

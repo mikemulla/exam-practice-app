@@ -27,7 +27,6 @@ function AddQuestionPage() {
   useEffect(() => {
     const fetchSubjects = async () => {
       try {
-        const adminToken = localStorage.getItem("adminToken");
         const response = await api.get("/api/subjects/admin/all", { _tokenType: "admin" });
         setSubjects(apiArray(response.data, "subjects"));
       } catch (error) {
@@ -47,8 +46,7 @@ function AddQuestionPage() {
       }
 
       try {
-        const adminToken = localStorage.getItem("adminToken");
-        const response = await api.get(`/api/topics/subject/${subjectId}`, { _tokenType: "admin" });
+        const response = await api.get(`/api/topics/admin/all?subjectId=${subjectId}`, { _tokenType: "admin" });
         setTopics(apiArray(response.data, "topics"));
         setTopicId("");
       } catch (error) {
@@ -122,8 +120,6 @@ function AddQuestionPage() {
     }
 
     try {
-      const adminToken = localStorage.getItem("adminToken");
-
       await api.post(
         "/api/questions",
         {
@@ -135,7 +131,7 @@ function AddQuestionPage() {
           explanation,
         },
         {
-          headers: { Authorization: `Bearer ${adminToken}` },
+          _tokenType: "admin",
         },
       );
 

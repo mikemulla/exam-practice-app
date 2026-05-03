@@ -20,9 +20,8 @@ function AddTopicPage() {
   useEffect(() => {
     const fetchSubjects = async () => {
       try {
-        const adminToken = localStorage.getItem("adminToken");
         const response = await api.get("/api/subjects/admin/all", {
-          headers: { Authorization: `Bearer ${adminToken}` },
+          _tokenType: "admin",
         });
         setSubjects(apiArray(response.data, "subjects"));
       } catch (error) {
@@ -42,8 +41,6 @@ function AddTopicPage() {
     }
 
     try {
-      const adminToken = localStorage.getItem("adminToken");
-
       await api.post(
         "/api/topics",
         {
@@ -51,7 +48,7 @@ function AddTopicPage() {
           name: topicName,
         },
         {
-          headers: { Authorization: `Bearer ${adminToken}` },
+          _tokenType: "admin",
         },
       );
 

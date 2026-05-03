@@ -29,19 +29,13 @@ function ManageSubjectsPage() {
       const [subjectsRes, topicsRes, questionsRes, coursesRes] =
         await Promise.all([
           api.get("/api/subjects/admin/all", {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("adminToken")}`,
-            },
+            _tokenType: "admin",
           }),
           api.get("/api/topics/admin/all", {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("adminToken")}`,
-            },
+            _tokenType: "admin",
           }),
           api.get("/api/questions/admin/all", {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("adminToken")}`,
-            },
+            _tokenType: "admin",
           }),
           api.get("/api/courses"),
         ]);
@@ -154,9 +148,7 @@ function ManageSubjectsPage() {
 
     try {
       await api.delete(`/api/subjects/${id}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("adminToken")}`,
-        },
+        _tokenType: "admin",
       });
       alert("Subject deleted successfully");
       fetchData();

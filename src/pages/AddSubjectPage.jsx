@@ -9,7 +9,6 @@ const apiArray = (payload, key) => {
   return [];
 };
 
-
 function AddSubjectPage() {
   const navigate = useNavigate();
 
@@ -21,8 +20,13 @@ function AddSubjectPage() {
 
   useEffect(() => {
     const fetchCourses = async () => {
-      const response = await api.get("/api/courses");
-      setCourses(apiArray(response.data, "courses"));
+      try {
+        const response = await api.get("/api/courses");
+        setCourses(apiArray(response.data, "courses"));
+      } catch (error) {
+        console.error("Error fetching courses:", error);
+        alert(error.message || "Error loading courses");
+      }
     };
 
     fetchCourses();
@@ -31,19 +35,24 @@ function AddSubjectPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    try {
-      const adminToken = localStorage.getItem("adminToken");
+    const adminToken = localStorage.getItem("adminToken");
+    if (!adminToken) {
+      alert("Your admin session has expired. Please log in again.");
+      navigate("/admin-login");
+      return;
+    }
 
+    try {
       await api.post(
         "/api/subjects",
         {
-          name: subjectName,
+          name: subjectName.trim(),
           duration: Number(durationMinutes) * 60,
           courseId,
           level: Number(level),
         },
         {
-          headers: { Authorization: `Bearer ${adminToken}` },
+          _tokenType: "admin",
         },
       );
 
@@ -54,7 +63,7 @@ function AddSubjectPage() {
       setLevel("");
     } catch (error) {
       console.error("Error saving subject:", error);
-      alert(error.response?.data?.message || "Error saving subject");
+      alert(error.message || "Error saving subject");
     }
   };
 

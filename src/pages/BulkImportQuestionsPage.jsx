@@ -23,9 +23,8 @@ function BulkImportQuestionsPage() {
   useEffect(() => {
     const fetchSubjects = async () => {
       try {
-        const adminToken = localStorage.getItem("adminToken");
         const response = await api.get("/api/subjects/admin/all", {
-          headers: { Authorization: `Bearer ${adminToken}` },
+          _tokenType: "admin",
         });
         setSubjects(apiArray(response.data, "subjects"));
       } catch (error) {
@@ -45,9 +44,8 @@ function BulkImportQuestionsPage() {
       }
 
       try {
-        const adminToken = localStorage.getItem("adminToken");
-        const response = await api.get(`/api/topics/subject/${subjectId}`, {
-          headers: { Authorization: `Bearer ${adminToken}` },
+        const response = await api.get(`/api/topics/admin/all?subjectId=${subjectId}`, {
+          _tokenType: "admin",
         });
         setTopics(apiArray(response.data, "topics"));
         setTopicId("");
@@ -156,8 +154,6 @@ function BulkImportQuestionsPage() {
     try {
       setIsSubmitting(true);
 
-      const adminToken = localStorage.getItem("adminToken");
-
       const response = await api.post(
         "/api/questions/bulk",
         {
@@ -165,7 +161,7 @@ function BulkImportQuestionsPage() {
           questions: normalizedQuestions,
         },
         {
-          headers: { Authorization: `Bearer ${adminToken}` },
+          _tokenType: "admin",
         },
       );
 

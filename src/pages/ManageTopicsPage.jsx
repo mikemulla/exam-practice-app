@@ -26,9 +26,7 @@ function ManageTopicsPage() {
   const fetchTopics = async () => {
     try {
       const response = await api.get("/api/topics/admin/all", {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("adminToken")}`,
-        },
+        _tokenType: "admin",
       });
       setTopics(apiArray(response.data, "topics"));
     } catch (error) {
@@ -39,9 +37,7 @@ function ManageTopicsPage() {
   const fetchSubjects = async () => {
     try {
       const response = await api.get("/api/subjects/admin/all", {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("adminToken")}`,
-        },
+        _tokenType: "admin",
       });
       setSubjects(apiArray(response.data, "subjects"));
     } catch (error) {
@@ -52,9 +48,7 @@ function ManageTopicsPage() {
   const fetchQuestions = async () => {
     try {
       const response = await api.get("/api/questions/admin/all", {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("adminToken")}`,
-        },
+        _tokenType: "admin",
       });
       setQuestions(apiArray(response.data, "questions"));
     } catch (error) {
@@ -136,9 +130,7 @@ function ManageTopicsPage() {
 
     try {
       await api.delete(`/api/topics/${id}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("adminToken")}`,
-        },
+        _tokenType: "admin",
       });
       alert("Topic deleted successfully");
       fetchTopics();
