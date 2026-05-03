@@ -34,8 +34,6 @@ const initials = (name = "") =>
     .slice(0, 2)
     .toUpperCase();
 
-/* ─── Icons ─────────────────────────────────────────────────────────────── */
-
 const CheckIcon = () => (
   <svg
     width="14"
@@ -82,8 +80,6 @@ const PaperclipIcon = () => (
   </svg>
 );
 
-/* ─── Styles ─────────────────────────────────────────────────────────────── */
-
 const S = {
   page: {
     minHeight: "100vh",
@@ -91,7 +87,6 @@ const S = {
     padding: "32px 20px",
   },
   inner: { maxWidth: "780px", margin: "0 auto" },
-
   eyebrow: {
     margin: 0,
     fontSize: "11px",
@@ -113,7 +108,6 @@ const S = {
     fontSize: "14px",
     lineHeight: 1.6,
   },
-
   stats: {
     display: "grid",
     gridTemplateColumns: "repeat(3, 1fr)",
@@ -136,7 +130,6 @@ const S = {
     margin: "0 0 4px",
   },
   statValue: { fontSize: "22px", fontWeight: 700, margin: 0 },
-
   filterRow: {
     display: "flex",
     gap: "8px",
@@ -167,16 +160,13 @@ const S = {
     cursor: "pointer",
     whiteSpace: "nowrap",
   },
-
   list: { display: "flex", flexDirection: "column", gap: "12px" },
-
   card: {
     backgroundColor: "white",
     border: "1px solid #e2e8f0",
     borderRadius: "16px",
     padding: "20px",
   },
-
   cardTop: {
     display: "flex",
     justifyContent: "space-between",
@@ -203,7 +193,6 @@ const S = {
     backgroundColor: status === "pending" ? "#c2410c" : "#15803d",
     flexShrink: 0,
   }),
-
   subject: {
     fontSize: "15px",
     fontWeight: 700,
@@ -211,7 +200,6 @@ const S = {
     margin: "0 0 12px",
     textTransform: "capitalize",
   },
-
   metaGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
@@ -227,7 +215,6 @@ const S = {
     letterSpacing: "0.06em",
   },
   metaValue: { fontSize: "13px", color: "#334155" },
-
   fileChip: {
     display: "inline-flex",
     alignItems: "center",
@@ -248,9 +235,7 @@ const S = {
     flex: 1,
   },
   fileSize: { color: "#94a3b8", flexShrink: 0 },
-
   divider: { height: "1px", backgroundColor: "#f1f5f9", margin: "14px 0" },
-
   userRow: {
     display: "flex",
     alignItems: "center",
@@ -272,9 +257,7 @@ const S = {
   },
   userName: { fontSize: "13px", fontWeight: 600, color: "#0f172a", margin: 0 },
   userEmail: { fontSize: "12px", color: "#94a3b8", margin: 0 },
-
   actionsRow: { display: "flex", gap: "8px", flexWrap: "wrap" },
-
   reviewBtn: {
     display: "inline-flex",
     alignItems: "center",
@@ -301,14 +284,12 @@ const S = {
     fontSize: "13px",
     cursor: "pointer",
   },
-
   empty: {
     color: "#94a3b8",
     textAlign: "center",
     padding: "40px 0",
     fontSize: "14px",
   },
-
   toastWrap: {
     position: "fixed",
     bottom: "24px",
@@ -334,31 +315,16 @@ const S = {
   }),
 };
 
-/* ─── Toast ─────────────────────────────────────────────────────────────── */
-
 function Toast({ message, visible }) {
   return (
     <div style={S.toastWrap}>
       <div style={S.toast(visible)}>
-        <svg
-          width="14"
-          height="14"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="#4ade80"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <polyline points="20 6 9 17 4 12" />
-        </svg>
+        <CheckIcon />
         {message}
       </div>
     </div>
   );
 }
-
-/* ─── RequestRow ─────────────────────────────────────────────────────────── */
 
 function RequestRow({ request, onMarkReviewed, onDelete }) {
   const u = request.userId || {};
@@ -378,8 +344,10 @@ function RequestRow({ request, onMarkReviewed, onDelete }) {
       !window.confirm(
         `Mark "${request.subject}" as reviewed?\n\nThis will send a notification email to ${fullName} (${email}).`,
       )
-    )
+    ) {
       return;
+    }
+
     onMarkReviewed(request._id);
   };
 
@@ -443,8 +411,6 @@ function RequestRow({ request, onMarkReviewed, onDelete }) {
   );
 }
 
-/* ─── Page ───────────────────────────────────────────────────────────────── */
-
 function AdminRequestsPage() {
   const navigate = useNavigate();
   const [requests, setRequests] = useState([]);
@@ -482,9 +448,12 @@ function AdminRequestsPage() {
 
   const markReviewed = async (id) => {
     try {
-      await api.put(`/api/requests/${id}/reviewed`, null, {
-        _tokenType: "admin",
-      });
+      await api.put(
+        `/api/requests/${id}/reviewed`,
+        {},
+        { _tokenType: "admin" },
+      );
+
       showToast("Request marked as reviewed");
       fetchRequests();
     } catch (err) {
@@ -496,6 +465,7 @@ function AdminRequestsPage() {
   const deleteRequest = async (id) => {
     try {
       await api.delete(`/api/requests/${id}`, { _tokenType: "admin" });
+
       showToast("Request deleted");
       fetchRequests();
     } catch (err) {
