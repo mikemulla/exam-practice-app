@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import api from "../lib/api";
 import { useNavigate } from "react-router-dom";
+import api from "../lib/api";
+
+const LEVELS = [100, 200, 300, 400, 500, 600];
 
 const apiArray = (payload, key) => {
   if (Array.isArray(payload)) return payload;
@@ -9,949 +11,292 @@ const apiArray = (payload, key) => {
   return [];
 };
 
-
-const styles = {
-  page: {
-    minHeight: "100vh",
-    background: "#f6f5f1",
-    padding: "40px 24px",
-    fontFamily: "'Geist', 'Inter', sans-serif",
-  },
-  inner: { maxWidth: "940px", margin: "0 auto" },
-  breadcrumb: {
-    fontFamily: "'DM Mono', monospace",
-    fontSize: "11px",
-    color: "#64748b",
-    letterSpacing: "0.08em",
-    textTransform: "uppercase",
-    marginBottom: "10px",
-  },
-  pageTitle: {
-    fontFamily: "'Instrument Serif', Georgia, serif",
-    fontSize: "40px",
-    fontStyle: "italic",
-    color: "#0f172a",
-    lineHeight: 1.1,
-    marginBottom: "8px",
-  },
-  pageSub: {
-    fontSize: "14px",
-    color: "#64748b",
-    lineHeight: 1.6,
-    marginBottom: "36px",
-  },
-  card: {
-    background: "#fff",
-    border: "0.5px solid rgba(15,23,42,0.1)",
-    borderRadius: "16px",
-    overflow: "hidden",
-  },
-  filtersRow: {
-    padding: "20px 24px",
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr 1.4fr",
-    gap: "14px",
-    borderBottom: "0.5px solid rgba(15,23,42,0.1)",
-    background: "#f9f8f5",
-  },
-  fieldLabel: {
-    display: "block",
-    fontSize: "11px",
-    fontWeight: 600,
-    letterSpacing: "0.06em",
-    textTransform: "uppercase",
-    color: "#64748b",
-    fontFamily: "'DM Mono', monospace",
-    marginBottom: "6px",
-  },
-  select: {
-    width: "100%",
-    padding: "9px 28px 9px 12px",
-    border: "0.5px solid rgba(15,23,42,0.18)",
-    borderRadius: "8px",
-    background: "#fff",
-    color: "#0f172a",
-    fontSize: "13px",
-    outline: "none",
-    appearance: "none",
-    backgroundImage:
-      "url(\"data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2364748b' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E\")",
-    backgroundRepeat: "no-repeat",
-    backgroundPosition: "right 10px center",
-    cursor: "pointer",
-    boxSizing: "border-box",
-  },
-  input: {
-    width: "100%",
-    padding: "9px 12px",
-    border: "0.5px solid rgba(15,23,42,0.18)",
-    borderRadius: "8px",
-    background: "#fff",
-    color: "#0f172a",
-    fontSize: "13px",
-    outline: "none",
-    boxSizing: "border-box",
-  },
-  textarea: {
-    width: "100%",
-    padding: "9px 12px",
-    border: "0.5px solid rgba(15,23,42,0.18)",
-    borderRadius: "8px",
-    background: "#fff",
-    color: "#0f172a",
-    fontSize: "13px",
-    outline: "none",
-    resize: "vertical",
-    boxSizing: "border-box",
-    fontFamily: "'Geist', 'Inter', sans-serif",
-  },
-  bulkBar: {
-    padding: "14px 24px",
-    display: "flex",
-    alignItems: "center",
-    gap: "10px",
-    borderBottom: "0.5px solid rgba(15,23,42,0.1)",
-    flexWrap: "wrap",
-  },
-  bulkLabel: {
-    fontFamily: "'DM Mono', monospace",
-    fontSize: "11px",
-    color: "#64748b",
-    textTransform: "uppercase",
-    letterSpacing: "0.06em",
-    marginRight: "4px",
-  },
-  rangeInput: {
-    width: "64px",
-    padding: "7px 10px",
-    border: "0.5px solid rgba(15,23,42,0.18)",
-    borderRadius: "8px",
-    fontSize: "12px",
-    outline: "none",
-    boxSizing: "border-box",
-  },
-  rangeSep: { fontSize: "13px", color: "#94a3b8" },
-  btn: {
-    padding: "7px 14px",
-    borderRadius: "8px",
-    fontSize: "12px",
-    fontWeight: 500,
-    cursor: "pointer",
-    border: "0.5px solid rgba(15,23,42,0.18)",
-    background: "#fff",
-    color: "#0f172a",
-    whiteSpace: "nowrap",
-    fontFamily: "inherit",
-  },
-  btnAccent: {
-    background: "#185FA5",
-    color: "#fff",
-    border: "none",
-  },
-  btnDanger: {
-    background: "#dc2626",
-    color: "#fff",
-    border: "none",
-  },
-  btnGhost: {
-    background: "#f9f8f5",
-    border: "0.5px solid rgba(15,23,42,0.18)",
-    color: "#0f172a",
-  },
-  countBar: {
-    padding: "12px 24px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderBottom: "0.5px solid rgba(15,23,42,0.1)",
-  },
-  countBadge: {
-    fontFamily: "'DM Mono', monospace",
-    fontSize: "11px",
-    color: "#64748b",
-  },
-  selBadge: {
-    background: "#e6f1fb",
-    color: "#185FA5",
-    fontFamily: "'DM Mono', monospace",
-    fontSize: "11px",
-    padding: "3px 10px",
-    borderRadius: "20px",
-  },
-  qItem: {
-    borderBottom: "0.5px solid rgba(15,23,42,0.08)",
-    padding: "18px 24px",
-    display: "flex",
-    gap: "14px",
-  },
-  qNum: {
-    fontFamily: "'DM Mono', monospace",
-    fontSize: "11px",
-    color: "#94a3b8",
-    marginBottom: "5px",
-  },
-  qMeta: { display: "flex", gap: "8px", marginBottom: "8px", flexWrap: "wrap" },
-  pillSubj: {
-    fontSize: "11px",
-    padding: "2px 8px",
-    borderRadius: "20px",
-    fontWeight: 500,
-    background: "#e6f1fb",
-    color: "#185FA5",
-  },
-  pillTopic: {
-    fontSize: "11px",
-    padding: "2px 8px",
-    borderRadius: "20px",
-    fontWeight: 500,
-    background: "#eaf3de",
-    color: "#3B6D11",
-  },
-  qText: {
-    fontSize: "14px",
-    color: "#0f172a",
-    lineHeight: 1.5,
-    marginBottom: "8px",
-    fontWeight: 500,
-  },
-  qAnswer: {
-    fontFamily: "'DM Mono', monospace",
-    fontSize: "11px",
-    color: "#3B6D11",
-    background: "#eaf3de",
-    display: "inline-block",
-    padding: "2px 8px",
-    borderRadius: "6px",
-    marginBottom: "10px",
-  },
-  qActions: { display: "flex", gap: "8px" },
-  editForm: {
-    padding: "20px 24px",
-    background: "#f9f8f5",
-    borderBottom: "0.5px solid rgba(15,23,42,0.1)",
-  },
-  twoCol: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" },
-  editField: { marginBottom: "12px" },
-  optRow: {
-    display: "flex",
-    gap: "8px",
-    alignItems: "center",
-    marginBottom: "8px",
-  },
-  formActions: { display: "flex", gap: "8px", marginTop: "16px" },
-  footerBar: {
-    padding: "20px 24px",
-    borderTop: "0.5px solid rgba(15,23,42,0.1)",
-  },
-  empty: {
-    padding: "60px 24px",
-    textAlign: "center",
-    color: "#94a3b8",
-    fontSize: "14px",
-  },
-};
-
-function QuestionItem({
-  question,
-  index,
-  isSelected,
-  isEditing,
-  onToggleSelect,
-  onEdit,
-  onDelete,
-  onUpdate,
-  onCancelEdit,
-  subjects,
-  editTopics,
-  onEditSubjectChange,
-}) {
-  const [subjectId, setSubjectId] = useState(
-    question.subjectId?._id || question.subjectId || "",
-  );
-  const [topicId, setTopicId] = useState(
-    question.topicId?._id || question.topicId || "",
-  );
-  const [questionText, setQuestionText] = useState(question.questionText);
-  const [options, setOptions] = useState(
-    question.options.length ? question.options : ["", "", "", ""],
-  );
-  const [correctAnswer, setCorrectAnswer] = useState(question.correctAnswer);
-  const [explanation, setExplanation] = useState(question.explanation);
-
-  useEffect(() => {
-    if (isEditing) {
-      setSubjectId(question.subjectId?._id || question.subjectId || "");
-      setTopicId(question.topicId?._id || question.topicId || "");
-      setQuestionText(question.questionText);
-      setOptions(question.options.length ? question.options : ["", "", "", ""]);
-      setCorrectAnswer(question.correctAnswer);
-      setExplanation(question.explanation);
-    }
-  }, [isEditing]);
-
-  const handleSubjectChange = (val) => {
-    setSubjectId(val);
-    setTopicId("");
-    onEditSubjectChange(val);
-  };
-
-  const handleOptionChange = (i, val) => {
-    const updated = [...options];
-    updated[i] = val;
-    setOptions(updated);
-    const cleaned = updated.map((o) => o.trim()).filter(Boolean);
-    if (correctAnswer && !cleaned.includes(correctAnswer)) setCorrectAnswer("");
-  };
-
-  const removeOption = (i) => {
-    if (options.length <= 2) return;
-    const updated = options.filter((_, idx) => idx !== i);
-    setOptions(updated);
-    const cleaned = updated.map((o) => o.trim()).filter(Boolean);
-    if (correctAnswer && !cleaned.includes(correctAnswer)) setCorrectAnswer("");
-  };
-
-  const validOptions = options.map((o) => o.trim()).filter(Boolean);
-
-  const handleSave = () => {
-    onUpdate(question._id, {
-      subjectId,
-      topicId,
-      questionText,
-      options,
-      correctAnswer,
-      explanation,
-    });
-  };
-
-  if (isEditing) {
-    return (
-      <div style={styles.editForm}>
-        <div style={styles.twoCol}>
-          <div style={styles.editField}>
-            <label style={styles.fieldLabel}>Subject</label>
-            <select
-              style={styles.select}
-              value={subjectId}
-              onChange={(e) => handleSubjectChange(e.target.value)}
-            >
-              <option value="">Select subject</option>
-              {subjects.map((s) => (
-                <option key={s._id} value={s._id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div style={styles.editField}>
-            <label style={styles.fieldLabel}>Topic</label>
-            <select
-              style={styles.select}
-              value={topicId}
-              onChange={(e) => setTopicId(e.target.value)}
-              disabled={!subjectId}
-            >
-              <option value="">
-                {subjectId ? "Select topic" : "Select subject first"}
-              </option>
-              {editTopics.map((t) => (
-                <option key={t._id} value={t._id}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-        <div style={styles.editField}>
-          <label style={styles.fieldLabel}>Question</label>
-          <textarea
-            style={styles.textarea}
-            rows={3}
-            value={questionText}
-            onChange={(e) => setQuestionText(e.target.value)}
-            placeholder="Question text"
-          />
-        </div>
-        <div style={styles.editField}>
-          <label style={styles.fieldLabel}>Options</label>
-          {options.map((opt, i) => (
-            <div key={i} style={styles.optRow}>
-              <input
-                style={{ ...styles.input, flex: 1 }}
-                type="text"
-                value={opt}
-                onChange={(e) => handleOptionChange(i, e.target.value)}
-                placeholder={`Option ${i + 1}`}
-              />
-              {options.length > 2 && (
-                <button
-                  style={{
-                    ...styles.btn,
-                    color: "#dc2626",
-                    borderColor: "#fecaca",
-                    padding: "5px 10px",
-                    fontSize: "11px",
-                  }}
-                  onClick={() => removeOption(i)}
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-          ))}
-          {options.length < 6 && (
-            <button
-              style={{
-                ...styles.btn,
-                fontSize: "11px",
-                padding: "5px 12px",
-                marginTop: "4px",
-              }}
-              onClick={() => setOptions([...options, ""])}
-            >
-              + Add option
-            </button>
-          )}
-        </div>
-        <div style={styles.editField}>
-          <label style={styles.fieldLabel}>Correct answer</label>
-          <select
-            style={styles.select}
-            value={correctAnswer}
-            onChange={(e) => setCorrectAnswer(e.target.value)}
-          >
-            <option value="">Select correct answer</option>
-            {validOptions.map((o, i) => (
-              <option key={i} value={o}>
-                {o}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div style={styles.editField}>
-          <label style={styles.fieldLabel}>Explanation</label>
-          <textarea
-            style={styles.textarea}
-            rows={2}
-            value={explanation}
-            onChange={(e) => setExplanation(e.target.value)}
-            placeholder="Explanation"
-          />
-        </div>
-        <div style={styles.formActions}>
-          <button
-            style={{ ...styles.btn, ...styles.btnAccent }}
-            onClick={handleSave}
-          >
-            Save changes
-          </button>
-          <button style={styles.btn} onClick={onCancelEdit}>
-            Cancel
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div
-      style={{
-        ...styles.qItem,
-        background: isSelected ? "#eef6ff" : "transparent",
-      }}
-    >
-      <div style={{ paddingTop: "2px" }}>
-        <input
-          type="checkbox"
-          checked={isSelected}
-          onChange={() => onToggleSelect(question._id)}
-          style={{
-            width: 16,
-            height: 16,
-            accentColor: "#185FA5",
-            cursor: "pointer",
-          }}
-        />
-      </div>
-      <div style={{ flex: 1 }}>
-        <div style={styles.qNum}>#{index + 1}</div>
-        <div style={styles.qMeta}>
-          <span style={styles.pillSubj}>
-            {question.subjectId?.name || "Unknown"}
-          </span>
-          <span style={styles.pillTopic}>
-            {question.topicId?.name || "Unknown"}
-          </span>
-        </div>
-        <div style={styles.qText}>{question.questionText}</div>
-        <div style={styles.qAnswer}>✓ {question.correctAnswer}</div>
-        <div style={styles.qActions}>
-          <button
-            style={{ ...styles.btn, ...styles.btnAccent }}
-            onClick={() => onEdit(question)}
-          >
-            Edit
-          </button>
-          <button
-            style={{ ...styles.btn, ...styles.btnDanger }}
-            onClick={() => onDelete(question._id)}
-          >
-            Delete
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
+const subjectOfQuestion = (question) => question?.subjectId || {};
+const topicOfQuestion = (question) => question?.topicId || {};
+const getCourseId = (subject) => typeof subject?.courseId === "object" ? subject.courseId?._id : subject?.courseId;
+const getCourseName = (subject) => typeof subject?.courseId === "object" ? subject.courseId?.name : "Not available";
 
 function ManageQuestionsPage() {
   const navigate = useNavigate();
-
-  const [questions, setQuestions] = useState([]);
   const [courses, setCourses] = useState([]);
   const [subjects, setSubjects] = useState([]);
   const [topics, setTopics] = useState([]);
-  const [editTopics, setEditTopics] = useState([]);
+  const [questions, setQuestions] = useState([]);
+  const [courseFilter, setCourseFilter] = useState("");
+  const [levelFilter, setLevelFilter] = useState("");
+  const [subjectFilter, setSubjectFilter] = useState("");
+  const [topicFilter, setTopicFilter] = useState("");
   const [editingId, setEditingId] = useState(null);
+  const [editForm, setEditForm] = useState({
+    subjectId: "",
+    topicId: "",
+    questionText: "",
+    options: ["", "", "", ""],
+    correctAnswer: "",
+    explanation: "",
+  });
+  const [isLoading, setIsLoading] = useState(true);
 
-  const [filterCourseId, setFilterCourseId] = useState("");
-  const [filterLevel, setFilterLevel] = useState("");
-  const [filterSubjectId, setFilterSubjectId] = useState("");
-  const [filterTopicId, setFilterTopicId] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
-
-  const [rangeStart, setRangeStart] = useState("");
-  const [rangeEnd, setRangeEnd] = useState("");
-  const [selectedIds, setSelectedIds] = useState([]);
-
-  const fetchQuestions = async () => {
+  const fetchData = async () => {
     try {
-      const res = await api.get("/api/questions/admin/all", {
-        _tokenType: "admin",
-      });
-      setQuestions(apiArray(res.data, "questions"));
-    } catch (e) {
-      console.error("Error fetching questions:", e);
+      setIsLoading(true);
+      const [coursesRes, subjectsRes, topicsRes, questionsRes] = await Promise.all([
+        api.get("/api/courses"),
+        api.get("/api/subjects/admin/all?limit=100", { _tokenType: "admin" }),
+        api.get("/api/topics/admin/all?limit=100", { _tokenType: "admin" }),
+        api.get("/api/questions/admin/all?limit=100", { _tokenType: "admin" }),
+      ]);
+      setCourses(apiArray(coursesRes.data, "courses"));
+      setSubjects(apiArray(subjectsRes.data, "subjects"));
+      setTopics(apiArray(topicsRes.data, "topics"));
+      setQuestions(apiArray(questionsRes.data, "questions"));
+    } catch (error) {
+      console.error("Error loading questions:", error);
+      alert(error.message || "Error loading questions");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    const fetchCourses = async () => {
-      try {
-        const res = await api.get("/api/courses", { _tokenType: "admin" });
-        setCourses(apiArray(res.data, "courses"));
-      } catch (e) {
-        console.error("Error fetching courses:", e);
-      }
-    };
-
-    fetchQuestions();
-    fetchCourses();
+    fetchData();
   }, []);
 
-  useEffect(() => {
-    const fetchSubjects = async () => {
-      setFilterSubjectId("");
-      setFilterTopicId("");
-      setTopics([]);
+  const filteredSubjects = useMemo(() => {
+    return subjects.filter((subject) => {
+      const matchesCourse = courseFilter ? getCourseId(subject) === courseFilter : true;
+      const matchesLevel = levelFilter ? Number(subject.level) === Number(levelFilter) : true;
+      return matchesCourse && matchesLevel;
+    });
+  }, [subjects, courseFilter, levelFilter]);
 
-      if (!filterCourseId || !filterLevel) {
-        setSubjects([]);
-        return;
-      }
-
-      try {
-        const res = await api.get(
-          `/api/subjects/admin/all?courseId=${filterCourseId}&level=${filterLevel}&limit=100`,
-          { _tokenType: "admin" },
-        );
-        setSubjects(apiArray(res.data, "subjects"));
-      } catch (e) {
-        console.error("Error fetching subjects:", e);
-      }
-    };
-
-    fetchSubjects();
-  }, [filterCourseId, filterLevel]);
+  const filteredTopics = useMemo(() => {
+    return topics.filter((topic) => {
+      const subject = topic.subjectId || {};
+      const matchesCourse = courseFilter ? getCourseId(subject) === courseFilter : true;
+      const matchesLevel = levelFilter ? Number(subject.level) === Number(levelFilter) : true;
+      const matchesSubject = subjectFilter ? subject?._id === subjectFilter : true;
+      return matchesCourse && matchesLevel && matchesSubject;
+    });
+  }, [topics, courseFilter, levelFilter, subjectFilter]);
 
   useEffect(() => {
-    const fetchFilterTopics = async () => {
-      if (!filterSubjectId) {
-        setTopics([]);
-        setFilterTopicId("");
-        return;
-      }
-      try {
-        const res = await api.get(`/api/topics/admin/all?subjectId=${filterSubjectId}`, { _tokenType: "admin" });
-        setTopics(apiArray(res.data, "topics"));
-        setFilterTopicId("");
-      } catch (e) {
-        console.error("Error fetching filter topics:", e);
-      }
-    };
-    fetchFilterTopics();
-  }, [filterSubjectId]);
+    if (subjectFilter && !filteredSubjects.some((subject) => subject._id === subjectFilter)) {
+      setSubjectFilter("");
+      setTopicFilter("");
+    }
+  }, [filteredSubjects, subjectFilter]);
 
   useEffect(() => {
-    setSelectedIds([]);
-    setRangeStart("");
-    setRangeEnd("");
-  }, [filterSubjectId, filterTopicId, searchTerm]);
+    if (topicFilter && !filteredTopics.some((topic) => topic._id === topicFilter)) {
+      setTopicFilter("");
+    }
+  }, [filteredTopics, topicFilter]);
 
   const filteredQuestions = useMemo(() => {
-    return questions.filter((q) => {
-      const sid = q.subjectId?._id || q.subjectId;
-      const tid = q.topicId?._id || q.topicId;
-      const subjectCourseId = q.subjectId?.courseId?._id || q.subjectId?.courseId || "";
-      const subjectLevel = q.subjectId?.level || "";
-
-      if (filterCourseId && subjectCourseId !== filterCourseId) return false;
-      if (filterLevel && Number(subjectLevel) !== Number(filterLevel)) return false;
-      if (filterSubjectId && sid !== filterSubjectId) return false;
-      if (filterTopicId && tid !== filterTopicId) return false;
-      const s = searchTerm.trim().toLowerCase();
-      if (s) {
-        const hay = [
-          q.questionText,
-          q.correctAnswer,
-          q.explanation,
-          ...q.options,
-        ]
-          .join(" ")
-          .toLowerCase();
-        if (!hay.includes(s)) return false;
-      }
-      return true;
+    return questions.filter((question) => {
+      const subject = subjectOfQuestion(question);
+      const topic = topicOfQuestion(question);
+      const matchesCourse = courseFilter ? getCourseId(subject) === courseFilter : true;
+      const matchesLevel = levelFilter ? Number(subject.level) === Number(levelFilter) : true;
+      const matchesSubject = subjectFilter ? subject?._id === subjectFilter : true;
+      const matchesTopic = topicFilter ? topic?._id === topicFilter : true;
+      return matchesCourse && matchesLevel && matchesSubject && matchesTopic;
     });
-  }, [questions, filterCourseId, filterLevel, filterSubjectId, filterTopicId, searchTerm]);
+  }, [questions, courseFilter, levelFilter, subjectFilter, topicFilter]);
 
-  const handleEditSubjectChange = async (newSubjectId) => {
-    if (!newSubjectId) {
-      setEditTopics([]);
-      return;
-    }
-    try {
-      const res = await api.get(`/api/topics/admin/all?subjectId=${newSubjectId}`, { _tokenType: "admin" });
-      setEditTopics(apiArray(res.data, "topics"));
-    } catch (e) {
-      console.error("Error fetching edit topics:", e);
-      setEditTopics([]);
-    }
-  };
-
-  const startEdit = async (question) => {
-    const sid = question.subjectId?._id || question.subjectId || "";
+  const startEdit = (question) => {
+    const options = Array.isArray(question.options) ? question.options : [];
     setEditingId(question._id);
-    if (sid) {
-      try {
-        const res = await api.get(`/api/topics/admin/all?subjectId=${sid}`, { _tokenType: "admin" });
-        setEditTopics(apiArray(res.data, "topics"));
-      } catch (e) {
-        setEditTopics([]);
-      }
-    }
+    setEditForm({
+      subjectId: subjectOfQuestion(question)?._id || "",
+      topicId: topicOfQuestion(question)?._id || "",
+      questionText: question.questionText || "",
+      options: [...options, "", "", "", "", "", ""].slice(0, Math.max(4, options.length)),
+      correctAnswer: question.correctAnswer || "",
+      explanation: question.explanation || "",
+    });
   };
 
   const cancelEdit = () => {
     setEditingId(null);
-    setEditTopics([]);
+    setEditForm({ subjectId: "", topicId: "", questionText: "", options: ["", "", "", ""], correctAnswer: "", explanation: "" });
   };
 
-  const handleUpdate = async (id, data) => {
-    const cleaned = data.options.map((o) => o.trim()).filter(Boolean);
-    if (!data.subjectId) {
-      alert("Please select a subject.");
+  const editTopics = useMemo(() => {
+    return topics.filter((topic) => {
+      const subject = topic.subjectId || {};
+      return editForm.subjectId ? subject?._id === editForm.subjectId : true;
+    });
+  }, [topics, editForm.subjectId]);
+
+  const updateOption = (index, value) => {
+    const next = [...editForm.options];
+    next[index] = value;
+    setEditForm({ ...editForm, options: next });
+  };
+
+  const saveEdit = async (id) => {
+    const options = editForm.options.map((option) => option.trim()).filter(Boolean);
+
+    if (!editForm.subjectId || !editForm.topicId || !editForm.questionText.trim() || options.length < 2 || !editForm.correctAnswer.trim() || !editForm.explanation.trim()) {
+      alert("Please complete all question fields. At least two options are required.");
       return;
     }
-    if (!data.topicId) {
-      alert("Please select a topic.");
-      return;
-    }
-    if (!data.questionText.trim()) {
-      alert("Please enter the question text.");
-      return;
-    }
-    if (cleaned.length < 2) {
-      alert("Please provide at least two options.");
-      return;
-    }
-    if (!data.correctAnswer) {
-      alert("Please select the correct answer.");
-      return;
-    }
-    if (!cleaned.includes(data.correctAnswer)) {
-      alert("Correct answer must match one of the options.");
-      return;
-    }
-    if (!data.explanation.trim()) {
-      alert("Please enter the explanation.");
-      return;
-    }
+
     try {
       await api.put(
         `/api/questions/${id}`,
         {
-          ...data,
-          options: cleaned,
-          questionText: data.questionText.trim(),
-          explanation: data.explanation.trim(),
+          subjectId: editForm.subjectId,
+          topicId: editForm.topicId,
+          questionText: editForm.questionText.trim(),
+          options,
+          correctAnswer: editForm.correctAnswer.trim(),
+          explanation: editForm.explanation.trim(),
         },
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("adminToken")}`,
-          },
-        },
+        { _tokenType: "admin" },
       );
-      alert("Question updated successfully");
       cancelEdit();
-      fetchQuestions();
-    } catch (e) {
-      console.error("Error updating question:", e);
-      alert("Error updating question");
+      fetchData();
+    } catch (error) {
+      console.error("Error updating question:", error);
+      alert(error.message || "Error updating question");
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this question?"))
-      return;
+  const deleteQuestion = async (id) => {
+    if (!window.confirm("Delete this question?")) return;
+
     try {
-      await api.delete(`/api/questions/${id}`, {
-        _tokenType: "admin",
-      });
-      alert("Question deleted successfully");
-      fetchQuestions();
-      setSelectedIds((prev) => prev.filter((qid) => qid !== id));
-    } catch (e) {
-      alert("Error deleting question");
-    }
-  };
-
-  const toggleSelect = (id) =>
-    setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
-    );
-  const handleSelectAll = () =>
-    setSelectedIds(filteredQuestions.map((q) => q._id));
-  const clearSelection = () => setSelectedIds([]);
-
-  const handleSelectRange = () => {
-    const s = Number(rangeStart);
-    const e = Number(rangeEnd);
-    if (!s || !e || s < 1 || e < 1 || s > e) {
-      alert("Please enter a valid range.");
-      return;
-    }
-    const ids = filteredQuestions
-      .filter((_, i) => i + 1 >= s && i + 1 <= e)
-      .map((q) => q._id);
-    if (!ids.length) {
-      alert("No questions found in that range.");
-      return;
-    }
-    setSelectedIds(ids);
-  };
-
-  const handleDeleteSelected = async () => {
-    if (!selectedIds.length) {
-      alert("No questions selected.");
-      return;
-    }
-    if (
-      !window.confirm(
-        `Delete ${selectedIds.length} question${selectedIds.length !== 1 ? "s" : ""}?`,
-      )
-    )
-      return;
-    try {
-      await Promise.all(
-        selectedIds.map((id) =>
-          api.delete(`/api/questions/${id}`, {
-            _tokenType: "admin",
-          }),
-        ),
-      );
-      alert("Selected questions deleted successfully");
-      setSelectedIds([]);
-      setRangeStart("");
-      setRangeEnd("");
-      fetchQuestions();
-    } catch (e) {
-      alert("Error deleting selected questions");
+      await api.delete(`/api/questions/${id}`, { _tokenType: "admin" });
+      fetchData();
+    } catch (error) {
+      console.error("Error deleting question:", error);
+      alert(error.message || "Error deleting question");
     }
   };
 
   return (
-    <div style={styles.page}>
-      <div style={styles.inner}>
-        <div style={styles.breadcrumb}>Admin / Manage questions</div>
-        <h1 style={styles.pageTitle}>Edit & delete questions</h1>
-        <p style={styles.pageSub}>
-          Filter by subject, topic, and keyword to manage large question banks
-          more easily.
-        </p>
+    <div style={pageStyle}>
+      <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
+        <p style={eyebrowStyle}>Admin / Questions</p>
+        <h1 style={headingStyle}>Manage questions</h1>
+        <p style={subheadingStyle}>Filter questions by course, level, subject, and topic.</p>
 
-        <div style={styles.card}>
-          {/* Filters */}
-          <div style={styles.filtersRow}>
-            <div>
-              <label style={styles.fieldLabel}>Course</label>
-              <select
-                style={styles.select}
-                value={filterCourseId}
-                onChange={(e) => setFilterCourseId(e.target.value)}
-              >
-                <option value="">Select course</option>
-                {courses.map((course) => (
-                  <option key={course._id} value={course._id}>
-                    {course.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label style={styles.fieldLabel}>Level</label>
-              <select
-                style={styles.select}
-                value={filterLevel}
-                onChange={(e) => setFilterLevel(e.target.value)}
-              >
-                <option value="">Select level</option>
-                {[100, 200, 300, 400, 500, 600].map((levelOption) => (
-                  <option key={levelOption} value={levelOption}>
-                    {levelOption} Level
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label style={styles.fieldLabel}>Subject</label>
-              <select
-                style={styles.select}
-                value={filterSubjectId}
-                onChange={(e) => setFilterSubjectId(e.target.value)}
-                disabled={!filterCourseId || !filterLevel}
-              >
-                <option value="">{filterCourseId && filterLevel ? "All subjects" : "Select course and level first"}</option>
-                {subjects.map((s) => (
-                  <option key={s._id} value={s._id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label style={styles.fieldLabel}>Topic</label>
-              <select
-                style={styles.select}
-                value={filterTopicId}
-                onChange={(e) => setFilterTopicId(e.target.value)}
-                disabled={!filterSubjectId}
-              >
-                <option value="">
-                  {filterSubjectId ? "All topics" : "Select subject first"}
-                </option>
-                {topics.map((t) => (
-                  <option key={t._id} value={t._id}>
-                    {t.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label style={styles.fieldLabel}>Search</label>
-              <input
-                style={styles.input}
-                type="text"
-                placeholder="Question, option, answer, explanation"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-          </div>
+        <div style={filterCardStyle}>
+          <select value={courseFilter} onChange={(e) => setCourseFilter(e.target.value)} style={inputStyle}>
+            <option value="">All courses</option>
+            {courses.map((course) => <option key={course._id} value={course._id}>{course.name}</option>)}
+          </select>
 
-          {/* Bulk tools */}
-          <div style={styles.bulkBar}>
-            <span style={styles.bulkLabel}>Bulk delete</span>
-            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-              <input
-                style={styles.rangeInput}
-                type="number"
-                min="1"
-                placeholder="From"
-                value={rangeStart}
-                onChange={(e) => setRangeStart(e.target.value)}
-              />
-              <span style={styles.rangeSep}>to</span>
-              <input
-                style={styles.rangeInput}
-                type="number"
-                min="1"
-                placeholder="To"
-                value={rangeEnd}
-                onChange={(e) => setRangeEnd(e.target.value)}
-              />
-            </div>
-            <button style={styles.btn} onClick={handleSelectRange}>
-              Select range
-            </button>
-            <button style={styles.btn} onClick={handleSelectAll}>
-              Select all filtered
-            </button>
-            <button style={styles.btn} onClick={clearSelection}>
-              Clear
-            </button>
-            <button
-              style={{ ...styles.btn, ...styles.btnDanger }}
-              onClick={handleDeleteSelected}
-            >
-              Delete selected
-            </button>
-          </div>
+          <select value={levelFilter} onChange={(e) => setLevelFilter(e.target.value)} style={inputStyle}>
+            <option value="">All levels</option>
+            {LEVELS.map((level) => <option key={level} value={level}>{level} Level</option>)}
+          </select>
 
-          {/* Count bar */}
-          <div style={styles.countBar}>
-            <span style={styles.countBadge}>
-              Showing {filteredQuestions.length} question
-              {filteredQuestions.length !== 1 ? "s" : ""}
-            </span>
-            <span style={styles.selBadge}>{selectedIds.length} selected</span>
-          </div>
+          <select value={subjectFilter} onChange={(e) => setSubjectFilter(e.target.value)} style={inputStyle}>
+            <option value="">All subjects</option>
+            {filteredSubjects.map((subject) => <option key={subject._id} value={subject._id}>{subject.name}</option>)}
+          </select>
 
-          {/* Question list */}
-          {filteredQuestions.length === 0 ? (
-            <div style={styles.empty}>No matching questions found.</div>
+          <select value={topicFilter} onChange={(e) => setTopicFilter(e.target.value)} style={inputStyle}>
+            <option value="">All topics</option>
+            {filteredTopics.map((topic) => <option key={topic._id} value={topic._id}>{topic.name}</option>)}
+          </select>
+
+          <button onClick={() => navigate("/admin")} style={secondaryButton}>Back to Admin</button>
+        </div>
+
+        <div style={countStyle}>Showing {filteredQuestions.length} question(s)</div>
+
+        <div style={cardStyle}>
+          {isLoading ? (
+            <p style={emptyStyle}>Loading questions...</p>
+          ) : filteredQuestions.length === 0 ? (
+            <p style={emptyStyle}>No questions found.</p>
           ) : (
-            filteredQuestions.map((q, i) => (
-              <QuestionItem
-                key={q._id}
-                question={q}
-                index={i}
-                isSelected={selectedIds.includes(q._id)}
-                isEditing={editingId === q._id}
-                onToggleSelect={toggleSelect}
-                onEdit={startEdit}
-                onDelete={handleDelete}
-                onUpdate={handleUpdate}
-                onCancelEdit={cancelEdit}
-                subjects={subjects}
-                editTopics={editTopics}
-                onEditSubjectChange={handleEditSubjectChange}
-              />
-            ))
-          )}
+            filteredQuestions.map((question, index) => {
+              const subject = subjectOfQuestion(question);
+              const topic = topicOfQuestion(question);
 
-          <div style={styles.footerBar}>
-            <button
-              style={{ ...styles.btn, ...styles.btnGhost }}
-              onClick={() => navigate("/admin")}
-            >
-              ← Back to Admin
-            </button>
-          </div>
+              return (
+                <div key={question._id} style={rowStyle}>
+                  {editingId === question._id ? (
+                    <div style={{ width: "100%" }}>
+                      <div style={gridStyle}>
+                        <select value={editForm.subjectId} onChange={(e) => setEditForm({ ...editForm, subjectId: e.target.value, topicId: "" })} style={inputStyle}>
+                          <option value="">Select subject</option>
+                          {subjects.map((item) => <option key={item._id} value={item._id}>{item.name}</option>)}
+                        </select>
+                        <select value={editForm.topicId} onChange={(e) => setEditForm({ ...editForm, topicId: e.target.value })} style={inputStyle}>
+                          <option value="">Select topic</option>
+                          {editTopics.map((item) => <option key={item._id} value={item._id}>{item.name}</option>)}
+                        </select>
+                      </div>
+
+                      <textarea value={editForm.questionText} onChange={(e) => setEditForm({ ...editForm, questionText: e.target.value })} style={textareaStyle} placeholder="Question text" />
+
+                      <div style={gridStyle}>
+                        {editForm.options.map((option, optionIndex) => (
+                          <input key={optionIndex} value={option} onChange={(e) => updateOption(optionIndex, e.target.value)} style={inputStyle} placeholder={`Option ${optionIndex + 1}`} />
+                        ))}
+                      </div>
+
+                      <input value={editForm.correctAnswer} onChange={(e) => setEditForm({ ...editForm, correctAnswer: e.target.value })} style={inputStyle} placeholder="Correct answer, must match one option" />
+                      <textarea value={editForm.explanation} onChange={(e) => setEditForm({ ...editForm, explanation: e.target.value })} style={textareaStyle} placeholder="Explanation" />
+
+                      <div style={buttonRowStyle}>
+                        <button onClick={() => saveEdit(question._id)} style={primaryButton}>Save</button>
+                        <button onClick={cancelEdit} style={secondaryButton}>Cancel</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div style={{ flex: 1 }}>
+                        <h3 style={itemTitleStyle}>Question {index + 1}</h3>
+                        <p style={itemMetaStyle}>Course: {getCourseName(subject)} | Level: {subject?.level || "N/A"} | Subject: {subject?.name || "Deleted subject"} | Topic: {topic?.name || "Deleted topic"}</p>
+                        <p style={questionTextStyle}>{question.questionText}</p>
+                        <ol style={{ marginTop: "8px", color: "#475569" }}>
+                          {(question.options || []).map((option) => <li key={option}>{option}</li>)}
+                        </ol>
+                        <p style={itemMetaStyle}><strong>Answer:</strong> {question.correctAnswer}</p>
+                        <p style={itemMetaStyle}><strong>Explanation:</strong> {question.explanation}</p>
+                      </div>
+                      <div style={buttonRowStyle}>
+                        <button onClick={() => startEdit(question)} style={primaryButton}>Edit</button>
+                        <button onClick={() => deleteQuestion(question._id)} style={dangerButton}>Delete</button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              );
+            })
+          )}
         </div>
       </div>
     </div>
   );
 }
+
+const pageStyle = { minHeight: "100vh", background: "linear-gradient(135deg, #f8fbff 0%, #eef4ff 50%, #f7f9fc 100%)", padding: "32px 20px" };
+const eyebrowStyle = { margin: 0, color: "#64748b", fontSize: "14px", fontWeight: 600 };
+const headingStyle = { margin: "10px 0 8px", fontSize: "36px", color: "#0f172a" };
+const subheadingStyle = { margin: "0 0 24px", color: "#475569", fontSize: "16px", lineHeight: 1.6 };
+const filterCardStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: "12px", marginBottom: "18px" };
+const cardStyle = { backgroundColor: "white", border: "1px solid #e2e8f0", borderRadius: "20px", padding: "20px", boxShadow: "0 12px 30px rgba(15,23,42,0.06)" };
+const rowStyle = { display: "flex", justifyContent: "space-between", gap: "16px", flexWrap: "wrap", padding: "18px 0", borderBottom: "1px solid #e2e8f0" };
+const gridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "10px", marginBottom: "10px" };
+const inputStyle = { width: "100%", padding: "12px 14px", borderRadius: "10px", border: "1px solid #cbd5e1", fontSize: "14px", boxSizing: "border-box", backgroundColor: "white" };
+const textareaStyle = { ...inputStyle, minHeight: "95px", resize: "vertical", marginBottom: "10px" };
+const buttonRowStyle = { display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "flex-start" };
+const primaryButton = { padding: "10px 14px", border: "none", borderRadius: "8px", backgroundColor: "#185FA5", color: "white", fontWeight: 700, cursor: "pointer" };
+const secondaryButton = { padding: "10px 14px", border: "1px solid #cbd5e1", borderRadius: "8px", backgroundColor: "white", color: "#0f172a", fontWeight: 700, cursor: "pointer" };
+const dangerButton = { padding: "10px 14px", border: "none", borderRadius: "8px", backgroundColor: "#dc2626", color: "white", fontWeight: 700, cursor: "pointer" };
+const countStyle = { marginBottom: "12px", color: "#475569", fontWeight: 700 };
+const emptyStyle = { color: "#64748b", textAlign: "center" };
+const itemTitleStyle = { margin: "0 0 6px", color: "#0f172a" };
+const itemMetaStyle = { margin: "0 0 6px", color: "#64748b", lineHeight: 1.5 };
+const questionTextStyle = { margin: "10px 0 0", color: "#0f172a", lineHeight: 1.6 };
 
 export default ManageQuestionsPage;

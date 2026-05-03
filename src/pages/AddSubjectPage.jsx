@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
-import api from "../lib/api";
 import { useNavigate } from "react-router-dom";
+import api from "../lib/api";
+
+const LEVELS = [100, 200, 300, 400, 500, 600];
 
 const apiArray = (payload, key) => {
   if (Array.isArray(payload)) return payload;
@@ -11,18 +13,18 @@ const apiArray = (payload, key) => {
 
 function AddSubjectPage() {
   const navigate = useNavigate();
-
   const [courses, setCourses] = useState([]);
   const [subjectName, setSubjectName] = useState("");
   const [durationMinutes, setDurationMinutes] = useState(5);
   const [courseId, setCourseId] = useState("");
   const [level, setLevel] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     const fetchCourses = async () => {
       try {
-        const response = await api.get("/api/courses", { _tokenType: "admin" });
-        setCourses(apiArray(response.data, "courses"));
+        const { data } = await api.get("/api/courses");
+        setCourses(apiArray(data, "courses"));
       } catch (error) {
         console.error("Error fetching courses:", error);
         alert(error.message || "Error loading courses");
@@ -35,14 +37,13 @@ function AddSubjectPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const adminToken = localStorage.getItem("adminToken");
-    if (!adminToken) {
-      alert("Your admin session has expired. Please log in again.");
-      navigate("/admin-login");
+    if (!subjectName.trim() || !courseId || !level) {
+      alert("Please complete subject name, course, and level.");
       return;
     }
 
     try {
+      setIsSaving(true);
       await api.post(
         "/api/subjects",
         {
@@ -51,9 +52,7 @@ function AddSubjectPage() {
           courseId,
           level: Number(level),
         },
-        {
-          _tokenType: "admin",
-        },
+        { _tokenType: "admin" },
       );
 
       alert("Subject saved successfully");
@@ -64,28 +63,31 @@ function AddSubjectPage() {
     } catch (error) {
       console.error("Error saving subject:", error);
       alert(error.message || "Error saving subject");
+    } finally {
+      setIsSaving(false);
     }
   };
 
   return (
     <div style={pageStyle}>
       <div style={{ maxWidth: "700px", margin: "0 auto" }}>
-        <h1>Create a new subject</h1>
-        <p style={{ color: "#64748b" }}>
-          Add subject name, course, level, and timer.
-        </p>
+        <p style={eyebrowStyle}>Admin / Subject setup</p>
+        <h1 style={headingStyle}>Create a new subject</h1>
+        <p style={subheadingStyle}>Add subject name, course, level, and timer.</p>
 
         <div style={cardStyle}>
           <form onSubmit={handleSubmit}>
+            <label style={labelStyle}>Subject name</label>
             <input
               type="text"
-              placeholder="Subject name"
+              placeholder="For example: Anatomy"
               value={subjectName}
               onChange={(e) => setSubjectName(e.target.value)}
               style={inputStyle}
               required
             />
 
+            <label style={labelStyle}>Course</label>
             <select
               value={courseId}
               onChange={(e) => setCourseId(e.target.value)}
@@ -100,6 +102,7 @@ function AddSubjectPage() {
               ))}
             </select>
 
+            <label style={labelStyle}>Level</label>
             <select
               value={level}
               onChange={(e) => setLevel(e.target.value)}
@@ -107,33 +110,30 @@ function AddSubjectPage() {
               required
             >
               <option value="">Select level</option>
-              {[100, 200, 300, 400, 500, 600].map((item) => (
+              {LEVELS.map((item) => (
                 <option key={item} value={item}>
                   {item} Level
                 </option>
               ))}
             </select>
 
+            <label style={labelStyle}>Duration in minutes</label>
             <input
               type="number"
-              placeholder="Duration in minutes"
               value={durationMinutes}
               onChange={(e) => setDurationMinutes(e.target.value)}
               min="1"
+              max="120"
               style={inputStyle}
               required
             />
 
-            <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-              <button type="submit" style={primaryButton}>
-                Save Subject
+            <div style={buttonRowStyle}>
+              <button type="submit" disabled={isSaving} style={primaryButton}>
+                {isSaving ? "Saving..." : "Save Subject"}
               </button>
 
-              <button
-                type="button"
-                onClick={() => navigate("/admin")}
-                style={secondaryButton}
-              >
+              <button type="button" onClick={() => navigate("/admin")} style={secondaryButton}>
                 Back to Admin
               </button>
             </div>
@@ -144,52 +144,15 @@ function AddSubjectPage() {
   );
 }
 
-const pageStyle = {
-  minHeight: "100vh",
-  background: "linear-gradient(135deg, #f8fbff 0%, #eef4ff 50%, #f7f9fc 100%)",
-  padding: "32px 20px",
-};
-
-const cardStyle = {
-  backgroundColor: "white",
-  border: "1px solid #e2e8f0",
-  borderRadius: "20px",
-  padding: "28px",
-  boxShadow: "0 12px 30px rgba(15,23,42,0.06)",
-};
-
-const inputStyle = {
-  width: "100%",
-  padding: "14px 16px",
-  borderRadius: "10px",
-  border: "1px solid #cbd5e1",
-  fontSize: "15px",
-  outline: "none",
-  boxSizing: "border-box",
-  marginBottom: "14px",
-  backgroundColor: "white",
-};
-
-const primaryButton = {
-  padding: "14px 22px",
-  border: "none",
-  borderRadius: "10px",
-  backgroundColor: "#185FA5",
-  color: "white",
-  fontSize: "15px",
-  fontWeight: "600",
-  cursor: "pointer",
-};
-
-const secondaryButton = {
-  padding: "14px 22px",
-  border: "1px solid #cbd5e1",
-  borderRadius: "10px",
-  backgroundColor: "white",
-  color: "#0f172a",
-  fontSize: "15px",
-  fontWeight: "600",
-  cursor: "pointer",
-};
+const pageStyle = { minHeight: "100vh", background: "linear-gradient(135deg, #f8fbff 0%, #eef4ff 50%, #f7f9fc 100%)", padding: "32px 20px" };
+const eyebrowStyle = { margin: 0, color: "#64748b", fontSize: "14px", fontWeight: 600 };
+const headingStyle = { margin: "10px 0 8px", fontSize: "36px", color: "#0f172a" };
+const subheadingStyle = { margin: "0 0 24px", color: "#475569", fontSize: "16px", lineHeight: 1.6 };
+const cardStyle = { backgroundColor: "white", border: "1px solid #e2e8f0", borderRadius: "20px", padding: "28px", boxShadow: "0 12px 30px rgba(15,23,42,0.06)" };
+const labelStyle = { display: "block", marginBottom: "8px", fontWeight: 600, color: "#0f172a" };
+const inputStyle = { width: "100%", padding: "14px 16px", borderRadius: "10px", border: "1px solid #cbd5e1", fontSize: "15px", outline: "none", boxSizing: "border-box", marginBottom: "14px", backgroundColor: "white" };
+const buttonRowStyle = { display: "flex", gap: "12px", flexWrap: "wrap" };
+const primaryButton = { padding: "14px 22px", border: "none", borderRadius: "10px", backgroundColor: "#185FA5", color: "white", fontSize: "15px", fontWeight: 600, cursor: "pointer" };
+const secondaryButton = { padding: "14px 22px", border: "1px solid #cbd5e1", borderRadius: "10px", backgroundColor: "white", color: "#0f172a", fontSize: "15px", fontWeight: 600, cursor: "pointer" };
 
 export default AddSubjectPage;

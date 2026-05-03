@@ -1,74 +1,4 @@
-import { useEffect, useState 
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "16px", marginBottom: "20px" }}>
-              <div>
-                <label
-                  style={{
-                    display: "block",
-                    marginBottom: "8px",
-                    fontWeight: "600",
-                    color: "#0f172a",
-                  }}
-                >
-                  Course
-                </label>
-                <select
-                  value={courseId}
-                  onChange={(e) => setCourseId(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "14px 16px",
-                    borderRadius: "10px",
-                    border: "1px solid #cbd5e1",
-                    fontSize: "15px",
-                    backgroundColor: "white",
-                    boxSizing: "border-box",
-                  }}
-                  required
-                >
-                  <option value="">Select Course</option>
-                  {courses.map((course) => (
-                    <option key={course._id} value={course._id}>
-                      {course.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label
-                  style={{
-                    display: "block",
-                    marginBottom: "8px",
-                    fontWeight: "600",
-                    color: "#0f172a",
-                  }}
-                >
-                  Level
-                </label>
-                <select
-                  value={level}
-                  onChange={(e) => setLevel(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "14px 16px",
-                    borderRadius: "10px",
-                    border: "1px solid #cbd5e1",
-                    fontSize: "15px",
-                    backgroundColor: "white",
-                    boxSizing: "border-box",
-                  }}
-                  required
-                >
-                  <option value="">Select Level</option>
-                  {[100, 200, 300, 400, 500, 600].map((levelOption) => (
-                    <option key={levelOption} value={levelOption}>
-                      {levelOption} Level
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-} from "react";
+import { useEffect, useMemo, useState } from "react";
 import api from "../lib/api";
 import { useNavigate } from "react-router-dom";
 
@@ -79,6 +9,7 @@ const apiArray = (payload, key) => {
   return [];
 };
 
+const levels = [100, 200, 300, 400, 500, 600];
 
 function BulkImportQuestionsPage() {
   const navigate = useNavigate();
@@ -86,6 +17,7 @@ function BulkImportQuestionsPage() {
   const [courses, setCourses] = useState([]);
   const [subjects, setSubjects] = useState([]);
   const [topics, setTopics] = useState([]);
+
   const [courseId, setCourseId] = useState("");
   const [level, setLevel] = useState("");
   const [subjectId, setSubjectId] = useState("");
@@ -94,41 +26,46 @@ function BulkImportQuestionsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    const fetchCourses = async () => {
+    const fetchData = async () => {
       try {
-        const response = await api.get("/api/courses", { _tokenType: "admin" });
-        setCourses(apiArray(response.data, "courses"));
+        const [courseRes, subjectRes] = await Promise.all([
+          api.get("/api/courses"),
+          api.get("/api/subjects/admin/all?limit=100", {
+            _tokenType: "admin",
+          }),
+        ]);
+
+        setCourses(apiArray(courseRes.data, "courses"));
+        setSubjects(apiArray(subjectRes.data, "subjects"));
       } catch (error) {
-        console.error("Error fetching courses:", error);
+        console.error("Error fetching data:", error);
+        alert(error.message || "Error loading courses and subjects");
       }
     };
 
-    fetchCourses();
+    fetchData();
   }, []);
 
+  const filteredSubjects = useMemo(() => {
+    return subjects.filter((subject) => {
+      const subjectCourseId =
+        typeof subject.courseId === "object"
+          ? subject.courseId?._id
+          : subject.courseId;
+
+      const courseMatches = courseId ? subjectCourseId === courseId : true;
+      const levelMatches = level
+        ? Number(subject.level) === Number(level)
+        : true;
+
+      return courseMatches && levelMatches;
+    });
+  }, [subjects, courseId, level]);
+
   useEffect(() => {
-    const fetchSubjects = async () => {
-      setSubjectId("");
-      setTopicId("");
-      if (typeof setTopics === "function") setTopics([]);
-
-      if (!courseId || !level) {
-        setSubjects([]);
-        return;
-      }
-
-      try {
-        const response = await api.get(
-          `/api/subjects/admin/all?courseId=${courseId}&level=${level}&limit=100`,
-          { _tokenType: "admin" },
-        );
-        setSubjects(apiArray(response.data, "subjects"));
-      } catch (error) {
-        console.error("Error fetching subjects:", error);
-      }
-    };
-
-    fetchSubjects();
+    setSubjectId("");
+    setTopicId("");
+    setTopics([]);
   }, [courseId, level]);
 
   useEffect(() => {
@@ -140,13 +77,16 @@ function BulkImportQuestionsPage() {
       }
 
       try {
-        const response = await api.get(`/api/topics/admin/all?subjectId=${subjectId}`, {
-          _tokenType: "admin",
-        });
+        const response = await api.get(
+          `/api/topics/admin/all?subjectId=${subjectId}&limit=100`,
+          { _tokenType: "admin" },
+        );
+
         setTopics(apiArray(response.data, "topics"));
         setTopicId("");
       } catch (error) {
         console.error("Error fetching topics:", error);
+        alert(error.message || "Error loading topics");
       }
     };
 
@@ -181,6 +121,16 @@ function BulkImportQuestionsPage() {
 
   const handleImport = async (e) => {
     e.preventDefault();
+
+    if (!courseId) {
+      alert("Please select a course");
+      return;
+    }
+
+    if (!level) {
+      alert("Please select a level");
+      return;
+    }
 
     if (!subjectId) {
       alert("Please select a subject");
@@ -256,9 +206,7 @@ function BulkImportQuestionsPage() {
           subjectId,
           questions: normalizedQuestions,
         },
-        {
-          _tokenType: "admin",
-        },
+        { _tokenType: "admin" },
       );
 
       alert(response.data.message || "Questions imported successfully");
@@ -266,7 +214,7 @@ function BulkImportQuestionsPage() {
       setTopicId("");
     } catch (error) {
       console.error("Error importing questions:", error);
-      alert("Error importing questions");
+      alert(error.message || "Error importing questions");
     } finally {
       setIsSubmitting(false);
     }
@@ -310,8 +258,8 @@ function BulkImportQuestionsPage() {
               lineHeight: "1.6",
             }}
           >
-            Select a subject, choose a topic, then paste a JSON array of
-            questions to import them all in one step.
+            Select a course, level, subject, and topic, then paste a JSON array
+            of questions to import them all in one step.
           </p>
         </div>
 
@@ -334,32 +282,54 @@ function BulkImportQuestionsPage() {
               }}
             >
               <div>
-                <label
-                  style={{
-                    display: "block",
-                    marginBottom: "8px",
-                    fontWeight: "600",
-                    color: "#0f172a",
-                  }}
+                <label style={labelStyle}>Course</label>
+                <select
+                  value={courseId}
+                  onChange={(e) => setCourseId(e.target.value)}
+                  style={selectStyle}
+                  required
                 >
-                  Subject
-                </label>
+                  <option value="">Select Course</option>
+                  {courses.map((course) => (
+                    <option key={course._id} value={course._id}>
+                      {course.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label style={labelStyle}>Level</label>
+                <select
+                  value={level}
+                  onChange={(e) => setLevel(e.target.value)}
+                  style={selectStyle}
+                  required
+                >
+                  <option value="">Select Level</option>
+                  {levels.map((item) => (
+                    <option key={item} value={item}>
+                      {item} Level
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label style={labelStyle}>Subject</label>
                 <select
                   value={subjectId}
                   onChange={(e) => setSubjectId(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "14px 16px",
-                    borderRadius: "10px",
-                    border: "1px solid #cbd5e1",
-                    fontSize: "15px",
-                    backgroundColor: "white",
-                    boxSizing: "border-box",
-                  }}
+                  style={selectStyle}
                   required
+                  disabled={!courseId || !level}
                 >
-                  <option value="">Select Subject</option>
-                  {subjects.map((subject) => (
+                  <option value="">
+                    {!courseId || !level
+                      ? "Select course and level first"
+                      : "Select Subject"}
+                  </option>
+                  {filteredSubjects.map((subject) => (
                     <option key={subject._id} value={subject._id}>
                       {subject.name}
                     </option>
@@ -368,28 +338,11 @@ function BulkImportQuestionsPage() {
               </div>
 
               <div>
-                <label
-                  style={{
-                    display: "block",
-                    marginBottom: "8px",
-                    fontWeight: "600",
-                    color: "#0f172a",
-                  }}
-                >
-                  Topic
-                </label>
+                <label style={labelStyle}>Topic</label>
                 <select
                   value={topicId}
                   onChange={(e) => setTopicId(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "14px 16px",
-                    borderRadius: "10px",
-                    border: "1px solid #cbd5e1",
-                    fontSize: "15px",
-                    backgroundColor: "white",
-                    boxSizing: "border-box",
-                  }}
+                  style={selectStyle}
                   required
                   disabled={!subjectId}
                 >
@@ -406,16 +359,7 @@ function BulkImportQuestionsPage() {
             </div>
 
             <div style={{ marginBottom: "12px" }}>
-              <label
-                style={{
-                  display: "block",
-                  marginBottom: "8px",
-                  fontWeight: "600",
-                  color: "#0f172a",
-                }}
-              >
-                JSON Array
-              </label>
+              <label style={labelStyle}>JSON Array</label>
               <textarea
                 value={jsonInput}
                 onChange={(e) => setJsonInput(e.target.value)}
@@ -515,5 +459,22 @@ function BulkImportQuestionsPage() {
     </div>
   );
 }
+
+const labelStyle = {
+  display: "block",
+  marginBottom: "8px",
+  fontWeight: "600",
+  color: "#0f172a",
+};
+
+const selectStyle = {
+  width: "100%",
+  padding: "14px 16px",
+  borderRadius: "10px",
+  border: "1px solid #cbd5e1",
+  fontSize: "15px",
+  backgroundColor: "white",
+  boxSizing: "border-box",
+};
 
 export default BulkImportQuestionsPage;

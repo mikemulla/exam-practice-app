@@ -1,480 +1,192 @@
 import { useEffect, useMemo, useState } from "react";
-import api from "../lib/api";
 import { useNavigate } from "react-router-dom";
+import api from "../lib/api";
+
+const LEVELS = [100, 200, 300, 400, 500, 600];
 
 const apiArray = (payload, key) => {
   if (Array.isArray(payload)) return payload;
-  if (key && Array.isArray(payload?.[
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-              gap: "16px",
-              marginBottom: "24px",
-            }}
-          >
-            <div>
-              <label style={{ display: "block", marginBottom: "8px", fontWeight: "600", color: "#0f172a" }}>
-                Filter by Course
-              </label>
-              <select
-                value={filterCourseId}
-                onChange={(e) => setFilterCourseId(e.target.value)}
-                style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #cbd5e1", backgroundColor: "white", boxSizing: "border-box" }}
-              >
-                <option value="">All Courses</option>
-                {courses.map((course) => (
-                  <option key={course._id} value={course._id}>
-                    {course.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label style={{ display: "block", marginBottom: "8px", fontWeight: "600", color: "#0f172a" }}>
-                Filter by Level
-              </label>
-              <select
-                value={filterLevel}
-                onChange={(e) => setFilterLevel(e.target.value)}
-                style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #cbd5e1", backgroundColor: "white", boxSizing: "border-box" }}
-              >
-                <option value="">All Levels</option>
-                {[100, 200, 300, 400, 500, 600].map((levelOption) => (
-                  <option key={levelOption} value={levelOption}>
-                    {levelOption} Level
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-key])) return payload[key];
+  if (key && Array.isArray(payload?.[key])) return payload[key];
   if (Array.isArray(payload?.data)) return payload.data;
   return [];
 };
 
+const getCourseId = (subject) =>
+  typeof subject?.courseId === "object" ? subject.courseId?._id : subject?.courseId;
+
+const getCourseName = (subject) =>
+  typeof subject?.courseId === "object" ? subject.courseId?.name : "Not available";
 
 function ManageSubjectsPage() {
   const navigate = useNavigate();
-
-  const [subjects, setSubjects] = useState([]);
-  const [topics, setTopics] = useState([]);
-  const [questions, setQuestions] = useState([]);
   const [courses, setCourses] = useState([]);
-
-  const [filterCourseId, setFilterCourseId] = useState("");
-  const [filterLevel, setFilterLevel] = useState("");
-
+  const [subjects, setSubjects] = useState([]);
+  const [courseFilter, setCourseFilter] = useState("");
+  const [levelFilter, setLevelFilter] = useState("");
   const [editingId, setEditingId] = useState(null);
-  const [editName, setEditName] = useState("");
-  const [editDurationMinutes, setEditDurationMinutes] = useState(5);
-  const [editCourseId, setEditCourseId] = useState("");
-  const [editLevel, setEditLevel] = useState("");
+  const [editForm, setEditForm] = useState({ name: "", courseId: "", level: "", durationMinutes: 5 });
+  const [isLoading, setIsLoading] = useState(true);
 
   const fetchData = async () => {
     try {
-      const [subjectsRes, topicsRes, questionsRes, coursesRes] =
-        await Promise.all([
-          api.get(
-            `/api/subjects/admin/all?${new URLSearchParams({
-              ...(filterCourseId ? { courseId: filterCourseId } : {}),
-              ...(filterLevel ? { level: filterLevel } : {}),
-              limit: "100",
-            }).toString()}`,
-            { _tokenType: "admin" },
-          ),
-          api.get("/api/topics/admin/all", {
-            _tokenType: "admin",
-          }),
-          api.get("/api/questions/admin/all", {
-            _tokenType: "admin",
-          }),
-          api.get("/api/courses"),
-        ]);
-
-      setSubjects(apiArray(subjectsRes.data, "subjects"));
-      setTopics(apiArray(topicsRes.data, "topics"));
-      setQuestions(apiArray(questionsRes.data, "questions"));
+      setIsLoading(true);
+      const [coursesRes, subjectsRes] = await Promise.all([
+        api.get("/api/courses"),
+        api.get("/api/subjects/admin/all?limit=100", { _tokenType: "admin" }),
+      ]);
       setCourses(apiArray(coursesRes.data, "courses"));
+      setSubjects(apiArray(subjectsRes.data, "subjects"));
     } catch (error) {
-      console.error("Error fetching data:", error);
-      alert("Failed to load subjects");
+      console.error("Error loading subjects:", error);
+      alert(error.message || "Error loading subjects");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   useEffect(() => {
     fetchData();
-  }, [filterCourseId, filterLevel]);
+  }, []);
 
-  const topicCountsBySubject = useMemo(() => {
-    const counts = {};
-
-    topics.forEach((topic) => {
-      const currentSubjectId = topic.subjectId?._id || topic.subjectId;
-      if (currentSubjectId) {
-        counts[currentSubjectId] = (counts[currentSubjectId] || 0) + 1;
-      }
+  const filteredSubjects = useMemo(() => {
+    return subjects.filter((subject) => {
+      const matchesCourse = courseFilter ? getCourseId(subject) === courseFilter : true;
+      const matchesLevel = levelFilter ? Number(subject.level) === Number(levelFilter) : true;
+      return matchesCourse && matchesLevel;
     });
-
-    return counts;
-  }, [topics]);
-
-  const questionCountsBySubject = useMemo(() => {
-    const counts = {};
-
-    questions.forEach((question) => {
-      const currentSubjectId = question.subjectId?._id || question.subjectId;
-      if (currentSubjectId) {
-        counts[currentSubjectId] = (counts[currentSubjectId] || 0) + 1;
-      }
-    });
-
-    return counts;
-  }, [questions]);
+  }, [subjects, courseFilter, levelFilter]);
 
   const startEdit = (subject) => {
     setEditingId(subject._id);
-    setEditName(subject.name);
-    setEditDurationMinutes(
-      Math.max(1, Math.floor((subject.duration || 300) / 60)),
-    );
-    setEditCourseId(subject.courseId?._id || subject.courseId || "");
-    setEditLevel(subject.level || "");
+    setEditForm({
+      name: subject.name || "",
+      courseId: getCourseId(subject) || "",
+      level: subject.level || "",
+      durationMinutes: Math.round((subject.duration || 300) / 60),
+    });
   };
 
   const cancelEdit = () => {
     setEditingId(null);
-    setEditName("");
-    setEditDurationMinutes(5);
-    setEditCourseId("");
-    setEditLevel("");
+    setEditForm({ name: "", courseId: "", level: "", durationMinutes: 5 });
   };
 
-  const handleUpdate = async (id) => {
-    if (!editName.trim()) {
-      alert("Subject name is required");
-      return;
-    }
-
-    if (!editCourseId) {
-      alert("Please select a course");
-      return;
-    }
-
-    if (!editLevel) {
-      alert("Please select a level");
-      return;
-    }
-
+  const saveEdit = async (id) => {
     try {
       await api.put(
         `/api/subjects/${id}`,
         {
-          name: editName.trim(),
-          duration: Number(editDurationMinutes) * 60,
-          courseId: editCourseId,
-          level: Number(editLevel),
+          name: editForm.name.trim(),
+          courseId: editForm.courseId,
+          level: Number(editForm.level),
+          duration: Number(editForm.durationMinutes) * 60,
         },
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("adminToken")}`,
-          },
-        },
+        { _tokenType: "admin" },
       );
-
-      alert("Subject updated successfully");
       cancelEdit();
       fetchData();
     } catch (error) {
       console.error("Error updating subject:", error);
-      alert(error.response?.data?.message || "Error updating subject");
+      alert(error.message || "Error updating subject");
     }
   };
 
-  const handleDelete = async (id) => {
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this subject? Related topics and questions may also be affected.",
-    );
-
-    if (!confirmed) return;
+  const deleteSubject = async (id) => {
+    if (!window.confirm("Delete this subject? Related topics and questions will also be deleted.")) return;
 
     try {
-      await api.delete(`/api/subjects/${id}`, {
-        _tokenType: "admin",
-      });
-      alert("Subject deleted successfully");
+      await api.delete(`/api/subjects/${id}`, { _tokenType: "admin" });
       fetchData();
     } catch (error) {
       console.error("Error deleting subject:", error);
-      alert(error.response?.data?.message || "Error deleting subject");
+      alert(error.message || "Error deleting subject");
     }
-  };
-
-  const formatDuration = (seconds) => {
-    const mins = Math.floor((seconds || 300) / 60);
-    return `${mins} min`;
   };
 
   return (
     <div style={pageStyle}>
-      <div style={{ maxWidth: "1000px", margin: "0 auto" }}>
-        <div style={{ marginBottom: "24px" }}>
-          <p style={topLabel}>Admin / Manage subjects</p>
-          <h1 style={titleStyle}>Edit and delete subjects</h1>
-          <p style={subtitleStyle}>
-            Assign each subject to a course and level so users only see subjects
-            that apply to them.
-          </p>
+      <div style={{ maxWidth: "1050px", margin: "0 auto" }}>
+        <p style={eyebrowStyle}>Admin / Subjects</p>
+        <h1 style={headingStyle}>Manage subjects</h1>
+        <p style={subheadingStyle}>Filter subjects by course and level, then edit or delete them.</p>
+
+        <div style={filterCardStyle}>
+          <select value={courseFilter} onChange={(e) => setCourseFilter(e.target.value)} style={inputStyle}>
+            <option value="">All courses</option>
+            {courses.map((course) => <option key={course._id} value={course._id}>{course.name}</option>)}
+          </select>
+
+          <select value={levelFilter} onChange={(e) => setLevelFilter(e.target.value)} style={inputStyle}>
+            <option value="">All levels</option>
+            {LEVELS.map((level) => <option key={level} value={level}>{level} Level</option>)}
+          </select>
+
+          <button onClick={() => navigate("/admin")} style={secondaryButton}>Back to Admin</button>
         </div>
 
         <div style={cardStyle}>
-          <p style={{ color: "#64748b", marginBottom: "18px" }}>
-            Showing {subjects.length} subject{subjects.length === 1 ? "" : "s"}
-          </p>
-
-          {subjects.length === 0 ? (
-            <p>No subjects found.</p>
+          {isLoading ? (
+            <p style={emptyStyle}>Loading subjects...</p>
+          ) : filteredSubjects.length === 0 ? (
+            <p style={emptyStyle}>No subjects found.</p>
           ) : (
-            subjects.map((subject) => {
-              const topicCount = topicCountsBySubject[subject._id] || 0;
-              const questionCount = questionCountsBySubject[subject._id] || 0;
-
-              return (
-                <div key={subject._id} style={subjectRowStyle}>
-                  {editingId === subject._id ? (
-                    <>
-                      <input
-                        type="text"
-                        value={editName}
-                        onChange={(e) => setEditName(e.target.value)}
-                        placeholder="Subject name"
-                        style={inputStyle}
-                      />
-
-                      <select
-                        value={editCourseId}
-                        onChange={(e) => setEditCourseId(e.target.value)}
-                        style={inputStyle}
-                      >
+            filteredSubjects.map((subject) => (
+              <div key={subject._id} style={rowStyle}>
+                {editingId === subject._id ? (
+                  <div style={{ width: "100%" }}>
+                    <div style={gridStyle}>
+                      <input value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} style={inputStyle} />
+                      <select value={editForm.courseId} onChange={(e) => setEditForm({ ...editForm, courseId: e.target.value })} style={inputStyle}>
                         <option value="">Select course</option>
-                        {courses.map((course) => (
-                          <option key={course._id} value={course._id}>
-                            {course.name}
-                          </option>
-                        ))}
+                        {courses.map((course) => <option key={course._id} value={course._id}>{course.name}</option>)}
                       </select>
-
-                      <select
-                        value={editLevel}
-                        onChange={(e) => setEditLevel(e.target.value)}
-                        style={inputStyle}
-                      >
+                      <select value={editForm.level} onChange={(e) => setEditForm({ ...editForm, level: e.target.value })} style={inputStyle}>
                         <option value="">Select level</option>
-                        {[100, 200, 300, 400, 500, 600].map((level) => (
-                          <option key={level} value={level}>
-                            {level} Level
-                          </option>
-                        ))}
+                        {LEVELS.map((level) => <option key={level} value={level}>{level} Level</option>)}
                       </select>
-
-                      <input
-                        type="number"
-                        value={editDurationMinutes}
-                        onChange={(e) => setEditDurationMinutes(e.target.value)}
-                        min="1"
-                        placeholder="Duration in minutes"
-                        style={inputStyle}
-                      />
-
-                      <div
-                        style={{
-                          display: "flex",
-                          gap: "10px",
-                          flexWrap: "wrap",
-                        }}
-                      >
-                        <button
-                          onClick={() => handleUpdate(subject._id)}
-                          style={primaryButton}
-                        >
-                          Save
-                        </button>
-
-                        <button onClick={cancelEdit} style={secondaryButton}>
-                          Cancel
-                        </button>
-                      </div>
-                    </>
-                  ) : (
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        gap: "16px",
-                        flexWrap: "wrap",
-                      }}
-                    >
-                      <div style={{ flex: 1, minWidth: "240px" }}>
-                        <h3 style={subjectTitleStyle}>{subject.name}</h3>
-
-                        <div
-                          style={{
-                            display: "flex",
-                            gap: "10px",
-                            flexWrap: "wrap",
-                          }}
-                        >
-                          <span style={pillStyle}>
-                            {subject.courseId?.name || "No course assigned"}
-                          </span>
-
-                          <span style={pillStyle}>
-                            {subject.level
-                              ? `${subject.level} Level`
-                              : "No level assigned"}
-                          </span>
-
-                          <span style={pillStyle}>
-                            {formatDuration(subject.duration)}
-                          </span>
-
-                          <span style={pillStyle}>
-                            {topicCount} topic{topicCount === 1 ? "" : "s"}
-                          </span>
-
-                          <span style={pillStyle}>
-                            {questionCount} question
-                            {questionCount === 1 ? "" : "s"}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div style={{ display: "flex", gap: "10px" }}>
-                        <button
-                          onClick={() => startEdit(subject)}
-                          style={primaryButton}
-                        >
-                          Edit
-                        </button>
-
-                        <button
-                          onClick={() => handleDelete(subject._id)}
-                          style={dangerButton}
-                        >
-                          Delete
-                        </button>
-                      </div>
+                      <input type="number" min="1" value={editForm.durationMinutes} onChange={(e) => setEditForm({ ...editForm, durationMinutes: e.target.value })} style={inputStyle} />
                     </div>
-                  )}
-                </div>
-              );
-            })
+                    <div style={buttonRowStyle}>
+                      <button onClick={() => saveEdit(subject._id)} style={primaryButton}>Save</button>
+                      <button onClick={cancelEdit} style={secondaryButton}>Cancel</button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div>
+                      <h3 style={itemTitleStyle}>{subject.name}</h3>
+                      <p style={itemMetaStyle}>Course: {getCourseName(subject)} | Level: {subject.level} | Duration: {Math.round((subject.duration || 0) / 60)} min</p>
+                    </div>
+                    <div style={buttonRowStyle}>
+                      <button onClick={() => startEdit(subject)} style={primaryButton}>Edit</button>
+                      <button onClick={() => deleteSubject(subject._id)} style={dangerButton}>Delete</button>
+                    </div>
+                  </>
+                )}
+              </div>
+            ))
           )}
-
-          <div style={{ marginTop: "24px" }}>
-            <button onClick={() => navigate("/admin")} style={secondaryButton}>
-              Back to Admin
-            </button>
-          </div>
         </div>
       </div>
     </div>
   );
 }
 
-const pageStyle = {
-  minHeight: "100vh",
-  background: "linear-gradient(135deg, #f8fbff 0%, #eef4ff 50%, #f7f9fc 100%)",
-  padding: "32px 20px",
-};
-
-const topLabel = {
-  margin: 0,
-  color: "#64748b",
-  fontSize: "14px",
-  fontWeight: "600",
-};
-
-const titleStyle = {
-  margin: "10px 0 8px",
-  fontSize: "36px",
-  color: "#0f172a",
-};
-
-const subtitleStyle = {
-  margin: 0,
-  color: "#475569",
-  fontSize: "16px",
-  lineHeight: "1.6",
-};
-
-const cardStyle = {
-  backgroundColor: "white",
-  border: "1px solid #e2e8f0",
-  borderRadius: "20px",
-  padding: "28px",
-  boxShadow: "0 12px 30px rgba(15,23,42,0.06)",
-};
-
-const subjectRowStyle = {
-  borderBottom: "1px solid #e2e8f0",
-  padding: "18px 0",
-};
-
-const inputStyle = {
-  width: "100%",
-  padding: "12px",
-  marginBottom: "10px",
-  borderRadius: "8px",
-  border: "1px solid #cbd5e1",
-  boxSizing: "border-box",
-  backgroundColor: "white",
-};
-
-const subjectTitleStyle = {
-  margin: "0 0 8px",
-  textTransform: "capitalize",
-  color: "#0f172a",
-};
-
-const pillStyle = {
-  padding: "7px 12px",
-  borderRadius: "999px",
-  backgroundColor: "#f8fafc",
-  color: "#475569",
-  fontSize: "13px",
-  fontWeight: "600",
-};
-
-const primaryButton = {
-  padding: "10px 18px",
-  border: "none",
-  borderRadius: "8px",
-  backgroundColor: "#185FA5",
-  color: "white",
-  cursor: "pointer",
-  fontWeight: "600",
-};
-
-const secondaryButton = {
-  padding: "10px 18px",
-  border: "1px solid #cbd5e1",
-  borderRadius: "8px",
-  backgroundColor: "white",
-  cursor: "pointer",
-  fontWeight: "600",
-};
-
-const dangerButton = {
-  padding: "10px 18px",
-  border: "none",
-  borderRadius: "8px",
-  backgroundColor: "#dc2626",
-  color: "white",
-  cursor: "pointer",
-  fontWeight: "600",
-};
+const pageStyle = { minHeight: "100vh", background: "linear-gradient(135deg, #f8fbff 0%, #eef4ff 50%, #f7f9fc 100%)", padding: "32px 20px" };
+const eyebrowStyle = { margin: 0, color: "#64748b", fontSize: "14px", fontWeight: 600 };
+const headingStyle = { margin: "10px 0 8px", fontSize: "36px", color: "#0f172a" };
+const subheadingStyle = { margin: "0 0 24px", color: "#475569", fontSize: "16px", lineHeight: 1.6 };
+const filterCardStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: "12px", marginBottom: "18px" };
+const cardStyle = { backgroundColor: "white", border: "1px solid #e2e8f0", borderRadius: "20px", padding: "20px", boxShadow: "0 12px 30px rgba(15,23,42,0.06)" };
+const rowStyle = { display: "flex", justifyContent: "space-between", gap: "16px", flexWrap: "wrap", padding: "16px 0", borderBottom: "1px solid #e2e8f0" };
+const gridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "10px" };
+const inputStyle = { width: "100%", padding: "12px 14px", borderRadius: "10px", border: "1px solid #cbd5e1", fontSize: "14px", boxSizing: "border-box", backgroundColor: "white" };
+const buttonRowStyle = { display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center" };
+const primaryButton = { padding: "10px 14px", border: "none", borderRadius: "8px", backgroundColor: "#185FA5", color: "white", fontWeight: 700, cursor: "pointer" };
+const secondaryButton = { padding: "10px 14px", border: "1px solid #cbd5e1", borderRadius: "8px", backgroundColor: "white", color: "#0f172a", fontWeight: 700, cursor: "pointer" };
+const dangerButton = { padding: "10px 14px", border: "none", borderRadius: "8px", backgroundColor: "#dc2626", color: "white", fontWeight: 700, cursor: "pointer" };
+const emptyStyle = { color: "#64748b", textAlign: "center" };
+const itemTitleStyle = { margin: "0 0 6px", color: "#0f172a" };
+const itemMetaStyle = { margin: 0, color: "#64748b" };
 
 export default ManageSubjectsPage;
