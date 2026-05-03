@@ -9,7 +9,6 @@ const apiArray = (payload, key) => {
   return [];
 };
 
-
 const S = {
   page: {
     minHeight: "100vh",
@@ -95,29 +94,55 @@ const formatFileSize = (bytes) =>
   bytes ? `${(bytes / (1024 * 1024)).toFixed(2)} MB` : "No file";
 
 function RequestRow({ request, onMarkReviewed, onDelete }) {
+  const user = request.userId;
+  const courseName = user?.courseId?.name || "Not available";
+  const level = user?.level || "Not available";
+  const fullName = user?.fullName || "Unknown user";
+  const email = user?.email || "No email";
+
   return (
     <div style={S.row}>
       <div style={S.rowInner}>
         <div style={S.rowLeft}>
           <span style={S.badge(request.status)}>{request.status}</span>
+
           <h3 style={S.subject}>{request.subject}</h3>
+
           <p style={S.info}>
-            <strong>Topic:</strong> {request.topic}
+            <strong>Submitted by: </strong> {fullName} ({email})
           </p>
+
           <p style={S.info}>
-            <strong>Timer:</strong> {request.timer} minutes
+            <strong>Course: </strong> {courseName}
           </p>
+
           <p style={S.info}>
-            <strong>File:</strong>{" "}
+            <strong>Level: </strong> {level}
+          </p>
+
+          <p style={S.info}>
+            <strong>Topic: </strong> {request.topic}
+          </p>
+
+          <p style={S.info}>
+            <strong>Timer: </strong> {request.timer} minutes
+          </p>
+
+          <p style={S.info}>
+            <strong>File: </strong>{" "}
             {request.fileName
               ? `${request.fileName} (${formatFileSize(request.fileSize)})`
               : "No file uploaded"}
           </p>
+
           <p style={S.info}>
-            <strong>Submitted:</strong>{" "}
-            {new Date(request.createdAt).toLocaleString()}
+            <strong>Submitted: </strong>{" "}
+            {request.createdAt
+              ? new Date(request.createdAt).toLocaleString()
+              : "Not available"}
           </p>
         </div>
+
         <div style={S.rowActions}>
           {request.status !== "reviewed" && (
             <button
@@ -127,6 +152,7 @@ function RequestRow({ request, onMarkReviewed, onDelete }) {
               Mark Reviewed
             </button>
           )}
+
           <button
             onClick={() => onDelete(request._id)}
             style={S.actionBtn("#dc2626")}
@@ -148,14 +174,15 @@ function AdminRequestsPage() {
   const fetchRequests = async () => {
     try {
       setIsLoading(true);
-      const adminToken = localStorage.getItem("adminToken");
+
       const { data } = await api.get("/api/requests", {
-        headers: { Authorization: `Bearer ${adminToken}` },
+        _tokenType: "admin",
       });
+
       setRequests(apiArray(data, "requests"));
     } catch (err) {
       console.error("Error fetching requests:", err);
-      alert("Failed to load requests");
+      alert(err.message || "Failed to load requests");
     } finally {
       setIsLoading(false);
     }
@@ -173,33 +200,35 @@ function AdminRequestsPage() {
 
   const markReviewed = async (id) => {
     try {
-      const adminToken = localStorage.getItem("adminToken");
       await api.put(`/api/requests/${id}/reviewed`, null, {
-        headers: { Authorization: `Bearer ${adminToken}` },
+        _tokenType: "admin",
       });
+
       fetchRequests();
     } catch (err) {
       console.error("Error marking request reviewed:", err);
-      alert("Failed to update request");
+      alert(err.message || "Failed to update request");
     }
   };
 
   const deleteRequest = async (id) => {
     if (!window.confirm("Are you sure you want to delete this request?"))
       return;
+
     try {
-      const adminToken = localStorage.getItem("adminToken");
       await api.delete(`/api/requests/${id}`, {
-        headers: { Authorization: `Bearer ${adminToken}` },
+        _tokenType: "admin",
       });
+
       fetchRequests();
     } catch (err) {
       console.error("Error deleting request:", err);
-      alert("Failed to delete request");
+      alert(err.message || "Failed to delete request");
     }
   };
 
   const pendingCount = requests.filter((r) => r.status === "pending").length;
+  const reviewedCount = requests.filter((r) => r.status === "reviewed").length;
 
   return (
     <div style={S.page}>
@@ -217,18 +246,21 @@ function AdminRequestsPage() {
           >
             All ({requests.length})
           </button>
+
           <button
             onClick={() => setFilter("pending")}
             style={S.filterBtn(filter === "pending")}
           >
             Pending ({pendingCount})
           </button>
+
           <button
             onClick={() => setFilter("reviewed")}
             style={S.filterBtn(filter === "reviewed")}
           >
-            Reviewed
+            Reviewed ({reviewedCount})
           </button>
+
           <button onClick={() => navigate("/admin")} style={S.secondaryBtn}>
             Back to Admin
           </button>
