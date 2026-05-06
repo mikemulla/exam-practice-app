@@ -9,43 +9,81 @@ const apiArray = (payload, key) => {
   return [];
 };
 
+const COURSE_CACHE_KEY = "signupCoursesCache";
 
 function UserSignupPage() {
   const navigate = useNavigate();
 
-  const [courses, setCourses] = useState([]);
+  const [courses, setCourses] = useState(() => {
+    try {
+      const cached = localStorage.getItem(COURSE_CACHE_KEY);
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
+
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [courseId, setCourseId] = useState("");
   const [level, setLevel] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoadingCourses, setIsLoadingCourses] = useState(
+    courses.length === 0,
+  );
+  const [courseError, setCourseError] = useState("");
+
+  const fetchCourses = async () => {
+    try {
+      setCourseError("");
+      setIsLoadingCourses(true);
+
+      const response = await api.get("/api/courses?limit=100");
+      const list = apiArray(response.data, "courses");
+
+      setCourses(list);
+      localStorage.setItem(COURSE_CACHE_KEY, JSON.stringify(list));
+
+      if (list.length === 0) {
+        setCourseError("No courses found. Please contact the admin.");
+      }
+    } catch (error) {
+      console.error("Error fetching courses:", error);
+      setCourseError(
+        error.message || "Could not load courses. Please try again.",
+      );
+    } finally {
+      setIsLoadingCourses(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchCourses = async () => {
-      try {
-        const response = await api.get("/api/courses");
-        setCourses(apiArray(response.data, "courses"));
-      } catch (error) {
-        console.error("Error fetching courses:", error);
-      }
-    };
-
     fetchCourses();
   }, []);
 
   const handleSignup = async (e) => {
     e.preventDefault();
 
+    if (!courseId) {
+      alert("Please select a course");
+      return;
+    }
+
+    if (!level) {
+      alert("Please select a level");
+      return;
+    }
+
     try {
       setIsSubmitting(true);
 
       const response = await api.post("/api/users/signup", {
-        fullName,
-        email,
+        fullName: fullName.trim(),
+        email: email.trim(),
         password,
         courseId,
-        level,
+        level: Number(level),
       });
 
       localStorage.setItem("userToken", response.data.token);
@@ -55,11 +93,17 @@ function UserSignupPage() {
       navigate("/user-dashboard");
     } catch (error) {
       console.error("Signup error:", error);
-      alert(error.response?.data?.message || "Signup failed");
+      alert(error.message || "Signup failed");
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  const courseSelectLabel = isLoadingCourses
+    ? "Loading courses..."
+    : courses.length === 0
+      ? "No courses available"
+      : "Select course";
 
   return (
     <div style={pageStyle}>
@@ -105,14 +149,24 @@ function UserSignupPage() {
             onChange={(e) => setCourseId(e.target.value)}
             required
             style={inputStyle}
+            disabled={isLoadingCourses || courses.length === 0}
           >
-            <option value="">Select course</option>
+            <option value="">{courseSelectLabel}</option>
             {courses.map((course) => (
               <option key={course._id} value={course._id}>
                 {course.name}
               </option>
             ))}
           </select>
+
+          {courseError && (
+            <div style={courseErrorBox}>
+              <span>{courseError}</span>
+              <button type="button" onClick={fetchCourses} style={retryButton}>
+                Retry
+              </button>
+            </div>
+          )}
 
           <select
             value={level}
@@ -128,7 +182,21 @@ function UserSignupPage() {
             ))}
           </select>
 
-          <button type="submit" disabled={isSubmitting} style={primaryButton}>
+          <button
+            type="submit"
+            disabled={isSubmitting || isLoadingCourses || courses.length === 0}
+            style={{
+              ...primaryButton,
+              opacity:
+                isSubmitting || isLoadingCourses || courses.length === 0
+                  ? 0.7
+                  : 1,
+              cursor:
+                isSubmitting || isLoadingCourses || courses.length === 0
+                  ? "not-allowed"
+                  : "pointer",
+            }}
+          >
             {isSubmitting ? "Creating account..." : "Sign Up"}
           </button>
         </form>
@@ -193,6 +261,30 @@ const inputStyle = {
   backgroundColor: "white",
 };
 
+const courseErrorBox = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  gap: "10px",
+  marginTop: "-6px",
+  marginBottom: "14px",
+  padding: "10px 12px",
+  borderRadius: "10px",
+  backgroundColor: "#fff7ed",
+  color: "#9a3412",
+  fontSize: "13px",
+};
+
+const retryButton = {
+  border: "none",
+  borderRadius: "8px",
+  padding: "7px 10px",
+  backgroundColor: "#185FA5",
+  color: "white",
+  fontWeight: "700",
+  cursor: "pointer",
+};
+
 const primaryButton = {
   width: "100%",
   padding: "14px",
@@ -201,7 +293,6 @@ const primaryButton = {
   backgroundColor: "#185FA5",
   color: "white",
   fontWeight: "700",
-  cursor: "pointer",
 };
 
 const secondaryButton = {

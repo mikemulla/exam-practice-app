@@ -86,7 +86,11 @@ function SubjectRequestPage() {
   const [fileError, setFileError] = useState("");
 
   const validateAndSetFile = (selectedFile, inputElement = null) => {
-    if (!selectedFile) return;
+    if (!selectedFile) {
+      setFileError("Please upload a reference file before submitting.");
+      setFile(null);
+      return;
+    }
 
     if (selectedFile.size > MAX_FILE_SIZE) {
       setFileError("File is too large. Maximum allowed size is 15MB.");
@@ -122,6 +126,12 @@ function SubjectRequestPage() {
       return;
     }
 
+    if (!file) {
+      setFileError("Please upload a reference file before submitting.");
+      alert("Please upload a reference file before submitting.");
+      return;
+    }
+
     const formData = new FormData();
     formData.append("subject", subject.trim());
     formData.append("topic", topic.trim());
@@ -132,7 +142,6 @@ function SubjectRequestPage() {
       setIsSubmitting(true);
       await api.post("/api/requests/subject-request", formData, {
         _tokenType: "user",
-        headers: { "Content-Type": "multipart/form-data" },
       });
 
       setSuccess(true);
@@ -146,7 +155,7 @@ function SubjectRequestPage() {
       }, 2200);
     } catch (error) {
       console.error("Error sending request:", error);
-      alert("Failed to send request");
+      alert(error.message || "Failed to send request");
     } finally {
       setIsSubmitting(false);
     }
@@ -271,7 +280,7 @@ function SubjectRequestPage() {
                 />
               </Field>
 
-              <Field label="Reference file" hint="Optional">
+              <Field label="Reference file" hint="Required">
                 <div
                   onDragOver={(e) => {
                     e.preventDefault();
@@ -315,7 +324,7 @@ function SubjectRequestPage() {
                   ) : (
                     <div style={{ textAlign: "center" }}>
                       <p style={S.dropLabel}>
-                        Drag and drop or{" "}
+                        File is required. Drag and drop or{" "}
                         <span style={{ color: "#185FA5", fontWeight: "600" }}>
                           browse
                         </span>
