@@ -68,13 +68,25 @@ api.interceptors.request.use(
     const url = config.url || "";
     const method = config.method || "get";
 
+    const isFormData =
+      typeof FormData !== "undefined" && config.data instanceof FormData;
+
+    if (isFormData && config.headers) {
+      delete config.headers["Content-Type"];
+      delete config.headers["content-type"];
+    }
+
     if (config._tokenType === "admin") {
       const token = localStorage.getItem("adminToken");
 
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       } else {
-        console.warn("Admin token missing for request:", method?.toUpperCase(), url);
+        console.warn(
+          "Admin token missing for request:",
+          method?.toUpperCase(),
+          url,
+        );
       }
 
       return config;
@@ -86,7 +98,11 @@ api.interceptors.request.use(
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       } else {
-        console.warn("User token missing for request:", method?.toUpperCase(), url);
+        console.warn(
+          "User token missing for request:",
+          method?.toUpperCase(),
+          url,
+        );
       }
 
       return config;

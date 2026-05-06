@@ -28,12 +28,15 @@ function AddQuestionPage() {
   const [options, setOptions] = useState(["", "", "", ""]);
   const [correctAnswer, setCorrectAnswer] = useState("");
   const [explanation, setExplanation] = useState("");
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
         const [courseRes, subjectRes] = await Promise.all([
-          api.get("/api/courses"),
+          api.get("/api/courses?limit=100"),
           api.get("/api/subjects/admin/all?limit=100", {
             _tokenType: "admin",
           }),
@@ -58,9 +61,7 @@ function AddQuestionPage() {
           : subject.courseId;
 
       const courseMatches = courseId ? subjectCourseId === courseId : true;
-      const levelMatches = level
-        ? Number(subject.level) === Number(level)
-        : true;
+      const levelMatches = level ? Number(subject.level) === Number(level) : true;
 
       return courseMatches && levelMatches;
     });
@@ -129,6 +130,41 @@ function AddQuestionPage() {
     }
   };
 
+  const handleImageChange = (e) => {
+    const selectedFile = e.target.files?.[0] || null;
+
+    if (!selectedFile) {
+      setImageFile(null);
+      setImagePreview("");
+      return;
+    }
+
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+    if (!allowedTypes.includes(selectedFile.type)) {
+      alert("Please upload a JPG, PNG, or WEBP image.");
+      e.target.value = "";
+      setImageFile(null);
+      setImagePreview("");
+      return;
+    }
+
+    if (selectedFile.size > 5 * 1024 * 1024) {
+      alert("Image must be 5MB or less.");
+      e.target.value = "";
+      setImageFile(null);
+      setImagePreview("");
+      return;
+    }
+
+    setImageFile(selectedFile);
+    setImagePreview(URL.createObjectURL(selectedFile));
+  };
+
+  const clearImage = () => {
+    setImageFile(null);
+    setImagePreview("");
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -140,25 +176,36 @@ function AddQuestionPage() {
     if (!level) return alert("Please select a level");
     if (!subjectId) return alert("Please select a subject");
     if (!topicId) return alert("Please select a topic");
-    if (cleanedOptions.length < 2)
-      return alert("Please enter at least 2 options");
+    if (cleanedOptions.length < 2) return alert("Please enter at least 2 options");
     if (!correctAnswer) return alert("Please select the correct answer");
 
     try {
-      await api.post(
-        "/api/questions",
-        {
-          subjectId,
-          topicId,
-          questionText: questionText.trim(),
-          options: cleanedOptions,
-          correctAnswer,
-          explanation: explanation.trim(),
-        },
-        {
-          _tokenType: "admin",
-        },
-      );
+      setIsSubmitting(true);
+
+      const formData = new FormData();
+      formData.append("subjectId", subjectId);
+      formData.append("topicId", topicId);
+      formData.append("questionText", questionText.trim());
+      formData.append("options", JSON.stringify(cleanedOptions));
+      formData.append("correctAnswer", correctAnswer);
+      formData.append("explanation", explanation.trim());
+
+      // IMPORTANT: backend expects this exact field name.
+      if (imageFile) {
+        formData.append("image", imageFile);
+      }
+
+      console.log("ADD QUESTION IMAGE DEBUG:", {
+        imageFile,
+        hasImage: !!imageFile,
+        name: imageFile?.name,
+        type: imageFile?.type,
+        size: imageFile?.size,
+      });
+
+      await api.post("/api/questions", formData, {
+        _tokenType: "admin",
+      });
 
       alert("Question saved successfully");
 
@@ -167,9 +214,13 @@ function AddQuestionPage() {
       setOptions(["", "", "", ""]);
       setCorrectAnswer("");
       setExplanation("");
+      setImageFile(null);
+      setImagePreview("");
     } catch (error) {
       console.error("Error saving question:", error);
       alert(error.message || "Error saving question");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -182,8 +233,7 @@ function AddQuestionPage() {
           <p style={eyebrowStyle}>Admin / Question builder</p>
           <h1 style={headingStyle}>Add a new question</h1>
           <p style={subheadingStyle}>
-            Select course, level, subject, and topic before creating the
-            question.
+            Select course, level, subject, and topic before creating the question.
           </p>
         </div>
 
@@ -274,6 +324,24 @@ function AddQuestionPage() {
               />
             </Field>
 
+            <Field label="Question Image (optional)">
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={handleImageChange}
+                style={inputStyle}
+              />
+
+              {imagePreview && (
+                <div style={imagePreviewWrap}>
+                  <img src={imagePreview} alt="Question preview" style={imagePreviewStyle} />
+                  <button type="button" onClick={clearImage} style={removeImageButton}>
+                    Remove Image
+                  </button>
+                </div>
+              )}
+            </Field>
+
             <Field label="Number of Options">
               <select
                 value={optionCount}
@@ -331,8 +399,8 @@ function AddQuestionPage() {
             </Field>
 
             <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-              <button type="submit" style={primaryButton}>
-                Save Question
+              <button type="submit" disabled={isSubmitting} style={primaryButton}>
+                {isSubmitting ? "Saving..." : "Save Question"}
               </button>
 
               <button
@@ -420,6 +488,34 @@ const inputStyle = {
 const textareaStyle = {
   ...inputStyle,
   resize: "vertical",
+};
+
+const imagePreviewWrap = {
+  marginTop: "12px",
+  padding: "12px",
+  border: "1px solid #e2e8f0",
+  borderRadius: "12px",
+  backgroundColor: "#f8fafc",
+};
+
+const imagePreviewStyle = {
+  display: "block",
+  width: "100%",
+  maxWidth: "420px",
+  maxHeight: "280px",
+  objectFit: "contain",
+  borderRadius: "10px",
+  marginBottom: "10px",
+};
+
+const removeImageButton = {
+  padding: "10px 14px",
+  border: "1px solid #fecaca",
+  borderRadius: "10px",
+  backgroundColor: "#fff5f5",
+  color: "#dc2626",
+  fontWeight: "600",
+  cursor: "pointer",
 };
 
 const primaryButton = {

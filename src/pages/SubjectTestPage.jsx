@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import api from "../lib/api";
 
 /* ─── Design tokens ─── */
@@ -88,6 +88,41 @@ const shuffleArray = (arr) => {
 
 const formatTime = (s) =>
   `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
+
+const questionImageSrc = (question) => {
+  if (!question) return "";
+
+  if (question.imageData && question.imageContentType) {
+    if (String(question.imageData).startsWith("data:")) {
+      return question.imageData;
+    }
+
+    return `data:${question.imageContentType};base64,${question.imageData}`;
+  }
+
+  const rawImageUrl =
+    question.imageUrl ||
+    question.image ||
+    question.questionImage ||
+    question.imagePath ||
+    "";
+
+  if (!rawImageUrl) return "";
+
+  if (
+    String(rawImageUrl).startsWith("http") ||
+    String(rawImageUrl).startsWith("data:")
+  ) {
+    return rawImageUrl;
+  }
+
+  const baseUrl =
+    import.meta.env.VITE_API_URL ||
+    import.meta.env.VITE_API_BASE_URL ||
+    "http://localhost:5000";
+
+  return `${baseUrl}${String(rawImageUrl).startsWith("/") ? "" : "/"}${rawImageUrl}`;
+};
 
 /* ─── Tiny icons ─── */
 const Icon = {
@@ -417,6 +452,32 @@ function QuestionReviewCard({ question, index, userAnswer }) {
           {isCorrect ? "✓ Correct" : "✗ Incorrect"}
         </Badge>
       </div>
+
+      {questionImageSrc(question) && (
+        <div
+          style={{
+            margin: "0 0 14px",
+            padding: "10px",
+            background: T.surfaceAlt,
+            border: `1px solid ${T.border}`,
+            borderRadius: T.radius,
+          }}
+        >
+          <img
+            src={questionImageSrc(question)}
+            alt="Question"
+            style={{
+              display: "block",
+              width: "100%",
+              maxWidth: "560px",
+              maxHeight: "360px",
+              objectFit: "contain",
+              borderRadius: T.radiusSm,
+              margin: "0 auto",
+            }}
+          />
+        </div>
+      )}
       {question.options.map((opt, i) => (
         <ReviewOption
           key={i}
@@ -472,8 +533,12 @@ function StatCell({ value, label, accent }) {
    Main component
 ═══════════════════════════════════════════════ */
 function SubjectTestPage() {
-  const { subjectId, topicId } = useParams();
+  const params = useParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+
+  const subjectId = params.subjectId || searchParams.get("subjectId") || "";
+  const topicId = params.topicId || searchParams.get("topicId") || "";
   const isTopicMode = Boolean(topicId);
 
   const [subject, setSubject] = useState(null);
@@ -509,6 +574,10 @@ function SubjectTestPage() {
 
         const userRequest = { _tokenType: "user" };
 
+        if (!subjectId && !topicId) {
+          throw new Error("Missing subject or topic ID");
+        }
+
         if (isTopicMode) {
           const [topicResponse, questionsResponse] = await Promise.all([
             api.get(`/api/topics/${topicId}`, userRequest),
@@ -517,7 +586,15 @@ function SubjectTestPage() {
           const selectedTopic = topicResponse.data;
           if (!selectedTopic) throw new Error("Topic not found");
           const resolvedSubjectId =
-            selectedTopic.subjectId?._id || selectedTopic.subjectId;
+            selectedTopic.subjectId?._id ||
+            selectedTopic.subject?._id ||
+            selectedTopic.subjectId ||
+            selectedTopic.subject;
+
+          if (!resolvedSubjectId) {
+            throw new Error("Topic subject not found");
+          }
+
           const subjectResponse = await api.get(
             `/api/subjects/${resolvedSubjectId}`,
             userRequest,
@@ -525,6 +602,18 @@ function SubjectTestPage() {
           const unique = Array.from(
             new Map(questionsResponse.data.map((q) => [q._id, q])).values(),
           );
+          console.log(
+            "TEST QUESTIONS IMAGE DEBUG:",
+            unique.map((q) => ({
+              id: q._id,
+              hasImageData: !!q.imageData,
+              imageContentType: q.imageContentType,
+              imageDataLength: q.imageData?.length,
+              image: q.image,
+              imageUrl: q.imageUrl,
+            })),
+          );
+
           setTopic(selectedTopic);
           setSubject(subjectResponse.data);
           setQuestions(
@@ -540,6 +629,18 @@ function SubjectTestPage() {
           const unique = Array.from(
             new Map(questionsResponse.data.map((q) => [q._id, q])).values(),
           );
+          console.log(
+            "TEST QUESTIONS IMAGE DEBUG:",
+            unique.map((q) => ({
+              id: q._id,
+              hasImageData: !!q.imageData,
+              imageContentType: q.imageContentType,
+              imageDataLength: q.imageData?.length,
+              image: q.image,
+              imageUrl: q.imageUrl,
+            })),
+          );
+
           setTopic(null);
           setSubject(subjectResponse.data);
           setQuestions(
@@ -588,7 +689,12 @@ function SubjectTestPage() {
   );
 
   useEffect(() => {
-    if (!showResults || resultSavedRef.current || !subject || questions.length === 0) {
+    if (
+      !showResults ||
+      resultSavedRef.current ||
+      !subject ||
+      questions.length === 0
+    ) {
       return;
     }
 
@@ -616,7 +722,15 @@ function SubjectTestPage() {
     };
 
     saveResult();
-  }, [showResults, subject, questions.length, score, timeLeft, isTopicMode, topicId]);
+  }, [
+    showResults,
+    subject,
+    questions.length,
+    score,
+    timeLeft,
+    isTopicMode,
+    topicId,
+  ]);
 
   const currentQuestion = questions[currentQuestionIndex];
   const answeredCount = Object.keys(selectedAnswers).length;
@@ -1172,6 +1286,42 @@ function SubjectTestPage() {
         >
           {currentQuestion.questionText}
         </p>
+
+        {questionImageSrc(currentQuestion) && (
+          <div
+            style={{
+              margin: "-0.5rem 0 1.5rem",
+              padding: "10px",
+              background: T.surfaceAlt,
+              border: `1px solid ${T.border}`,
+              borderRadius: T.radius,
+              animation: "fadeIn 0.25s ease",
+            }}
+          >
+            <img
+              src={questionImageSrc(currentQuestion)}
+              alt="Question"
+              style={{
+                display: "block",
+                width: "100%",
+                maxWidth: "600px",
+                maxHeight: "380px",
+                objectFit: "contain",
+                borderRadius: T.radiusSm,
+                margin: "0 auto",
+              }}
+              onError={(e) => {
+                console.error("Question image failed to load:", {
+                  id: currentQuestion._id,
+                  imageContentType: currentQuestion.imageContentType,
+                  imageDataLength: currentQuestion.imageData?.length,
+                  srcStart: questionImageSrc(currentQuestion)?.slice(0, 80),
+                });
+                e.currentTarget.style.display = "none";
+              }}
+            />
+          </div>
+        )}
 
         <div>
           {currentQuestion.options.map((option, i) => {
