@@ -4,39 +4,37 @@ import api from "../lib/api";
 
 /* ─── Design tokens ─── */
 const T = {
-  bg: "#F5F4F0",
-  surface: "#FFFFFF",
-  surfaceAlt: "#F9F8F5",
-  border: "rgba(0,0,0,0.07)",
+  bg: "#f8f9fb",
+  surface: "#ffffff",
+  surfaceAlt: "#f8fafc",
+  border: "rgba(0,0,0,0.08)",
   borderStrong: "rgba(0,0,0,0.12)",
-  ink: "#18180F",
-  inkMid: "#5C5C50",
-  inkFaint: "#9B9B88",
-  accent: "#1A4E2E",
-  accentLight: "#E8F2EC",
-  accentMid: "#2D7A4A",
-  danger: "#8B2020",
-  dangerLight: "#FBF0F0",
-  dangerBorder: "#E8C4C4",
-  warn: "#7A5A00",
-  warnLight: "#FDF6E3",
+  ink: "#0f172a",
+  inkMid: "#64748b",
+  inkFaint: "#94a3b8",
+  accent: "#185FA5",
+  accentLight: "#E6F1FB",
+  accentMid: "#0e3d6e",
+  accentDark: "#042C53",
+  success: "#16A34A",
+  successLight: "#DCFCE7",
+  danger: "#DC2626",
+  dangerLight: "#FEE2E2",
+  dangerBorder: "#FCA5A5",
   radius: "10px",
   radiusSm: "6px",
-  radiusLg: "16px",
+  radiusLg: "14px",
   shadow: "0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)",
   shadowMd: "0 2px 8px rgba(0,0,0,0.08), 0 8px 32px rgba(0,0,0,0.06)",
-  font: "'Lora', Georgia, serif",
-  fontSans: "'DM Sans', system-ui, sans-serif",
-  fontMono: "'DM Mono', monospace",
 };
 
 const injectFonts = () => {
-  if (document.getElementById("quiz-fonts")) return;
+  if (document.getElementById("test-fonts")) return;
   const link = document.createElement("link");
-  link.id = "quiz-fonts";
+  link.id = "test-fonts";
   link.rel = "stylesheet";
   link.href =
-    "https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap";
+    "https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap";
   document.head.appendChild(link);
 };
 
@@ -49,29 +47,29 @@ const globalCSS = `
     from { opacity: 0; }
     to   { opacity: 1; }
   }
-  @keyframes progressFill {
-    from { transform: scaleX(0); }
-    to   { transform: scaleX(1); }
-  }
   @keyframes pulse {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.5; }
   }
+  .quiz-option {
+    transition: all 0.2s ease;
+  }
   .quiz-option:hover {
-    border-color: ${T.accentMid} !important;
+    border-color: ${T.accent} !important;
     background: ${T.accentLight} !important;
   }
-  .quiz-btn:hover { opacity: 0.88; }
+  .quiz-btn:hover { opacity: 0.88; transform: translateY(-1px); }
   .quiz-btn:active { transform: scale(0.98); }
-  .quiz-link:hover { color: ${T.accentMid} !important; }
-  .exp-toggle:hover { color: ${T.accent} !important; }
-  .dot-nav:hover { transform: scale(1.3); }
+  .dot-nav {
+    transition: all 0.25s cubic-bezier(0.4,0,0.2,1);
+  }
+  .dot-nav:hover { transform: scale(1.4); }
 `;
 
 const injectStyles = () => {
-  if (document.getElementById("quiz-styles")) return;
+  if (document.getElementById("test-styles")) return;
   const s = document.createElement("style");
-  s.id = "quiz-styles";
+  s.id = "test-styles";
   s.textContent = globalCSS;
   document.head.appendChild(s);
 };
@@ -96,7 +94,6 @@ const questionImageSrc = (question) => {
     if (String(question.imageData).startsWith("data:")) {
       return question.imageData;
     }
-
     return `data:${question.imageContentType};base64,${question.imageData}`;
   }
 
@@ -124,41 +121,41 @@ const questionImageSrc = (question) => {
   return `${baseUrl}${String(rawImageUrl).startsWith("/") ? "" : "/"}${rawImageUrl}`;
 };
 
-/* ─── Tiny icons ─── */
+/* ─── Icons ─── */
 const Icon = {
   left: () => (
-    <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
       <path
         d="M10 12L6 8l4-4"
         stroke="currentColor"
-        strokeWidth="1.6"
+        strokeWidth="1.5"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
     </svg>
   ),
   right: () => (
-    <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
       <path
         d="M6 4l4 4-4 4"
         stroke="currentColor"
-        strokeWidth="1.6"
+        strokeWidth="1.5"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
     </svg>
   ),
   clock: ({ warn }) => (
-    <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
       <circle
         cx="8"
-        cy="9"
+        cy="8"
         r="6"
         stroke={warn ? T.danger : T.inkMid}
         strokeWidth="1.3"
       />
       <path
-        d="M8 6.5v2.5l1.5 1"
+        d="M8 5.5v2.5l1.5 1"
         stroke={warn ? T.danger : T.inkMid}
         strokeWidth="1.3"
         strokeLinecap="round"
@@ -166,7 +163,7 @@ const Icon = {
     </svg>
   ),
   check: () => (
-    <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
       <path
         d="M1.5 6l3 3 6-6"
         stroke="currentColor"
@@ -177,7 +174,7 @@ const Icon = {
     </svg>
   ),
   x: () => (
-    <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
       <path
         d="M2.5 2.5l7 7M9.5 2.5l-7 7"
         stroke="currentColor"
@@ -207,17 +204,17 @@ const Icon = {
     </svg>
   ),
   trophy: () => (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
       <path
         d="M8 21h8M12 17v4M7 4H4a1 1 0 00-1 1v2a4 4 0 004 4h.5M17 4h3a1 1 0 011 1v2a4 4 0 01-4 4h-.5"
         stroke={T.accent}
-        strokeWidth="1.6"
+        strokeWidth="1.5"
         strokeLinecap="round"
       />
       <path
         d="M7 4h10v6a5 5 0 01-10 0V4z"
         stroke={T.accent}
-        strokeWidth="1.6"
+        strokeWidth="1.5"
       />
     </svg>
   ),
@@ -226,10 +223,10 @@ const Icon = {
 /* ─── Badge ─── */
 function Badge({ variant, children }) {
   const variants = {
-    correct: { bg: "#E4F2E9", color: T.accent, border: "#B8DDC3" },
+    correct: { bg: T.successLight, color: T.success, border: "#86efac" },
     incorrect: { bg: T.dangerLight, color: T.danger, border: T.dangerBorder },
-    info: { bg: T.accentLight, color: T.accent, border: "#B8DDC3" },
-    neutral: { bg: "#F0EFEA", color: T.inkMid, border: T.border },
+    info: { bg: T.accentLight, color: T.accent, border: "#bfdbfe" },
+    neutral: { bg: "#f1f5f9", color: T.inkMid, border: T.border },
   };
   const c = variants[variant] || variants.neutral;
   return (
@@ -237,11 +234,10 @@ function Badge({ variant, children }) {
       style={{
         display: "inline-flex",
         alignItems: "center",
-        fontSize: "11px",
-        fontFamily: T.fontSans,
-        fontWeight: "500",
-        padding: "3px 10px",
-        borderRadius: "999px",
+        fontSize: "12px",
+        fontWeight: "600",
+        padding: "4px 10px",
+        borderRadius: "6px",
         background: c.bg,
         color: c.color,
         border: `1px solid ${c.border}`,
@@ -261,15 +257,14 @@ function Btn({ variant = "ghost", children, onClick, disabled, style = {} }) {
     alignItems: "center",
     justifyContent: "center",
     gap: "6px",
-    padding: "9px 18px",
-    borderRadius: T.radius,
+    padding: "10px 16px",
+    borderRadius: T.radiusSm,
     fontSize: "13px",
-    fontFamily: T.fontSans,
-    fontWeight: "500",
+    fontWeight: "600",
     cursor: disabled ? "not-allowed" : "pointer",
     border: "none",
-    transition: "opacity 0.15s, transform 0.1s",
-    opacity: disabled ? 0.4 : 1,
+    transition: "all 0.2s",
+    opacity: disabled ? 0.5 : 1,
     letterSpacing: "0.01em",
   };
   const variants = {
@@ -289,6 +284,7 @@ function Btn({ variant = "ghost", children, onClick, disabled, style = {} }) {
     <button
       className="quiz-btn"
       onClick={!disabled ? onClick : undefined}
+      disabled={disabled}
       style={{ ...base, ...variants[variant], ...style }}
     >
       {children}
@@ -300,9 +296,9 @@ function Btn({ variant = "ghost", children, onClick, disabled, style = {} }) {
 function ReviewOption({ option, isCorrect, isUserAnswer }) {
   if (!isCorrect && !isUserAnswer) return null;
   const isWrong = isUserAnswer && !isCorrect;
-  const color = isWrong ? T.danger : T.accent;
-  const bg = isWrong ? T.dangerLight : "#E4F2E9";
-  const border = isWrong ? T.dangerBorder : "#B8DDC3";
+  const color = isWrong ? T.danger : T.success;
+  const bg = isWrong ? T.dangerLight : T.successLight;
+  const border = isWrong ? T.dangerBorder : "#86efac";
   const label =
     isCorrect && isUserAnswer
       ? "Your answer · correct"
@@ -316,7 +312,7 @@ function ReviewOption({ option, isCorrect, isUserAnswer }) {
         display: "flex",
         alignItems: "center",
         gap: "10px",
-        padding: "9px 12px",
+        padding: "10px 12px",
         borderRadius: T.radiusSm,
         marginBottom: "6px",
         background: bg,
@@ -335,17 +331,15 @@ function ReviewOption({ option, isCorrect, isUserAnswer }) {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
+          fontSize: "11px",
         }}
       >
         {isCorrect ? <Icon.check /> : <Icon.x />}
       </span>
-      <span style={{ fontSize: "13px", fontFamily: T.fontSans, flex: 1 }}>
-        {option}
-      </span>
+      <span style={{ fontSize: "13px", flex: 1 }}>{option}</span>
       <span
         style={{
-          fontSize: "10.5px",
-          fontFamily: T.fontSans,
+          fontSize: "11px",
           opacity: 0.75,
           whiteSpace: "nowrap",
         }}
@@ -362,7 +356,6 @@ function ExplanationToggle({ text }) {
   return (
     <div style={{ marginTop: "12px" }}>
       <button
-        className="exp-toggle"
         onClick={() => setOpen(!open)}
         style={{
           display: "flex",
@@ -372,9 +365,9 @@ function ExplanationToggle({ text }) {
           border: "none",
           cursor: "pointer",
           padding: 0,
-          fontSize: "12px",
-          fontFamily: T.fontSans,
-          color: T.inkFaint,
+          fontSize: "13px",
+          color: T.accent,
+          fontWeight: "600",
           transition: "color 0.15s",
         }}
       >
@@ -385,15 +378,15 @@ function ExplanationToggle({ text }) {
         <p
           style={{
             fontSize: "13px",
-            fontFamily: T.fontSans,
             color: T.inkMid,
             lineHeight: "1.7",
             marginTop: "10px",
             padding: "12px 14px",
             background: T.surfaceAlt,
             borderRadius: T.radiusSm,
-            borderLeft: `3px solid ${T.accentMid}`,
+            borderLeft: `3px solid ${T.accent}`,
             animation: "fadeIn 0.2s ease",
+            margin: "10px 0 0",
           }}
         >
           {text}
@@ -412,8 +405,8 @@ function QuestionReviewCard({ question, index, userAnswer }) {
         background: T.surface,
         border: `1px solid ${T.border}`,
         borderRadius: T.radiusLg,
-        padding: "1.25rem 1.5rem",
-        marginBottom: "10px",
+        padding: "1.5rem",
+        marginBottom: "1rem",
         boxShadow: T.shadow,
         animation: `fadeUp 0.3s ease ${Math.min(index * 0.03, 0.3)}s both`,
       }}
@@ -424,24 +417,24 @@ function QuestionReviewCard({ question, index, userAnswer }) {
           justifyContent: "space-between",
           alignItems: "flex-start",
           gap: "12px",
-          marginBottom: "14px",
+          marginBottom: "1rem",
         }}
       >
         <p
           style={{
             fontSize: "14px",
-            fontFamily: T.font,
             lineHeight: "1.65",
             color: T.ink,
             flex: 1,
+            margin: 0,
           }}
         >
           <span
             style={{
-              fontFamily: T.fontMono,
-              fontSize: "11px",
+              fontSize: "12px",
               color: T.inkFaint,
-              marginRight: "7px",
+              marginRight: "8px",
+              fontWeight: "600",
             }}
           >
             {String(index + 1).padStart(2, "0")}
@@ -456,7 +449,7 @@ function QuestionReviewCard({ question, index, userAnswer }) {
       {questionImageSrc(question) && (
         <div
           style={{
-            margin: "0 0 14px",
+            margin: "0 0 1rem",
             padding: "10px",
             background: T.surfaceAlt,
             border: `1px solid ${T.border}`,
@@ -478,6 +471,7 @@ function QuestionReviewCard({ question, index, userAnswer }) {
           />
         </div>
       )}
+
       {question.options.map((opt, i) => (
         <ReviewOption
           key={i}
@@ -492,39 +486,41 @@ function QuestionReviewCard({ question, index, userAnswer }) {
 }
 
 /* ─── Stat cell ─── */
-function StatCell({ value, label, accent }) {
+function StatCell({ value, label }) {
   return (
     <div
       style={{
         background: T.surfaceAlt,
-        borderRadius: T.radius,
-        padding: "1rem 0.75rem",
+        borderRadius: T.radiusSm,
+        padding: "1rem",
         textAlign: "center",
         border: `1px solid ${T.border}`,
       }}
     >
-      <div
+      <p
         style={{
           fontSize: "24px",
-          fontFamily: T.font,
-          fontWeight: "600",
-          color: accent || T.ink,
+          fontWeight: "700",
+          color: T.accent,
           lineHeight: 1.1,
+          margin: 0,
         }}
       >
         {value}
-      </div>
-      <div
+      </p>
+      <p
         style={{
-          fontSize: "11px",
-          fontFamily: T.fontSans,
+          fontSize: "12px",
           color: T.inkFaint,
-          marginTop: "4px",
-          letterSpacing: "0.03em",
+          marginTop: "6px",
+          margin: "6px 0 0",
+          fontWeight: "500",
+          textTransform: "uppercase",
+          letterSpacing: "0.05em",
         }}
       >
         {label}
-      </div>
+      </p>
     </div>
   );
 }
@@ -602,17 +598,6 @@ function SubjectTestPage() {
           const unique = Array.from(
             new Map(questionsResponse.data.map((q) => [q._id, q])).values(),
           );
-          console.log(
-            "TEST QUESTIONS IMAGE DEBUG:",
-            unique.map((q) => ({
-              id: q._id,
-              hasImageData: !!q.imageData,
-              imageContentType: q.imageContentType,
-              imageDataLength: q.imageData?.length,
-              image: q.image,
-              imageUrl: q.imageUrl,
-            })),
-          );
 
           setTopic(selectedTopic);
           setSubject(subjectResponse.data);
@@ -628,17 +613,6 @@ function SubjectTestPage() {
           ]);
           const unique = Array.from(
             new Map(questionsResponse.data.map((q) => [q._id, q])).values(),
-          );
-          console.log(
-            "TEST QUESTIONS IMAGE DEBUG:",
-            unique.map((q) => ({
-              id: q._id,
-              hasImageData: !!q.imageData,
-              imageContentType: q.imageContentType,
-              imageDataLength: q.imageData?.length,
-              image: q.image,
-              imageUrl: q.imageUrl,
-            })),
           );
 
           setTopic(null);
@@ -787,15 +761,15 @@ function SubjectTestPage() {
       style={{
         minHeight: "100vh",
         background: T.bg,
-        fontFamily: T.fontSans,
+        fontFamily: "'Inter', sans-serif",
         color: T.ink,
       }}
     >
       <div
         style={{
-          maxWidth: "720px",
+          maxWidth: "800px",
           margin: "0 auto",
-          padding: "2.5rem 1.25rem 4rem",
+          padding: "2rem 1.25rem 4rem",
         }}
       >
         {children}
@@ -809,16 +783,16 @@ function SubjectTestPage() {
       <div style={{ textAlign: "center", paddingTop: "5rem" }}>
         <div
           style={{
-            width: "36px",
-            height: "36px",
+            width: "40px",
+            height: "40px",
             borderRadius: "50%",
-            border: `2px solid ${T.accentLight}`,
-            borderTop: `2px solid ${T.accent}`,
+            border: `3px solid ${T.accentLight}`,
+            borderTop: `3px solid ${T.accent}`,
             animation: "pulse 1s linear infinite",
-            margin: "0 auto 12px",
+            margin: "0 auto 1rem",
           }}
         />
-        <p style={{ fontSize: "13px", color: T.inkFaint }}>
+        <p style={{ fontSize: "14px", color: T.inkFaint }}>
           Loading questions…
         </p>
       </div>,
@@ -830,7 +804,7 @@ function SubjectTestPage() {
       <div
         style={{
           background: T.surface,
-          border: `1px solid ${T.border}`,
+          border: `1px solid ${T.dangerBorder}`,
           borderRadius: T.radiusLg,
           padding: "2rem",
           boxShadow: T.shadow,
@@ -857,8 +831,8 @@ function SubjectTestPage() {
           boxShadow: T.shadow,
         }}
       >
-        <p style={{ fontWeight: "500", marginBottom: "6px" }}>{breadcrumb}</p>
-        <p style={{ color: T.inkFaint, fontSize: "14px" }}>
+        <p style={{ fontWeight: "600", marginBottom: "6px" }}>{breadcrumb}</p>
+        <p style={{ color: T.inkFaint, fontSize: "14px", margin: 0 }}>
           No questions available for this test yet.
         </p>
       </div>,
@@ -884,7 +858,7 @@ function SubjectTestPage() {
             border: `1px solid ${T.border}`,
             borderRadius: T.radiusLg,
             padding: "2rem",
-            marginBottom: "1.25rem",
+            marginBottom: "1.5rem",
             boxShadow: T.shadowMd,
             animation: "fadeUp 0.4s ease",
           }}
@@ -900,9 +874,9 @@ function SubjectTestPage() {
           >
             <div
               style={{
-                width: "48px",
-                height: "48px",
-                borderRadius: "12px",
+                width: "52px",
+                height: "52px",
+                borderRadius: T.radius,
                 background: T.accentLight,
                 display: "flex",
                 alignItems: "center",
@@ -915,23 +889,22 @@ function SubjectTestPage() {
             <div>
               <p
                 style={{
-                  fontSize: "11px",
-                  fontFamily: T.fontSans,
+                  fontSize: "12px",
                   color: T.inkFaint,
-                  fontWeight: "500",
+                  fontWeight: "600",
                   textTransform: "uppercase",
-                  letterSpacing: "0.07em",
-                  marginBottom: "2px",
+                  letterSpacing: "0.08em",
+                  marginBottom: "4px",
                 }}
               >
                 {breadcrumb}
               </p>
               <h2
                 style={{
-                  fontSize: "20px",
-                  fontFamily: T.font,
-                  fontWeight: "600",
+                  fontSize: "22px",
+                  fontWeight: "700",
                   color: T.ink,
+                  margin: 0,
                 }}
               >
                 {getPerformanceMessage()}
@@ -943,20 +916,13 @@ function SubjectTestPage() {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(3,1fr)",
-              gap: "8px",
+              gridTemplateColumns: "repeat(3, 1fr)",
+              gap: "1rem",
               marginBottom: "1.5rem",
             }}
           >
-            <StatCell
-              value={`${percentage}%`}
-              label="Score"
-              accent={T.accent}
-            />
-            <StatCell
-              value={`${score} / ${questions.length}`}
-              label="Correct"
-            />
+            <StatCell value={`${percentage}%`} label="Score" />
+            <StatCell value={`${score}/${questions.length}`} label="Correct" />
             <StatCell value={formatTime(timeUsed)} label="Time used" />
           </div>
 
@@ -966,26 +932,21 @@ function SubjectTestPage() {
               style={{
                 display: "flex",
                 justifyContent: "space-between",
-                fontSize: "11px",
-                fontFamily: T.fontSans,
+                fontSize: "12px",
                 color: T.inkFaint,
-                marginBottom: "6px",
+                marginBottom: "8px",
+                fontWeight: "500",
               }}
             >
               <span>Performance</span>
-              <span
-                style={{
-                  color: percentage >= 50 ? T.accent : T.danger,
-                  fontWeight: "500",
-                }}
-              >
+              <span style={{ color: percentage >= 50 ? T.success : T.danger }}>
                 {percentage}%
               </span>
             </div>
             <div
               style={{
-                height: "5px",
-                background: "#ECEAE3",
+                height: "6px",
+                background: "#e2e8f0",
                 borderRadius: "999px",
                 overflow: "hidden",
               }}
@@ -994,7 +955,10 @@ function SubjectTestPage() {
                 style={{
                   width: `${percentage}%`,
                   height: "100%",
-                  background: percentage >= 50 ? T.accent : T.danger,
+                  background:
+                    percentage >= 50
+                      ? `linear-gradient(90deg, ${T.success} 0%, ${T.accent} 100%)`
+                      : T.danger,
                   borderRadius: "999px",
                   transition: "width 0.6s ease",
                 }}
@@ -1009,43 +973,42 @@ function SubjectTestPage() {
             background: T.surface,
             border: `1px solid ${T.border}`,
             borderRadius: T.radius,
-            padding: "1rem 1.25rem",
-            marginBottom: "1.25rem",
+            padding: "1.25rem",
+            marginBottom: "1.5rem",
             boxShadow: T.shadow,
           }}
         >
           <p
             style={{
-              fontSize: "11px",
-              fontFamily: T.fontSans,
+              fontSize: "12px",
               color: T.inkFaint,
-              fontWeight: "500",
+              fontWeight: "600",
               textTransform: "uppercase",
-              letterSpacing: "0.07em",
-              marginBottom: "10px",
+              letterSpacing: "0.08em",
+              marginBottom: "1rem",
+              margin: "0 0 1rem",
             }}
           >
             Question overview
           </p>
-          <div style={{ display: "flex", gap: "5px", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
             {questions.map((q, i) => {
               const correct = selectedAnswers[q._id] === q.correctAnswer;
               return (
                 <span
                   key={q._id}
                   style={{
-                    width: "28px",
-                    height: "28px",
-                    borderRadius: "7px",
-                    background: correct ? "#E4F2E9" : T.dangerLight,
-                    color: correct ? T.accent : T.danger,
-                    fontSize: "11px",
-                    fontFamily: T.fontMono,
-                    fontWeight: "500",
+                    width: "32px",
+                    height: "32px",
+                    borderRadius: "6px",
+                    background: correct ? T.successLight : T.dangerLight,
+                    color: correct ? T.success : T.danger,
+                    fontSize: "12px",
+                    fontWeight: "600",
                     display: "inline-flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    border: `1px solid ${correct ? "#B8DDC3" : T.dangerBorder}`,
+                    border: `1px solid ${correct ? "#86efac" : T.dangerBorder}`,
                   }}
                 >
                   {i + 1}
@@ -1055,41 +1018,44 @@ function SubjectTestPage() {
           </div>
         </div>
 
-        {/* Per-question review */}
+        {/* Review filter */}
         <div
           style={{
             display: "flex",
             gap: "8px",
             flexWrap: "wrap",
-            marginBottom: "1rem",
+            marginBottom: "1.5rem",
           }}
         >
           <Btn
-            variant={reviewMode === "all" ? "primary" : "secondary"}
+            variant={reviewMode === "all" ? "primary" : "ghost"}
             onClick={() => setReviewMode("all")}
           >
             All questions
           </Btn>
           <Btn
-            variant={reviewMode === "wrong" ? "primary" : "secondary"}
+            variant={reviewMode === "wrong" ? "primary" : "ghost"}
             onClick={() => setReviewMode("wrong")}
           >
-            Wrong answers only ({wrongQuestions.length})
+            Incorrect ({wrongQuestions.length})
           </Btn>
         </div>
 
+        {/* Perfect score message */}
         {reviewMode === "wrong" && wrongQuestions.length === 0 ? (
           <div
             style={{
-              background: T.accentLight,
-              border: "1px solid #B8DDC3",
+              background: T.successLight,
+              border: `1px solid #86efac`,
               borderRadius: T.radiusLg,
               padding: "1.25rem",
-              color: T.accent,
+              color: T.success,
               marginBottom: "1rem",
+              fontSize: "14px",
+              fontWeight: "500",
             }}
           >
-            Perfect score. No wrong answers to review.
+            🎉 Perfect score! No incorrect answers to review.
           </div>
         ) : (
           reviewQuestions.map((question) => (
@@ -1102,13 +1068,14 @@ function SubjectTestPage() {
           ))
         )}
 
+        {/* Footer actions */}
         <div
           style={{
             display: "flex",
             gap: "8px",
             justifyContent: "center",
             flexWrap: "wrap",
-            marginTop: "1.75rem",
+            marginTop: "2rem",
           }}
         >
           <Btn variant="primary" onClick={handleRetakeTest}>
@@ -1135,7 +1102,7 @@ function SubjectTestPage() {
           display: "flex",
           alignItems: "flex-start",
           justifyContent: "space-between",
-          gap: "12px",
+          gap: "1rem",
           flexWrap: "wrap",
           marginBottom: "1.5rem",
           animation: "fadeUp 0.3s ease",
@@ -1144,11 +1111,11 @@ function SubjectTestPage() {
         <div>
           <p
             style={{
-              fontSize: "11px",
+              fontSize: "12px",
               color: T.inkFaint,
-              fontWeight: "500",
+              fontWeight: "600",
               textTransform: "uppercase",
-              letterSpacing: "0.07em",
+              letterSpacing: "0.08em",
               marginBottom: "4px",
             }}
           >
@@ -1156,13 +1123,13 @@ function SubjectTestPage() {
           </p>
           <h2
             style={{
-              fontSize: "22px",
-              fontFamily: T.font,
-              fontWeight: "600",
+              fontSize: "24px",
+              fontWeight: "700",
               color: T.ink,
+              margin: 0,
             }}
           >
-            {isTopicMode ? "Topic test" : "Subject test"}
+            Start the test
           </h2>
         </div>
         <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
@@ -1170,14 +1137,13 @@ function SubjectTestPage() {
             style={{
               display: "inline-flex",
               alignItems: "center",
-              gap: "6px",
-              padding: "7px 13px",
-              borderRadius: T.radius,
+              gap: "8px",
+              padding: "9px 14px",
+              borderRadius: T.radiusSm,
               background: timeWarn ? T.dangerLight : T.surface,
               border: `1px solid ${timeWarn ? T.dangerBorder : T.border}`,
               fontSize: "14px",
-              fontFamily: T.fontMono,
-              fontWeight: "500",
+              fontWeight: "600",
               color: timeWarn ? T.danger : T.ink,
               transition: "all 0.3s",
             }}
@@ -1197,34 +1163,22 @@ function SubjectTestPage() {
           style={{
             display: "flex",
             justifyContent: "space-between",
-            fontSize: "12px",
-            fontFamily: T.fontSans,
+            fontSize: "13px",
             color: T.inkFaint,
             marginBottom: "8px",
+            fontWeight: "500",
           }}
         >
           <span>
             Question{" "}
-            <span
-              style={{
-                fontWeight: "600",
-                color: T.ink,
-                fontFamily: T.fontMono,
-              }}
-            >
+            <span style={{ color: T.ink, fontWeight: "700" }}>
               {currentQuestionIndex + 1}
             </span>{" "}
             of {questions.length}
           </span>
           <span>
             Answered{" "}
-            <span
-              style={{
-                fontWeight: "600",
-                color: T.ink,
-                fontFamily: T.fontMono,
-              }}
-            >
+            <span style={{ color: T.ink, fontWeight: "700" }}>
               {answeredCount}
             </span>
             /{questions.length}
@@ -1232,8 +1186,8 @@ function SubjectTestPage() {
         </div>
         <div
           style={{
-            height: "4px",
-            background: "#ECEAE3",
+            height: "6px",
+            background: "#e2e8f0",
             borderRadius: "999px",
             overflow: "hidden",
           }}
@@ -1257,19 +1211,13 @@ function SubjectTestPage() {
           background: T.surface,
           border: `1px solid ${T.border}`,
           borderRadius: T.radiusLg,
-          padding: "1.75rem",
+          padding: "2rem",
           boxShadow: T.shadowMd,
           animation: `fadeUp 0.3s ease`,
+          marginBottom: "1.5rem",
         }}
       >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            marginBottom: "1.25rem",
-          }}
-        >
+        <div style={{ marginBottom: "1rem" }}>
           <Badge variant="neutral">
             Q{String(currentQuestionIndex + 1).padStart(2, "0")}
           </Badge>
@@ -1277,8 +1225,7 @@ function SubjectTestPage() {
 
         <p
           style={{
-            fontSize: "15px",
-            fontFamily: T.font,
+            fontSize: "16px",
             lineHeight: "1.75",
             color: T.ink,
             marginBottom: "1.5rem",
@@ -1290,7 +1237,7 @@ function SubjectTestPage() {
         {questionImageSrc(currentQuestion) && (
           <div
             style={{
-              margin: "-0.5rem 0 1.5rem",
+              margin: "0 0 1.5rem",
               padding: "10px",
               background: T.surfaceAlt,
               border: `1px solid ${T.border}`,
@@ -1311,12 +1258,6 @@ function SubjectTestPage() {
                 margin: "0 auto",
               }}
               onError={(e) => {
-                console.error("Question image failed to load:", {
-                  id: currentQuestion._id,
-                  imageContentType: currentQuestion.imageContentType,
-                  imageDataLength: currentQuestion.imageData?.length,
-                  srcStart: questionImageSrc(currentQuestion)?.slice(0, 80),
-                });
                 e.currentTarget.style.display = "none";
               }}
             />
@@ -1340,23 +1281,21 @@ function SubjectTestPage() {
                   display: "flex",
                   alignItems: "center",
                   gap: "12px",
-                  padding: "11px 15px",
+                  padding: "12px 14px",
                   borderRadius: T.radius,
                   cursor: "pointer",
                   fontSize: "14px",
-                  fontFamily: T.fontSans,
-                  marginBottom: "7px",
-                  border: `1px solid ${isSelected ? T.accentMid : T.border}`,
+                  marginBottom: "8px",
+                  border: `1px solid ${isSelected ? T.accent : T.border}`,
                   background: isSelected ? T.accentLight : "transparent",
-                  color: isSelected ? T.accent : T.ink,
-                  transition:
-                    "border-color 0.15s, background 0.15s, color 0.15s",
+                  color: isSelected ? T.accentDark : T.ink,
+                  transition: "all 0.2s ease",
                 }}
               >
                 <div
                   style={{
-                    width: "17px",
-                    height: "17px",
+                    width: "18px",
+                    height: "18px",
                     borderRadius: "50%",
                     flexShrink: 0,
                     border: `1.5px solid ${isSelected ? T.accent : T.borderStrong}`,
@@ -1383,8 +1322,8 @@ function SubjectTestPage() {
                   <span
                     style={{
                       fontSize: "11px",
-                      color: T.accentMid,
-                      fontWeight: "500",
+                      color: T.accent,
+                      fontWeight: "600",
                     }}
                   >
                     Selected
@@ -1402,7 +1341,7 @@ function SubjectTestPage() {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          marginTop: "1.25rem",
+          gap: "1rem",
         }}
       >
         <Btn
@@ -1413,7 +1352,7 @@ function SubjectTestPage() {
         </Btn>
 
         {/* Dot nav */}
-        <div style={{ display: "flex", gap: "5px", alignItems: "center" }}>
+        <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
           {questions.slice(0, Math.min(questions.length, 12)).map((q, i) => {
             const isActive = i === currentQuestionIndex;
             const isAnswered = Boolean(selectedAnswers[q._id]);
@@ -1423,14 +1362,14 @@ function SubjectTestPage() {
                 className="dot-nav"
                 onClick={() => setCurrentQuestionIndex(i)}
                 style={{
-                  width: isActive ? "20px" : "7px",
-                  height: "7px",
+                  width: isActive ? "22px" : "8px",
+                  height: "8px",
                   borderRadius: "999px",
                   background: isActive
                     ? T.accent
                     : isAnswered
-                      ? `${T.accent}55`
-                      : "#D0CFC6",
+                      ? `${T.accent}66`
+                      : "#cbd5e1",
                   cursor: "pointer",
                   transition: "all 0.25s cubic-bezier(0.4,0,0.2,1)",
                 }}
