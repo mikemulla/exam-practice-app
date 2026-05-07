@@ -11,6 +11,167 @@ function TopicSelectionPage() {
   const [subjectQuestions, setSubjectQuestions] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Design tokens matching AdminPage
+  const S = {
+    container: {
+      minHeight: "100vh",
+      background: "#f8fafc",
+      padding: "40px 20px",
+    },
+    maxWidth: {
+      maxWidth: "1200px",
+      margin: "0 auto",
+    },
+    header: {
+      marginBottom: "48px",
+    },
+    headerTop: {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      flexWrap: "wrap",
+      gap: "16px",
+      marginBottom: "16px",
+    },
+    backBtn: {
+      padding: "10px 20px",
+      borderRadius: "8px",
+      border: "1px solid #e2e8f0",
+      backgroundColor: "white",
+      color: "#334155",
+      fontWeight: "600",
+      fontSize: "14px",
+      cursor: "pointer",
+      transition: "all 0.2s",
+    },
+    headerTitle: {
+      fontSize: `clamp(28px, 5vw, 36px)`,
+      fontWeight: "600",
+      margin: "0 0 8px",
+      color: "#0f172a",
+      textTransform: "capitalize",
+    },
+    headerSubtitle: {
+      fontSize: "15px",
+      color: "#64748b",
+      margin: "0",
+    },
+    headerDescription: {
+      fontSize: "14px",
+      color: "#475569",
+      margin: "12px 0 8px",
+      lineHeight: "1.6",
+    },
+    headerMeta: {
+      fontSize: "13px",
+      color: "#64748b",
+      margin: "0",
+    },
+    alertCard: {
+      backgroundColor: "white",
+      border: "1px solid #e2e8f0",
+      borderRadius: "12px",
+      padding: "18px 20px",
+      marginBottom: "32px",
+      textAlign: "center",
+    },
+    alertTitle: {
+      fontSize: "15px",
+      fontWeight: "600",
+      color: "#0f172a",
+      margin: "0 0 8px",
+    },
+    alertText: {
+      fontSize: "14px",
+      color: "#64748b",
+      margin: "0",
+    },
+    grid: {
+      display: "grid",
+      gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+      gap: "20px",
+      marginBottom: "32px",
+    },
+    card: {
+      backgroundColor: "white",
+      border: "1px solid #e2e8f0",
+      borderRadius: "12px",
+      padding: "24px",
+      transition: "all 0.2s ease",
+      display: "flex",
+      flexDirection: "column",
+    },
+    cardHover: {
+      borderColor: "#185fa5",
+      boxShadow: "0 4px 12px rgba(24, 95, 165, 0.08)",
+    },
+    iconBox: {
+      width: "48px",
+      height: "48px",
+      borderRadius: "12px",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      fontSize: "24px",
+      marginBottom: "16px",
+    },
+    iconBoxBlue: {
+      backgroundColor: "#e0f2fe",
+    },
+    iconBoxGreen: {
+      backgroundColor: "#dcfce7",
+    },
+    cardTitle: {
+      fontSize: "16px",
+      fontWeight: "600",
+      color: "#0f172a",
+      margin: "0 0 10px",
+    },
+    cardDescription: {
+      fontSize: "14px",
+      color: "#64748b",
+      margin: "0 0 16px",
+      lineHeight: "1.6",
+      flex: 1,
+    },
+    cardBadge: {
+      fontSize: "13px",
+      fontWeight: "600",
+      color: "#185fa5",
+      margin: "0 0 16px",
+    },
+    button: {
+      padding: "11px 16px",
+      border: "none",
+      borderRadius: "8px",
+      fontSize: "14px",
+      fontWeight: "600",
+      cursor: "pointer",
+      transition: "all 0.2s",
+      width: "100%",
+    },
+    buttonPrimary: {
+      backgroundColor: "#185fa5",
+      color: "white",
+    },
+    buttonSecondary: {
+      backgroundColor: "#e2e8f0",
+      color: "#0f172a",
+    },
+    empty: {
+      padding: "48px 20px",
+      textAlign: "center",
+      color: "#94a3b8",
+      fontSize: "14px",
+    },
+    emptyTitle: {
+      fontSize: "16px",
+      fontWeight: "600",
+      color: "#0f172a",
+      margin: "0 0 8px",
+    },
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -27,10 +188,13 @@ function TopicSelectionPage() {
           await Promise.all([
             api.get(`/api/subjects/${subjectId}`, { _tokenType: "user" }),
             api.get(`/api/topics/subject/${subjectId}`, { _tokenType: "user" }),
-            api.get(`/api/questions/subject/${subjectId}`, { _tokenType: "user" }),
+            api.get(`/api/questions/subject/${subjectId}`, {
+              _tokenType: "user",
+            }),
           ]);
 
-        const subjectData = subjectResponse.data?.subject || subjectResponse.data;
+        const subjectData =
+          subjectResponse.data?.subject || subjectResponse.data;
         const topicsData = Array.isArray(topicsResponse.data)
           ? topicsResponse.data
           : topicsResponse.data?.topics || [];
@@ -49,16 +213,14 @@ function TopicSelectionPage() {
     };
 
     fetchData();
-  }, [subjectId]);
+  }, [subjectId, navigate]);
 
   const topicQuestionCounts = useMemo(() => {
     const counts = {};
-
     const questions = Array.isArray(subjectQuestions) ? subjectQuestions : [];
 
     questions.forEach((question) => {
       const currentTopicId = question.topicId?._id || question.topicId;
-
       if (currentTopicId) {
         counts[currentTopicId] = (counts[currentTopicId] || 0) + 1;
       }
@@ -67,303 +229,164 @@ function TopicSelectionPage() {
     return counts;
   }, [subjectQuestions]);
 
-  const totalQuestionCount = Array.isArray(subjectQuestions) ? subjectQuestions.length : 0;
+  const totalQuestionCount = Array.isArray(subjectQuestions)
+    ? subjectQuestions.length
+    : 0;
 
   if (isLoading) {
     return (
-      <div style={{ textAlign: "center", marginTop: "100px" }}>
-        <p>Loading topics...</p>
+      <div style={S.container}>
+        <div style={S.maxWidth}>
+          <div style={S.empty}>
+            <p style={S.emptyTitle}>Loading topics…</p>
+          </div>
+        </div>
       </div>
     );
   }
 
   if (!subject) {
     return (
-      <div style={{ textAlign: "center", marginTop: "100px" }}>
-        <p>Unable to load subject.</p>
+      <div style={S.container}>
+        <div style={S.maxWidth}>
+          <div style={S.empty}>
+            <p style={S.emptyTitle}>Unable to load subject</p>
+            <p>Please try again or go back.</p>
+          </div>
+        </div>
       </div>
     );
   }
 
+  const TopicCard = ({ topic, questionCount }) => {
+    const [hovered, setHovered] = useState(false);
+
+    return (
+      <div
+        style={{
+          ...S.card,
+          ...(hovered && S.cardHover),
+        }}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+      >
+        <div style={{ ...S.iconBox, ...S.iconBoxGreen }}>🗂️</div>
+        <h2 style={S.cardTitle}>{topic.name}</h2>
+        <p style={S.cardDescription}>
+          Practice only questions from this topic.
+        </p>
+        <p style={S.cardBadge}>
+          {questionCount} question{questionCount === 1 ? "" : "s"}
+        </p>
+        <button
+          onClick={() => navigate(`/test/topic/${topic._id}`)}
+          style={{ ...S.button, ...S.buttonPrimary }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = "#0e3d6e";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = "#185fa5";
+          }}
+        >
+          Start Topic Test
+        </button>
+      </div>
+    );
+  };
+
+  const FullSubjectCard = () => {
+    const [hovered, setHovered] = useState(false);
+
+    return (
+      <div
+        style={{
+          ...S.card,
+          ...(hovered && S.cardHover),
+        }}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+      >
+        <div style={{ ...S.iconBox, ...S.iconBoxBlue }}>📘</div>
+        <h2 style={S.cardTitle}>Full Subject Test</h2>
+        <p style={S.cardDescription}>
+          Practice all questions available under this subject.
+        </p>
+        <p style={S.cardBadge}>
+          {totalQuestionCount} question{totalQuestionCount === 1 ? "" : "s"}
+        </p>
+        <button
+          onClick={() => navigate(`/test/subject/${subject._id}`)}
+          style={{ ...S.button, ...S.buttonSecondary }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = "#cbd5e1";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = "#e2e8f0";
+          }}
+        >
+          Start Full Test
+        </button>
+      </div>
+    );
+  };
+
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background:
-          "linear-gradient(135deg, #f8fbff 0%, #eef4ff 50%, #f7f9fc 100%)",
-        padding: "32px 20px",
-      }}
-    >
-      <div style={{ maxWidth: "1000px", margin: "0 auto" }}>
-        <div style={{ marginBottom: "24px" }}>
-          <p
-            style={{
-              margin: 0,
-              color: "#64748b",
-              fontSize: "14px",
-              fontWeight: "600",
-            }}
-          >
-            User / Topic selection
-          </p>
-
-          <h1
-            style={{
-              margin: "10px 0 8px",
-              fontSize: "36px",
-              color: "#0f172a",
-              textTransform: "capitalize",
-            }}
-          >
-            {subject.name}
-          </h1>
-
-          <p
-            style={{
-              margin: 0,
-              color: "#475569",
-              fontSize: "16px",
-              lineHeight: "1.6",
-            }}
-          >
-            Choose a full subject test or focus on one topic.
-          </p>
-
-          <p
-            style={{
-              color: "#64748b",
-              marginTop: "10px",
-              fontSize: "14px",
-            }}
-          >
-            {Array.isArray(topics) ? topics.length : 0} topic{Array.isArray(topics) && topics.length === 1 ? "" : "s"} available,{" "}
-            {totalQuestionCount} total question
-            {totalQuestionCount === 1 ? "" : "s"}
-          </p>
-        </div>
-
-        {(!Array.isArray(topics) || topics.length === 0) && (
-          <div
-            style={{
-              marginBottom: "20px",
-              padding: "20px",
-              borderRadius: "12px",
-              backgroundColor: "white",
-              border: "1px solid #e2e8f0",
-              boxShadow: "0 12px 30px rgba(15,23,42,0.06)",
-              textAlign: "center",
-            }}
-          >
-            <p
-              style={{
-                margin: "0 0 8px",
-                color: "#0f172a",
-                fontWeight: "600",
+    <div style={S.container}>
+      <div style={S.maxWidth}>
+        {/* Header with back button */}
+        <div style={S.header}>
+          <div style={S.headerTop}>
+            <div style={{ flex: 1 }}>
+              <p style={S.headerSubtitle}>Topic selection</p>
+              <h1 style={S.headerTitle}>{subject.name}</h1>
+              <p style={S.headerDescription}>
+                Choose a full subject test or focus on one topic.
+              </p>
+              <p style={S.headerMeta}>
+                {Array.isArray(topics) ? topics.length : 0} topic
+                {Array.isArray(topics) && topics.length === 1 ? "" : "s"}{" "}
+                available, {totalQuestionCount} total question
+                {totalQuestionCount === 1 ? "" : "s"}
+              </p>
+            </div>
+            <button
+              onClick={() => navigate("/user")}
+              style={S.backBtn}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = "#f1f5f9";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "white";
               }}
             >
-              No topics added yet
-            </p>
-            <p style={{ margin: 0, color: "#64748b", fontSize: "14px" }}>
-              You can still take the full subject test.
+              ← Back
+            </button>
+          </div>
+        </div>
+
+        {/* No topics alert */}
+        {(!Array.isArray(topics) || topics.length === 0) && (
+          <div style={S.alertCard}>
+            <p style={S.alertTitle}>No topics added yet</p>
+            <p style={S.alertText}>
+              You can still take the full subject test below.
             </p>
           </div>
         )}
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-            gap: "20px",
-          }}
-        >
-          <div
-            style={{
-              backgroundColor: "white",
-              border: "1px solid #e2e8f0",
-              borderRadius: "18px",
-              padding: "22px",
-              boxShadow: "0 12px 30px rgba(15,23,42,0.06)",
-              transition: "transform 0.2s, box-shadow 0.2s",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = "translateY(-4px)";
-              e.currentTarget.style.boxShadow =
-                "0 18px 40px rgba(15,23,42,0.08)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = "none";
-              e.currentTarget.style.boxShadow =
-                "0 12px 30px rgba(15,23,42,0.06)";
-            }}
-          >
-            <div
-              style={{
-                width: "52px",
-                height: "52px",
-                borderRadius: "14px",
-                backgroundColor: "#e7f0ff",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "22px",
-                marginBottom: "16px",
-              }}
-            >
-              📘
-            </div>
-
-            <h2 style={{ margin: "0 0 10px", color: "#0f172a" }}>
-              Full Subject Test
-            </h2>
-
-            <p
-              style={{
-                margin: "0 0 12px",
-                color: "#64748b",
-                lineHeight: "1.6",
-                fontSize: "15px",
-              }}
-            >
-              Practice all questions available under this subject.
-            </p>
-
-            <p
-              style={{
-                margin: "0 0 18px",
-                color: "#185FA5",
-                fontSize: "14px",
-                fontWeight: "600",
-              }}
-            >
-              {totalQuestionCount} question
-              {totalQuestionCount === 1 ? "" : "s"}
-            </p>
-
-            <button
-              onClick={() => navigate(`/test/subject/${subject._id}`)}
-              style={{
-                padding: "14px 20px",
-                border: "none",
-                borderRadius: "10px",
-                backgroundColor: "#e2e8f0",
-                color: "#0f172a",
-                fontSize: "15px",
-                fontWeight: "600",
-                cursor: "pointer",
-                width: "100%",
-              }}
-            >
-              Start Full Test
-            </button>
-          </div>
-
+        {/* Cards Grid */}
+        <div style={S.grid}>
+          <FullSubjectCard />
           {(Array.isArray(topics) ? topics : []).map((topic) => {
             const topicCount = topicQuestionCounts[topic._id] || 0;
-
             return (
-              <div
+              <TopicCard
                 key={topic._id}
-                style={{
-                  backgroundColor: "white",
-                  border: "1px solid #e2e8f0",
-                  borderRadius: "18px",
-                  padding: "22px",
-                  boxShadow: "0 12px 30px rgba(15,23,42,0.06)",
-                  transition: "transform 0.2s, box-shadow 0.2s",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = "translateY(-4px)";
-                  e.currentTarget.style.boxShadow =
-                    "0 18px 40px rgba(15,23,42,0.08)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = "none";
-                  e.currentTarget.style.boxShadow =
-                    "0 12px 30px rgba(15,23,42,0.06)";
-                }}
-              >
-                <div
-                  style={{
-                    width: "52px",
-                    height: "52px",
-                    borderRadius: "14px",
-                    backgroundColor: "#eefbf3",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: "22px",
-                    marginBottom: "16px",
-                  }}
-                >
-                  🗂️
-                </div>
-
-                <h2
-                  style={{
-                    margin: "0 0 10px",
-                    color: "#0f172a",
-                    textTransform: "capitalize",
-                  }}
-                >
-                  {topic.name}
-                </h2>
-
-                <p
-                  style={{
-                    margin: "0 0 12px",
-                    color: "#64748b",
-                    lineHeight: "1.6",
-                    fontSize: "15px",
-                  }}
-                >
-                  Practice only questions from this topic.
-                </p>
-
-                <p
-                  style={{
-                    margin: "0 0 18px",
-                    color: "#185FA5",
-                    fontSize: "14px",
-                    fontWeight: "600",
-                  }}
-                >
-                  {topicCount} question{topicCount === 1 ? "" : "s"}
-                </p>
-
-                <button
-                  onClick={() => navigate(`/test/topic/${topic._id}`)}
-                  style={{
-                    padding: "14px 20px",
-                    border: "none",
-                    borderRadius: "10px",
-                    backgroundColor: "#185FA5",
-                    color: "white",
-                    fontSize: "15px",
-                    fontWeight: "600",
-                    cursor: "pointer",
-                    width: "100%",
-                  }}
-                >
-                  Start Topic Test
-                </button>
-              </div>
+                topic={topic}
+                questionCount={topicCount}
+              />
             );
           })}
-        </div>
-
-        <div style={{ marginTop: "24px" }}>
-          <button
-            onClick={() => navigate("/user")}
-            style={{
-              padding: "12px 20px",
-              borderRadius: "10px",
-              border: "1px solid #cbd5e1",
-              backgroundColor: "white",
-              cursor: "pointer",
-            }}
-          >
-            Back to Subjects
-          </button>
         </div>
       </div>
     </div>

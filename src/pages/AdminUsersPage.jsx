@@ -9,276 +9,6 @@ const apiArray = (payload, key) => {
   return [];
 };
 
-
-const S = {
-  page: {
-    minHeight: "100vh",
-    background: "#F6F5F1",
-    padding: "40px 24px",
-    fontFamily: "'DM Sans', system-ui, sans-serif",
-  },
-  inner: { maxWidth: "1000px", margin: "0 auto" },
-  breadcrumb: {
-    fontSize: "11px",
-    fontWeight: "600",
-    color: "#94a3b8",
-    textTransform: "uppercase",
-    letterSpacing: "0.08em",
-    marginBottom: "10px",
-  },
-  heading: {
-    fontSize: "clamp(26px, 4vw, 38px)",
-    fontWeight: "600",
-    color: "#0f172a",
-    margin: "0 0 6px",
-    letterSpacing: "-0.02em",
-    fontFamily: "'DM Sans', system-ui, sans-serif",
-  },
-  subheading: {
-    fontSize: "14px",
-    color: "#64748b",
-    lineHeight: "1.6",
-    margin: "0 0 28px",
-  },
-  toolbar: {
-    display: "flex",
-    gap: "12px",
-    flexWrap: "wrap",
-    alignItems: "center",
-    marginBottom: "20px",
-  },
-  searchBox: {
-    flex: 1,
-    minWidth: "200px",
-    padding: "10px 14px",
-    border: "0.5px solid rgba(0,0,0,0.15)",
-    borderRadius: "10px",
-    fontSize: "14px",
-    background: "#fff",
-    outline: "none",
-    color: "#0f172a",
-    boxSizing: "border-box",
-  },
-  filterSelect: {
-    padding: "10px 14px",
-    border: "0.5px solid rgba(0,0,0,0.15)",
-    borderRadius: "10px",
-    fontSize: "13px",
-    background: "#fff",
-    outline: "none",
-    color: "#0f172a",
-    cursor: "pointer",
-  },
-  backBtn: {
-    padding: "10px 16px",
-    border: "0.5px solid rgba(0,0,0,0.15)",
-    borderRadius: "10px",
-    background: "#fff",
-    color: "#334155",
-    fontSize: "13px",
-    fontWeight: "500",
-    cursor: "pointer",
-  },
-  card: {
-    background: "#fff",
-    border: "0.5px solid rgba(0,0,0,0.08)",
-    borderRadius: "16px",
-    overflow: "hidden",
-    boxShadow: "0 2px 12px rgba(0,0,0,0.04)",
-  },
-  tableHeader: {
-    display: "grid",
-    gridTemplateColumns: "2fr 2fr 1.5fr 1fr 80px",
-    gap: "12px",
-    padding: "14px 24px",
-    background: "#F9F8F5",
-    borderBottom: "0.5px solid rgba(0,0,0,0.08)",
-  },
-  thLabel: {
-    fontSize: "11px",
-    fontWeight: "600",
-    color: "#94a3b8",
-    textTransform: "uppercase",
-    letterSpacing: "0.07em",
-    fontFamily: "'DM Mono', monospace",
-  },
-  row: {
-    display: "grid",
-    gridTemplateColumns: "2fr 2fr 1.5fr 1fr 80px",
-    gap: "12px",
-    padding: "16px 24px",
-    borderBottom: "0.5px solid rgba(0,0,0,0.06)",
-    alignItems: "center",
-    transition: "background 0.12s",
-  },
-  avatar: {
-    width: "34px",
-    height: "34px",
-    borderRadius: "50%",
-    background: "linear-gradient(135deg, #185FA5 0%, #0e3d6e 100%)",
-    color: "#fff",
-    fontSize: "13px",
-    fontWeight: "600",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-    letterSpacing: "0.02em",
-  },
-  nameCell: { display: "flex", alignItems: "center", gap: "10px" },
-  name: {
-    fontSize: "14px",
-    fontWeight: "600",
-    color: "#0f172a",
-    whiteSpace: "nowrap",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-  },
-  email: {
-    fontSize: "13px",
-    color: "#64748b",
-    whiteSpace: "nowrap",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-  },
-  coursePill: {
-    display: "inline-flex",
-    alignItems: "center",
-    padding: "4px 10px",
-    borderRadius: "999px",
-    background: "#E6F1FB",
-    color: "#185FA5",
-    fontSize: "12px",
-    fontWeight: "500",
-    whiteSpace: "nowrap",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    maxWidth: "100%",
-  },
-  levelPill: {
-    display: "inline-flex",
-    alignItems: "center",
-    padding: "4px 10px",
-    borderRadius: "999px",
-    background: "#EAF3DE",
-    color: "#3B6D11",
-    fontSize: "12px",
-    fontWeight: "600",
-    fontFamily: "'DM Mono', monospace",
-  },
-  deleteBtn: {
-    padding: "7px 12px",
-    border: "0.5px solid #fca5a5",
-    borderRadius: "8px",
-    background: "#fef2f2",
-    color: "#b91c1c",
-    fontSize: "12px",
-    fontWeight: "600",
-    cursor: "pointer",
-    whiteSpace: "nowrap",
-  },
-  empty: {
-    padding: "60px 24px",
-    textAlign: "center",
-    color: "#94a3b8",
-    fontSize: "14px",
-  },
-  countBar: {
-    padding: "12px 24px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderBottom: "0.5px solid rgba(0,0,0,0.08)",
-  },
-  countLabel: {
-    fontSize: "12px",
-    color: "#94a3b8",
-    fontFamily: "'DM Mono', monospace",
-  },
-  statStrip: {
-    display: "flex",
-    gap: "12px",
-    flexWrap: "wrap",
-    marginBottom: "24px",
-  },
-  statCard: {
-    background: "#fff",
-    border: "0.5px solid rgba(0,0,0,0.08)",
-    borderRadius: "12px",
-    padding: "16px 20px",
-    minWidth: "120px",
-    flex: "1",
-  },
-  statVal: {
-    fontSize: "24px",
-    fontWeight: "600",
-    color: "#0f172a",
-    lineHeight: 1.1,
-    marginBottom: "4px",
-    fontFamily: "'DM Mono', monospace",
-  },
-  statLabel: { fontSize: "12px", color: "#94a3b8" },
-};
-
-function getInitials(name) {
-  return name
-    .split(" ")
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase() || "")
-    .join("");
-}
-
-function UserRow({ user, index, onDelete }) {
-  const [hovered, setHovered] = useState(false);
-  const courseName = user.courseId?.name || "No course";
-  const joinDate = new Date(user.createdAt).toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-
-  return (
-    <div
-      style={{
-        ...S.row,
-        background: hovered ? "#FAFAF8" : "transparent",
-        animation: `fadeUp 0.25s ease ${Math.min(index * 0.04, 0.4)}s both`,
-      }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-    >
-      {/* Name + avatar */}
-      <div style={S.nameCell}>
-        <div style={S.avatar}>{getInitials(user.fullName)}</div>
-        <span style={S.name} title={user.fullName}>
-          {user.fullName}
-        </span>
-      </div>
-
-      {/* Email */}
-      <span style={S.email} title={user.email}>
-        {user.email}
-      </span>
-
-      {/* Course */}
-      <span style={S.coursePill} title={courseName}>
-        {courseName}
-      </span>
-
-      {/* Level */}
-      <span style={S.levelPill}>{user.level}L</span>
-
-      {/* Delete */}
-      <button
-        style={S.deleteBtn}
-        onClick={() => onDelete(user._id, user.fullName)}
-      >
-        Remove
-      </button>
-    </div>
-  );
-}
-
 function AdminUsersPage() {
   const navigate = useNavigate();
   const [users, setUsers] = useState([]);
@@ -286,6 +16,268 @@ function AdminUsersPage() {
   const [search, setSearch] = useState("");
   const [filterCourse, setFilterCourse] = useState("");
   const [filterLevel, setFilterLevel] = useState("");
+
+  // Design tokens matching AdminPage
+  const S = {
+    container: {
+      minHeight: "100vh",
+      background: "#f8fafc",
+      padding: "40px 20px",
+    },
+    maxWidth: {
+      maxWidth: "1200px",
+      margin: "0 auto",
+    },
+    header: {
+      marginBottom: "48px",
+    },
+    headerTop: {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      flexWrap: "wrap",
+      gap: "16px",
+      marginBottom: "16px",
+    },
+    headerTitle: {
+      fontSize: `clamp(28px, 5vw, 36px)`,
+      fontWeight: "600",
+      margin: "0 0 8px",
+      color: "#0f172a",
+    },
+    headerSubtitle: {
+      fontSize: "15px",
+      color: "#64748b",
+      margin: "0",
+    },
+    headerDescription: {
+      fontSize: "14px",
+      color: "#475569",
+      margin: "12px 0 0",
+      lineHeight: "1.6",
+    },
+    backBtn: {
+      padding: "10px 20px",
+      borderRadius: "8px",
+      border: "1px solid #e2e8f0",
+      backgroundColor: "white",
+      color: "#334155",
+      fontWeight: "600",
+      fontSize: "14px",
+      cursor: "pointer",
+      transition: "all 0.2s",
+    },
+    statsGrid: {
+      display: "grid",
+      gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+      gap: "16px",
+      marginBottom: "32px",
+    },
+    statCard: {
+      backgroundColor: "white",
+      border: "1px solid #e2e8f0",
+      borderRadius: "12px",
+      padding: "20px",
+      textAlign: "center",
+    },
+    statValue: {
+      fontSize: "32px",
+      fontWeight: "700",
+      color: "#185fa5",
+      margin: "0 0 8px",
+    },
+    statLabel: {
+      fontSize: "13px",
+      color: "#64748b",
+      margin: "0",
+    },
+    toolbar: {
+      display: "grid",
+      gridTemplateColumns: "1fr auto auto auto",
+      gap: "12px",
+      marginBottom: "24px",
+      alignItems: "center",
+    },
+    toolbarMobile: {
+      display: "grid",
+      gridTemplateColumns: "1fr",
+      gap: "10px",
+    },
+    searchBox: {
+      padding: "11px 14px",
+      border: "1px solid #e2e8f0",
+      borderRadius: "8px",
+      fontSize: "14px",
+      background: "white",
+      outline: "none",
+      color: "#0f172a",
+      boxSizing: "border-box",
+      transition: "border-color 0.2s",
+    },
+    searchBoxFocus: {
+      borderColor: "#185fa5",
+    },
+    filterSelect: {
+      padding: "11px 14px",
+      border: "1px solid #e2e8f0",
+      borderRadius: "8px",
+      fontSize: "14px",
+      background: "white",
+      outline: "none",
+      color: "#0f172a",
+      cursor: "pointer",
+      transition: "border-color 0.2s",
+    },
+    card: {
+      backgroundColor: "white",
+      border: "1px solid #e2e8f0",
+      borderRadius: "12px",
+      overflow: "hidden",
+    },
+    tableHeader: {
+      display: "grid",
+      gridTemplateColumns: "2fr 2fr 1.5fr 1fr 100px",
+      gap: "16px",
+      padding: "16px 20px",
+      background: "#f1f5f9",
+      borderBottom: "1px solid #e2e8f0",
+      fontSize: "12px",
+      fontWeight: "600",
+      color: "#64748b",
+      textTransform: "uppercase",
+      letterSpacing: "0.5px",
+    },
+    tableHeaderMobile: {
+      display: "none",
+    },
+    row: {
+      display: "grid",
+      gridTemplateColumns: "2fr 2fr 1.5fr 1fr 100px",
+      gap: "16px",
+      padding: "16px 20px",
+      borderBottom: "1px solid #e2e8f0",
+      alignItems: "center",
+      transition: "background 0.2s",
+    },
+    rowMobile: {
+      display: "flex",
+      flexDirection: "column",
+      gap: "12px",
+      padding: "16px",
+      borderBottom: "1px solid #e2e8f0",
+    },
+    rowHover: {
+      backgroundColor: "#f8fafc",
+    },
+    avatar: {
+      width: "40px",
+      height: "40px",
+      borderRadius: "50%",
+      background: "linear-gradient(135deg, #185fa5 0%, #0e3d6e 100%)",
+      color: "white",
+      fontSize: "14px",
+      fontWeight: "700",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      flexShrink: 0,
+    },
+    nameCell: {
+      display: "flex",
+      alignItems: "center",
+      gap: "12px",
+    },
+    nameCellMobile: {
+      display: "flex",
+      alignItems: "center",
+      gap: "12px",
+      flexDirection: "row",
+    },
+    name: {
+      fontSize: "15px",
+      fontWeight: "600",
+      color: "#0f172a",
+      whiteSpace: "nowrap",
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+    },
+    email: {
+      fontSize: "14px",
+      color: "#64748b",
+      whiteSpace: "nowrap",
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+    },
+    coursePill: {
+      display: "inline-flex",
+      alignItems: "center",
+      padding: "5px 12px",
+      borderRadius: "20px",
+      background: "#e0f2fe",
+      color: "#185fa5",
+      fontSize: "13px",
+      fontWeight: "600",
+      whiteSpace: "nowrap",
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+    },
+    levelPill: {
+      display: "inline-flex",
+      alignItems: "center",
+      padding: "5px 12px",
+      borderRadius: "20px",
+      background: "#e0fdf4",
+      color: "#0d9488",
+      fontSize: "13px",
+      fontWeight: "600",
+    },
+    deleteBtn: {
+      padding: "8px 14px",
+      border: "1px solid #fecaca",
+      borderRadius: "8px",
+      background: "#fef2f2",
+      color: "#b91c1c",
+      fontSize: "13px",
+      fontWeight: "600",
+      cursor: "pointer",
+      whiteSpace: "nowrap",
+      transition: "all 0.2s",
+    },
+    deleteBtnHover: {
+      backgroundColor: "#fee2e2",
+      borderColor: "#fca5a5",
+    },
+    countBar: {
+      padding: "14px 20px",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      borderBottom: "1px solid #e2e8f0",
+      fontSize: "14px",
+      color: "#64748b",
+      fontWeight: "500",
+    },
+    empty: {
+      padding: "48px 20px",
+      textAlign: "center",
+      color: "#94a3b8",
+      fontSize: "14px",
+    },
+    emptyTitle: {
+      fontSize: "16px",
+      fontWeight: "600",
+      color: "#0f172a",
+      margin: "0 0 8px",
+    },
+    mobileLabel: {
+      fontSize: "11px",
+      fontWeight: "600",
+      color: "#94a3b8",
+      textTransform: "uppercase",
+      letterSpacing: "0.5px",
+      marginBottom: "4px",
+    },
+  };
 
   const fetchUsers = async () => {
     try {
@@ -360,138 +352,255 @@ function AdminUsersPage() {
     (a, b) => b[1] - a[1],
   )[0];
 
+  const getInitials = (name) => {
+    return name
+      .split(" ")
+      .slice(0, 2)
+      .map((w) => w[0]?.toUpperCase() || "")
+      .join("");
+  };
+
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const UserRowDesktop = ({ user, onDelete }) => {
+    const [hovered, setHovered] = useState(false);
+    const courseName = user.courseId?.name || "No course";
+
+    return (
+      <div
+        style={{
+          ...S.row,
+          ...(hovered && S.rowHover),
+        }}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+      >
+        <div style={S.nameCell}>
+          <div style={S.avatar}>{getInitials(user.fullName)}</div>
+          <span style={S.name} title={user.fullName}>
+            {user.fullName}
+          </span>
+        </div>
+
+        <span style={S.email} title={user.email}>
+          {user.email}
+        </span>
+
+        <span style={S.coursePill} title={courseName}>
+          {courseName}
+        </span>
+
+        <span style={S.levelPill}>L{user.level}</span>
+
+        <button
+          style={S.deleteBtn}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = "#fee2e2";
+            e.currentTarget.style.borderColor = "#fca5a5";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = "#fef2f2";
+            e.currentTarget.style.borderColor = "#fecaca";
+          }}
+          onClick={() => onDelete(user._id, user.fullName)}
+        >
+          Remove
+        </button>
+      </div>
+    );
+  };
+
+  const UserRowMobile = ({ user, onDelete }) => {
+    const courseName = user.courseId?.name || "No course";
+
+    return (
+      <div style={S.rowMobile}>
+        <div style={S.nameCellMobile}>
+          <div style={S.avatar}>{getInitials(user.fullName)}</div>
+          <div style={{ flex: 1 }}>
+            <div style={S.name}>{user.fullName}</div>
+            <div style={S.email}>{user.email}</div>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+          <div>
+            <div style={S.mobileLabel}>Course</div>
+            <span style={S.coursePill}>{courseName}</span>
+          </div>
+          <div>
+            <div style={S.mobileLabel}>Level</div>
+            <span style={S.levelPill}>L{user.level}</span>
+          </div>
+        </div>
+
+        <button
+          style={S.deleteBtn}
+          onClick={() => onDelete(user._id, user.fullName)}
+        >
+          Remove User
+        </button>
+      </div>
+    );
+  };
+
   return (
-    <>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap');
-        @keyframes fadeUp {
-          from { opacity: 0; transform: translateY(8px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        .user-row-enter { animation: fadeUp 0.3s ease both; }
-      `}</style>
+    <div style={S.container}>
+      <div style={S.maxWidth}>
+        {/* Header */}
+        <div style={S.header}>
+          <div style={S.headerTop}>
+            <div style={{ flex: 1 }}>
+              <p style={S.headerSubtitle}>User management</p>
+              <h1 style={S.headerTitle}>Registered Users</h1>
+              <p style={S.headerDescription}>
+                View and manage all students registered on the platform.
+              </p>
+            </div>
+            <button
+              onClick={() => navigate("/admin")}
+              style={S.backBtn}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = "#f1f5f9";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "white";
+              }}
+            >
+              ← Back
+            </button>
+          </div>
+        </div>
 
-      <div style={S.page}>
-        <div style={S.inner}>
-          <div style={S.breadcrumb}>Admin / User management</div>
-          <h1 style={S.heading}>Registered Users</h1>
-          <p style={S.subheading}>
-            View and manage all students registered on the platform.
-          </p>
-
-          {/* Stats strip */}
-          {!isLoading && (
-            <div style={S.statStrip}>
+        {/* Stats Strip */}
+        {!isLoading && users.length > 0 && (
+          <div style={S.statsGrid}>
+            <div style={S.statCard}>
+              <div style={S.statValue}>{users.length}</div>
+              <p style={S.statLabel}>Total users</p>
+            </div>
+            <div style={S.statCard}>
+              <div style={S.statValue}>{courses.length}</div>
+              <p style={S.statLabel}>Courses</p>
+            </div>
+            <div style={S.statCard}>
+              <div style={S.statValue}>{levels.length}</div>
+              <p style={S.statLabel}>Active levels</p>
+            </div>
+            {topCourse && (
               <div style={S.statCard}>
-                <div style={S.statVal}>{users.length}</div>
-                <div style={S.statLabel}>Total users</div>
-              </div>
-              <div style={S.statCard}>
-                <div style={S.statVal}>{courses.length}</div>
-                <div style={S.statLabel}>Courses represented</div>
-              </div>
-              <div style={S.statCard}>
-                <div style={S.statVal}>{levels.length}</div>
-                <div style={S.statLabel}>Levels active</div>
-              </div>
-              {topCourse && (
-                <div style={{ ...S.statCard, flex: "2" }}>
-                  <div
-                    style={{
-                      ...S.statVal,
-                      fontSize: "16px",
-                      marginBottom: "2px",
-                    }}
-                  >
-                    {topCourse[0]}
-                  </div>
-                  <div style={S.statLabel}>
-                    Most popular course · {topCourse[1]} student
-                    {topCourse[1] !== 1 ? "s" : ""}
-                  </div>
+                <div style={{ ...S.statValue, fontSize: "18px" }}>
+                  {topCourse[0]}
                 </div>
-              )}
+                <p style={S.statLabel}>
+                  Most popular · {topCourse[1]} student
+                  {topCourse[1] !== 1 ? "s" : ""}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Toolbar */}
+        <div style={isMobile ? S.toolbarMobile : S.toolbar}>
+          <input
+            style={S.searchBox}
+            type="text"
+            placeholder="Search by name or email…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            onFocus={(e) => {
+              e.currentTarget.style.borderColor = "#185fa5";
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.borderColor = "#e2e8f0";
+            }}
+          />
+          <select
+            style={S.filterSelect}
+            value={filterCourse}
+            onChange={(e) => setFilterCourse(e.target.value)}
+          >
+            <option value="">All courses</option>
+            {courses.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+          <select
+            style={S.filterSelect}
+            value={filterLevel}
+            onChange={(e) => setFilterLevel(e.target.value)}
+          >
+            <option value="">All levels</option>
+            {levels.map((l) => (
+              <option key={l} value={l}>
+                Level {l}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Table */}
+        <div style={S.card}>
+          {/* Header - Desktop only */}
+          {!isMobile && (
+            <div style={S.tableHeader}>
+              <span>Name</span>
+              <span>Email</span>
+              <span>Course</span>
+              <span>Level</span>
+              <span>Action</span>
             </div>
           )}
 
-          {/* Toolbar */}
-          <div style={S.toolbar}>
-            <input
-              style={S.searchBox}
-              type="text"
-              placeholder="Search by name or email…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-            <select
-              style={S.filterSelect}
-              value={filterCourse}
-              onChange={(e) => setFilterCourse(e.target.value)}
-            >
-              <option value="">All courses</option>
-              {courses.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-            <select
-              style={S.filterSelect}
-              value={filterLevel}
-              onChange={(e) => setFilterLevel(e.target.value)}
-            >
-              <option value="">All levels</option>
-              {levels.map((l) => (
-                <option key={l} value={l}>
-                  {l} Level
-                </option>
-              ))}
-            </select>
-            <button style={S.backBtn} onClick={() => navigate("/admin")}>
-              ← Back to Admin
-            </button>
+          {/* Count bar */}
+          <div style={S.countBar}>
+            <span>
+              {filtered.length} user{filtered.length !== 1 ? "s" : ""}
+              {filtered.length !== users.length
+                ? ` (filtered from ${users.length})`
+                : ""}
+            </span>
           </div>
 
-          {/* Table */}
-          <div style={S.card}>
-            {/* Header */}
-            <div style={S.tableHeader}>
-              <span style={S.thLabel}>Name</span>
-              <span style={S.thLabel}>Email</span>
-              <span style={S.thLabel}>Course</span>
-              <span style={S.thLabel}>Level</span>
-              <span style={S.thLabel}>Action</span>
+          {/* Rows */}
+          {isLoading ? (
+            <div style={S.empty}>
+              <p style={S.emptyTitle}>Loading users…</p>
             </div>
-
-            {/* Count bar */}
-            <div style={S.countBar}>
-              <span style={S.countLabel}>
-                {filtered.length} user{filtered.length !== 1 ? "s" : ""}
-                {filtered.length !== users.length
-                  ? ` (filtered from ${users.length})`
-                  : ""}
-              </span>
+          ) : filtered.length === 0 ? (
+            <div style={S.empty}>
+              <p style={S.emptyTitle}>No users found</p>
+              <p>Try adjusting your filters or search terms.</p>
             </div>
-
-            {/* Rows */}
-            {isLoading ? (
-              <div style={S.empty}>Loading users…</div>
-            ) : filtered.length === 0 ? (
-              <div style={S.empty}>No users found.</div>
-            ) : (
-              filtered.map((user, i) => (
-                <UserRow
-                  key={user._id}
-                  user={user}
-                  index={i}
-                  onDelete={handleDelete}
-                />
-              ))
-            )}
-          </div>
+          ) : isMobile ? (
+            filtered.map((user) => (
+              <UserRowMobile
+                key={user._id}
+                user={user}
+                onDelete={handleDelete}
+              />
+            ))
+          ) : (
+            filtered.map((user) => (
+              <UserRowDesktop
+                key={user._id}
+                user={user}
+                onDelete={handleDelete}
+              />
+            ))
+          )}
         </div>
       </div>
-    </>
+    </div>
   );
 }
 
