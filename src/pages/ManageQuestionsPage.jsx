@@ -13,18 +13,64 @@ const apiArray = (payload, key) => {
 
 const subjectOfQuestion = (question) => question?.subjectId || {};
 const topicOfQuestion = (question) => question?.topicId || {};
+
 const getCourseId = (subject) =>
   typeof subject?.courseId === "object"
     ? subject.courseId?._id
     : subject?.courseId;
-const getCourseName = (subject) =>
-  typeof subject?.courseId === "object"
-    ? subject.courseId?.name
-    : "Not available";
 
-const getQuestionImageSrc = (question) => {
+const getCourseName = (subject) => {
+  if (!subject || !subject._id) return "Unknown";
+
+  if (typeof subject?.courseId === "object") {
+    return subject.courseId?.name || "Unknown Course";
+  }
+
+  if (typeof subject?.courseId === "string") {
+    return "Unknown Course";
+  }
+
+  return "Unknown";
+};
+
+const makeImageSrc = (imageData, imageContentType) => {
+  if (!imageData || !imageContentType) return "";
+  if (String(imageData).startsWith("data:")) return imageData;
+  return `data:${imageContentType};base64,${imageData}`;
+};
+
+const getQuestionImageSrc = (question, questionImages = {}) => {
+  if (!question) return "";
+
+  if (question.localImagePreview) return question.localImagePreview;
+
+  if (question?._id && questionImages[question._id]) {
+    return questionImages[question._id];
+  }
+
   if (!question?.imageData || !question?.imageContentType) return "";
-  return `data:${question.imageContentType};base64,${question.imageData}`;
+
+  return makeImageSrc(question.imageData, question.imageContentType);
+};
+
+const hasQuestionImage = (question) =>
+  Boolean(
+    question?.hasImage ||
+    question?.imageData ||
+    question?.imageContentType ||
+    question?.imageOriginalName ||
+    question?.imageSize,
+  );
+
+const formatFileSize = (size) => {
+  const bytes = Number(size || 0);
+
+  if (!bytes) return "";
+
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 };
 
 async function fetchAllPages(url, key, config = {}) {
@@ -34,10 +80,12 @@ async function fetchAllPages(url, key, config = {}) {
 
   do {
     const separator = url.includes("?") ? "&" : "?";
+
     const response = await api.get(
-      `${url}${separator}page=${page}&limit=100`,
+      `${url}${separator}page=${page}&limit=50`,
       config,
     );
+
     const items = apiArray(response.data, key);
 
     allItems.push(...items);
@@ -64,6 +112,10 @@ function ManageQuestionsPage() {
   const [hasLoadedQuestions, setHasLoadedQuestions] = useState(false);
   const [isLoadingSetup, setIsLoadingSetup] = useState(true);
   const [isLoadingQuestions, setIsLoadingQuestions] = useState(false);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+
+  const [questionImages, setQuestionImages] = useState({});
+  const [loadingImageIds, setLoadingImageIds] = useState({});
 
   const [editingId, setEditingId] = useState(null);
   const [editImagePreview, setEditImagePreview] = useState("");
@@ -78,6 +130,50 @@ function ManageQuestionsPage() {
     removeImage: false,
     existingImageSrc: "",
   });
+
+  const fetchAdminQuestionImage = async (questionId) => {
+    const response = await api.get(`/api/questions/${questionId}/admin-image`, {
+      _tokenType: "admin",
+    });
+
+    return makeImageSrc(
+      response.data?.imageData,
+      response.data?.imageContentType,
+    );
+  };
+
+  const loadQuestionImage = async (question) => {
+    if (!question?._id) return "";
+    if (questionImages[question._id]) return questionImages[question._id];
+    if (!hasQuestionImage(question)) return "";
+
+    try {
+      setLoadingImageIds((previous) => ({
+        ...previous,
+        [question._id]: true,
+      }));
+
+      const imageSrc = await fetchAdminQuestionImage(question._id);
+
+      if (imageSrc) {
+        setQuestionImages((previous) => ({
+          ...previous,
+          [question._id]: imageSrc,
+        }));
+      }
+
+      return imageSrc;
+    } catch (error) {
+      console.error("Error loading question image:", error);
+      return "";
+    } finally {
+      setLoadingImageIds((previous) => {
+        const next = { ...previous };
+        delete next[question._id];
+        return next;
+      });
+    }
+  };
 
   const fetchSetupData = async () => {
     try {
@@ -104,7 +200,34 @@ function ManageQuestionsPage() {
     }
   };
 
+  const resetEditImagePreview = () => {
+    if (editImagePreview) {
+      URL.revokeObjectURL(editImagePreview);
+      setEditImagePreview("");
+    }
+  };
+
+  const cancelEdit = () => {
+    if (isSavingEdit) return;
+
+    resetEditImagePreview();
+    setEditingId(null);
+    setEditForm({
+      subjectId: "",
+      topicId: "",
+      questionText: "",
+      options: ["", "", "", ""],
+      correctAnswer: "",
+      explanation: "",
+      image: null,
+      removeImage: false,
+      existingImageSrc: "",
+    });
+  };
+
   const loadQuestions = async () => {
+    if (isSavingEdit) return;
+
     if (!subjectFilter) {
       alert("Please select a subject first.");
       return;
@@ -124,6 +247,8 @@ function ManageQuestionsPage() {
         { _tokenType: "admin" },
       );
 
+      setQuestionImages({});
+      setLoadingImageIds({});
       setQuestions(allQuestions);
       setHasLoadedQuestions(true);
     } catch (error) {
@@ -149,9 +274,11 @@ function ManageQuestionsPage() {
       const matchesCourse = courseFilter
         ? getCourseId(subject) === courseFilter
         : true;
+
       const matchesLevel = levelFilter
         ? Number(subject.level) === Number(levelFilter)
         : true;
+
       return matchesCourse && matchesLevel;
     });
   }, [subjects, courseFilter, levelFilter]);
@@ -159,15 +286,19 @@ function ManageQuestionsPage() {
   const filteredTopics = useMemo(() => {
     return topics.filter((topic) => {
       const subject = topic.subjectId || {};
+
       const matchesCourse = courseFilter
         ? getCourseId(subject) === courseFilter
         : true;
+
       const matchesLevel = levelFilter
         ? Number(subject.level) === Number(levelFilter)
         : true;
+
       const matchesSubject = subjectFilter
         ? subject?._id === subjectFilter
         : true;
+
       return matchesCourse && matchesLevel && matchesSubject;
     });
   }, [topics, courseFilter, levelFilter, subjectFilter]);
@@ -205,18 +336,17 @@ function ManageQuestionsPage() {
     cancelEdit();
   }, [topicFilter]);
 
-  const resetEditImagePreview = () => {
-    if (editImagePreview) {
-      URL.revokeObjectURL(editImagePreview);
-      setEditImagePreview("");
-    }
-  };
+  const startEdit = async (question) => {
+    if (isSavingEdit) return;
 
-  const startEdit = (question) => {
     resetEditImagePreview();
 
     const options = Array.isArray(question.options) ? question.options : [];
-    const existingImageSrc = getQuestionImageSrc(question);
+    let existingImageSrc = getQuestionImageSrc(question, questionImages);
+
+    if (!existingImageSrc && hasQuestionImage(question)) {
+      existingImageSrc = await loadQuestionImage(question);
+    }
 
     setEditingId(question._id);
     setEditForm({
@@ -232,22 +362,6 @@ function ManageQuestionsPage() {
       image: null,
       removeImage: false,
       existingImageSrc,
-    });
-  };
-
-  const cancelEdit = () => {
-    resetEditImagePreview();
-    setEditingId(null);
-    setEditForm({
-      subjectId: "",
-      topicId: "",
-      questionText: "",
-      options: ["", "", "", ""],
-      correctAnswer: "",
-      explanation: "",
-      image: null,
-      removeImage: false,
-      existingImageSrc: "",
     });
   };
 
@@ -275,6 +389,7 @@ function ManageQuestionsPage() {
     }
 
     const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+
     if (!allowedTypes.includes(file.type)) {
       alert("Please upload a JPG, PNG, or WEBP image.");
       event.target.value = "";
@@ -282,6 +397,7 @@ function ManageQuestionsPage() {
     }
 
     const maxBytes = 5 * 1024 * 1024;
+
     if (file.size > maxBytes) {
       alert("Image is too large. Maximum size is 5MB.");
       event.target.value = "";
@@ -298,6 +414,8 @@ function ManageQuestionsPage() {
   };
 
   const removeCurrentImage = () => {
+    if (isSavingEdit) return;
+
     resetEditImagePreview();
     setEditForm({
       ...editForm,
@@ -308,6 +426,8 @@ function ManageQuestionsPage() {
   };
 
   const saveEdit = async (id) => {
+    if (isSavingEdit) return;
+
     const options = editForm.options
       .map((option) => option.trim())
       .filter(Boolean);
@@ -332,6 +452,18 @@ function ManageQuestionsPage() {
     }
 
     try {
+      setIsSavingEdit(true);
+
+      const selectedSubject = subjects.find(
+        (subject) => subject._id === editForm.subjectId,
+      );
+
+      const selectedTopic = topics.find(
+        (topic) => topic._id === editForm.topicId,
+      );
+
+      const localPreview = editImagePreview || "";
+
       const formData = new FormData();
       formData.append("subjectId", editForm.subjectId);
       formData.append("topicId", editForm.topicId);
@@ -348,24 +480,110 @@ function ManageQuestionsPage() {
         formData.append("removeImage", "true");
       }
 
-      await api.put(`/api/questions/${id}`, formData, {
+      const response = await api.put(`/api/questions/${id}`, formData, {
         _tokenType: "admin",
       });
 
-      cancelEdit();
-      await loadQuestions();
+      const updatedQuestionFromServer = response.data || {};
+
+      setQuestions((previousQuestions) =>
+        previousQuestions.map((question) => {
+          if (question._id !== id) return question;
+
+          const existingSubject = subjectOfQuestion(question);
+          const existingTopic = topicOfQuestion(question);
+
+          return {
+            ...question,
+            ...updatedQuestionFromServer,
+            _id: id,
+            subjectId: selectedSubject || existingSubject,
+            topicId: selectedTopic || existingTopic,
+            questionText: editForm.questionText.trim(),
+            options,
+            correctAnswer: editForm.correctAnswer.trim(),
+            explanation: editForm.explanation.trim(),
+            imageData: editForm.removeImage ? "" : question.imageData || "",
+            imageContentType: editForm.removeImage
+              ? ""
+              : updatedQuestionFromServer.imageContentType ||
+                editForm.image?.type ||
+                question.imageContentType ||
+                "",
+            imageOriginalName: editForm.removeImage
+              ? ""
+              : updatedQuestionFromServer.imageOriginalName ||
+                editForm.image?.name ||
+                question.imageOriginalName ||
+                "",
+            imageSize: editForm.removeImage
+              ? 0
+              : updatedQuestionFromServer.imageSize ||
+                editForm.image?.size ||
+                question.imageSize ||
+                0,
+            hasImage: editForm.removeImage
+              ? false
+              : Boolean(
+                  updatedQuestionFromServer.hasImage ||
+                  editForm.image ||
+                  question.hasImage ||
+                  question.imageContentType ||
+                  question.imageSize,
+                ),
+            localImagePreview: editForm.removeImage ? "" : localPreview,
+          };
+        }),
+      );
+
+      if (editForm.removeImage) {
+        setQuestionImages((previousImages) => {
+          const nextImages = { ...previousImages };
+          delete nextImages[id];
+          return nextImages;
+        });
+      } else if (localPreview) {
+        setQuestionImages((previousImages) => ({
+          ...previousImages,
+          [id]: localPreview,
+        }));
+      }
+
+      resetEditImagePreview();
+      setEditingId(null);
+      setEditForm({
+        subjectId: "",
+        topicId: "",
+        questionText: "",
+        options: ["", "", "", ""],
+        correctAnswer: "",
+        explanation: "",
+        image: null,
+        removeImage: false,
+        existingImageSrc: "",
+      });
     } catch (error) {
       console.error("Error updating question:", error);
       alert(error.message || "Error updating question");
+    } finally {
+      setIsSavingEdit(false);
     }
   };
 
   const deleteQuestion = async (id) => {
+    if (isSavingEdit) return;
     if (!window.confirm("Delete this question?")) return;
 
     try {
       await api.delete(`/api/questions/${id}`, { _tokenType: "admin" });
-      await loadQuestions();
+      setQuestions((previousQuestions) =>
+        previousQuestions.filter((question) => question._id !== id),
+      );
+      setQuestionImages((previousImages) => {
+        const nextImages = { ...previousImages };
+        delete nextImages[id];
+        return nextImages;
+      });
     } catch (error) {
       console.error("Error deleting question:", error);
       alert(error.message || "Error deleting question");
@@ -379,7 +597,10 @@ function ManageQuestionsPage() {
            from  { opacity: 0; transform: translateY(10px); }
           to { opacity: 1; transform: translateY(0); }
         }
-        .question-row { animation: fadeUp 0.3s ease-out; }
+
+        .question-row {
+          animation: fadeUp 0.3s ease-out;
+        }
       `}</style>
 
       <div
@@ -390,7 +611,6 @@ function ManageQuestionsPage() {
         }}
       >
         <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
-          {/* Header */}
           <div style={{ marginBottom: "2rem" }}>
             <p
               style={{
@@ -427,7 +647,6 @@ function ManageQuestionsPage() {
             </p>
           </div>
 
-          {/* Filters Card */}
           <div
             style={{
               background: "#fff",
@@ -447,24 +666,12 @@ function ManageQuestionsPage() {
               }}
             >
               <div>
-                <label
-                  style={{
-                    display: "block",
-                    marginBottom: "6px",
-                    fontSize: "12px",
-                    fontWeight: "600",
-                    color: "#64748b",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.05em",
-                  }}
-                >
-                  Course
-                </label>
+                <label style={filterLabelStyle}>Course</label>
                 <select
                   value={courseFilter}
                   onChange={(e) => setCourseFilter(e.target.value)}
                   style={selectStyle}
-                  disabled={isLoadingSetup}
+                  disabled={isLoadingSetup || isSavingEdit}
                 >
                   <option value="">All courses</option>
                   {courses.map((course) => (
@@ -476,24 +683,12 @@ function ManageQuestionsPage() {
               </div>
 
               <div>
-                <label
-                  style={{
-                    display: "block",
-                    marginBottom: "6px",
-                    fontSize: "12px",
-                    fontWeight: "600",
-                    color: "#64748b",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.05em",
-                  }}
-                >
-                  Level
-                </label>
+                <label style={filterLabelStyle}>Level</label>
                 <select
                   value={levelFilter}
                   onChange={(e) => setLevelFilter(e.target.value)}
                   style={selectStyle}
-                  disabled={isLoadingSetup}
+                  disabled={isLoadingSetup || isSavingEdit}
                 >
                   <option value="">All levels</option>
                   {LEVELS.map((level) => (
@@ -505,19 +700,7 @@ function ManageQuestionsPage() {
               </div>
 
               <div>
-                <label
-                  style={{
-                    display: "block",
-                    marginBottom: "6px",
-                    fontSize: "12px",
-                    fontWeight: "600",
-                    color: "#64748b",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.05em",
-                  }}
-                >
-                  Subject *
-                </label>
+                <label style={filterLabelStyle}>Subject *</label>
                 <select
                   value={subjectFilter}
                   onChange={(e) => {
@@ -525,7 +708,7 @@ function ManageQuestionsPage() {
                     setTopicFilter("");
                   }}
                   style={selectStyle}
-                  disabled={isLoadingSetup}
+                  disabled={isLoadingSetup || isSavingEdit}
                 >
                   <option value="">Select subject</option>
                   {filteredSubjects.map((subject) => (
@@ -537,24 +720,12 @@ function ManageQuestionsPage() {
               </div>
 
               <div>
-                <label
-                  style={{
-                    display: "block",
-                    marginBottom: "6px",
-                    fontSize: "12px",
-                    fontWeight: "600",
-                    color: "#64748b",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.05em",
-                  }}
-                >
-                  Topic
-                </label>
+                <label style={filterLabelStyle}>Topic</label>
                 <select
                   value={topicFilter}
                   onChange={(e) => setTopicFilter(e.target.value)}
                   style={selectStyle}
-                  disabled={isLoadingSetup || !subjectFilter}
+                  disabled={isLoadingSetup || !subjectFilter || isSavingEdit}
                 >
                   <option value="">All topics</option>
                   {filteredTopics.map((topic) => (
@@ -566,7 +737,6 @@ function ManageQuestionsPage() {
               </div>
             </div>
 
-            {/* Action Buttons */}
             <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
               <button
                 onClick={loadQuestions}
@@ -579,15 +749,18 @@ function ManageQuestionsPage() {
                   fontSize: "13px",
                   fontWeight: "600",
                   cursor:
-                    isLoadingSetup || isLoadingQuestions
+                    isLoadingSetup || isLoadingQuestions || isSavingEdit
                       ? "not-allowed"
                       : "pointer",
-                  opacity: isLoadingSetup || isLoadingQuestions ? 0.6 : 1,
+                  opacity:
+                    isLoadingSetup || isLoadingQuestions || isSavingEdit
+                      ? 0.6
+                      : 1,
                   transition: "all 0.2s",
                 }}
-                disabled={isLoadingSetup || isLoadingQuestions}
+                disabled={isLoadingSetup || isLoadingQuestions || isSavingEdit}
                 onMouseEnter={(e) => {
-                  if (!(isLoadingSetup || isLoadingQuestions)) {
+                  if (!(isLoadingSetup || isLoadingQuestions || isSavingEdit)) {
                     e.currentTarget.style.backgroundColor = "#0e3d6e";
                   }
                 }}
@@ -623,7 +796,6 @@ function ManageQuestionsPage() {
             </div>
           </div>
 
-          {/* Question Count */}
           <p
             style={{
               marginBottom: "1.5rem",
@@ -637,7 +809,6 @@ function ManageQuestionsPage() {
               : "Select course, level, and subject, then click Load Questions."}
           </p>
 
-          {/* Questions Container */}
           <div
             style={{
               background: "#fff",
@@ -678,23 +849,34 @@ function ManageQuestionsPage() {
               questions.map((question, index) => {
                 const subject = subjectOfQuestion(question);
                 const topic = topicOfQuestion(question);
-                const questionImageSrc = getQuestionImageSrc(question);
+                const questionImageSrc = getQuestionImageSrc(
+                  question,
+                  questionImages,
+                );
                 const imagePreviewToShow =
                   editImagePreview || editForm.existingImageSrc;
+                const loadingThisImage = Boolean(loadingImageIds[question._id]);
+                const imageFileDetails = [
+                  question.imageOriginalName,
+                  formatFileSize(question.imageSize),
+                ]
+                  .filter(Boolean)
+                  .join(" · ");
 
                 return (
                   <div
                     key={question._id}
                     className="question-row"
                     style={{
-                      borderBottom: "0.5px solid rgba(0,0,0,0.05)",
+                      borderBottom:
+                        index === questions.length - 1
+                          ? "none"
+                          : "0.5px solid rgba(0,0,0,0.05)",
                       padding: "1.5rem",
-                      "&:last-child": { borderBottom: "none" },
                     }}
                   >
                     {editingId === question._id ? (
                       <div style={{ width: "100%" }}>
-                        {/* Edit Mode */}
                         <div
                           style={{
                             display: "grid",
@@ -716,6 +898,7 @@ function ManageQuestionsPage() {
                                 })
                               }
                               style={inputStyle}
+                              disabled={isSavingEdit}
                             >
                               <option value="">Select subject</option>
                               {subjects.map((item) => (
@@ -737,6 +920,7 @@ function ManageQuestionsPage() {
                                 })
                               }
                               style={inputStyle}
+                              disabled={isSavingEdit}
                             >
                               <option value="">Select topic</option>
                               {editTopics.map((item) => (
@@ -760,6 +944,7 @@ function ManageQuestionsPage() {
                             }
                             style={textareaStyle}
                             placeholder="Enter question text"
+                            disabled={isSavingEdit}
                           />
                         </div>
 
@@ -783,6 +968,7 @@ function ManageQuestionsPage() {
                                 }
                                 style={inputStyle}
                                 placeholder={`Option ${optionIndex + 1}`}
+                                disabled={isSavingEdit}
                               />
                             ))}
                           </div>
@@ -800,6 +986,7 @@ function ManageQuestionsPage() {
                             }
                             style={inputStyle}
                             placeholder="Must match one of the options"
+                            disabled={isSavingEdit}
                           />
                         </div>
 
@@ -815,10 +1002,10 @@ function ManageQuestionsPage() {
                             }
                             style={textareaStyle}
                             placeholder="Provide detailed explanation"
+                            disabled={isSavingEdit}
                           />
                         </div>
 
-                        {/* Image Editor */}
                         <div
                           style={{
                             background: "#f8fafc",
@@ -879,11 +1066,13 @@ function ManageQuestionsPage() {
                               marginBottom: "0.75rem",
                               padding: "8px",
                             }}
+                            disabled={isSavingEdit}
                           />
 
                           <button
                             type="button"
                             onClick={removeCurrentImage}
+                            disabled={isSavingEdit}
                             style={{
                               padding: "8px 14px",
                               border: "0.5px solid #FCA5A5",
@@ -892,11 +1081,14 @@ function ManageQuestionsPage() {
                               color: "#DC2626",
                               fontSize: "12px",
                               fontWeight: "600",
-                              cursor: "pointer",
+                              cursor: isSavingEdit ? "not-allowed" : "pointer",
+                              opacity: isSavingEdit ? 0.6 : 1,
                               transition: "all 0.2s",
                             }}
                             onMouseEnter={(e) => {
-                              e.currentTarget.style.background = "#FEE2E2";
+                              if (!isSavingEdit) {
+                                e.currentTarget.style.background = "#FECACA";
+                              }
                             }}
                             onMouseLeave={(e) => {
                               e.currentTarget.style.background = "#FEE2E2";
@@ -916,10 +1108,10 @@ function ManageQuestionsPage() {
                           </p>
                         </div>
 
-                        {/* Action Buttons */}
                         <div style={{ display: "flex", gap: "0.75rem" }}>
                           <button
                             onClick={() => saveEdit(question._id)}
+                            disabled={isSavingEdit}
                             style={{
                               padding: "10px 16px",
                               border: "none",
@@ -928,20 +1120,25 @@ function ManageQuestionsPage() {
                               color: "#fff",
                               fontSize: "13px",
                               fontWeight: "600",
-                              cursor: "pointer",
+                              cursor: isSavingEdit ? "not-allowed" : "pointer",
+                              opacity: isSavingEdit ? 0.6 : 1,
                               transition: "all 0.2s",
                             }}
                             onMouseEnter={(e) => {
-                              e.currentTarget.style.background = "#0e3d6e";
+                              if (!isSavingEdit) {
+                                e.currentTarget.style.background = "#0e3d6e";
+                              }
                             }}
                             onMouseLeave={(e) => {
                               e.currentTarget.style.background = "#185FA5";
                             }}
                           >
-                            Save
+                            {isSavingEdit ? "Saving..." : "Save"}
                           </button>
+
                           <button
                             onClick={cancelEdit}
+                            disabled={isSavingEdit}
                             style={{
                               padding: "10px 16px",
                               border: "0.5px solid rgba(0,0,0,0.12)",
@@ -950,11 +1147,14 @@ function ManageQuestionsPage() {
                               color: "#334155",
                               fontSize: "13px",
                               fontWeight: "600",
-                              cursor: "pointer",
+                              cursor: isSavingEdit ? "not-allowed" : "pointer",
+                              opacity: isSavingEdit ? 0.6 : 1,
                               transition: "all 0.2s",
                             }}
                             onMouseEnter={(e) => {
-                              e.currentTarget.style.background = "#f1f5f9";
+                              if (!isSavingEdit) {
+                                e.currentTarget.style.background = "#f1f5f9";
+                              }
                             }}
                             onMouseLeave={(e) => {
                               e.currentTarget.style.background = "#fff";
@@ -966,7 +1166,6 @@ function ManageQuestionsPage() {
                       </div>
                     ) : (
                       <>
-                        {/* View Mode */}
                         <div style={{ marginBottom: "1rem" }}>
                           <div
                             style={{
@@ -974,6 +1173,7 @@ function ManageQuestionsPage() {
                               alignItems: "center",
                               gap: "1rem",
                               marginBottom: "0.75rem",
+                              flexWrap: "wrap",
                             }}
                           >
                             <h3
@@ -986,18 +1186,50 @@ function ManageQuestionsPage() {
                             >
                               Question {index + 1}
                             </h3>
-                            <span
-                              style={{
-                                fontSize: "12px",
-                                padding: "4px 10px",
-                                background: "#E6F1FB",
-                                color: "#185FA5",
-                                borderRadius: "6px",
-                                fontWeight: "600",
-                              }}
-                            >
-                              {getCourseName(subject)} · L{subject?.level}
-                            </span>
+
+                            {subject && subject._id ? (
+                              <span
+                                style={{
+                                  fontSize: "12px",
+                                  padding: "4px 10px",
+                                  background: "#E6F1FB",
+                                  color: "#185FA5",
+                                  borderRadius: "6px",
+                                  fontWeight: "600",
+                                }}
+                              >
+                                {getCourseName(subject)} · L
+                                {subject?.level || "?"}
+                              </span>
+                            ) : (
+                              <span
+                                style={{
+                                  fontSize: "12px",
+                                  padding: "4px 10px",
+                                  background: "#FEE2E2",
+                                  color: "#DC2626",
+                                  borderRadius: "6px",
+                                  fontWeight: "600",
+                                }}
+                              >
+                                ⚠️ Deleted Subject
+                              </span>
+                            )}
+
+                            {hasQuestionImage(question) && (
+                              <span
+                                style={{
+                                  fontSize: "12px",
+                                  padding: "4px 10px",
+                                  background: "#ECFDF5",
+                                  color: "#047857",
+                                  borderRadius: "6px",
+                                  fontWeight: "600",
+                                }}
+                              >
+                                🖼 Image attached
+                              </span>
+                            )}
                           </div>
 
                           <p
@@ -1007,9 +1239,9 @@ function ManageQuestionsPage() {
                               color: "#64748b",
                             }}
                           >
-                            <strong>Subject:</strong>{" "}
+                            <strong>Subject: </strong>{" "}
                             {subject?.name || "Deleted"} |{" "}
-                            <strong>Topic:</strong> {topic?.name || "Deleted"}
+                            <strong>Topic: </strong> {topic?.name || "Deleted"}
                           </p>
                         </div>
 
@@ -1035,6 +1267,48 @@ function ManageQuestionsPage() {
                                 display: "block",
                               }}
                             />
+                          </div>
+                        )}
+
+                        {!questionImageSrc && hasQuestionImage(question) && (
+                          <div
+                            style={{
+                              border: "1px dashed rgba(0,0,0,0.12)",
+                              borderRadius: "10px",
+                              padding: "1rem",
+                              marginBottom: "1rem",
+                              background: "#f8fafc",
+                              color: "#64748b",
+                              fontSize: "13px",
+                            }}
+                          >
+                            <p style={{ margin: "0 0 0.75rem" }}>
+                              Image is attached
+                              {imageFileDetails ? `, ${imageFileDetails}` : ""}.
+                            </p>
+
+                            <button
+                              type="button"
+                              onClick={() => loadQuestionImage(question)}
+                              disabled={loadingThisImage}
+                              style={{
+                                padding: "8px 13px",
+                                border: "0.5px solid rgba(24,95,165,0.25)",
+                                borderRadius: "6px",
+                                background: "#E6F1FB",
+                                color: "#185FA5",
+                                fontSize: "12px",
+                                fontWeight: "700",
+                                cursor: loadingThisImage
+                                  ? "not-allowed"
+                                  : "pointer",
+                                opacity: loadingThisImage ? 0.65 : 1,
+                              }}
+                            >
+                              {loadingThisImage
+                                ? "Loading image..."
+                                : "Load image"}
+                            </button>
                           </div>
                         )}
 
@@ -1130,10 +1404,10 @@ function ManageQuestionsPage() {
                           </p>
                         </div>
 
-                        {/* View Buttons */}
                         <div style={{ display: "flex", gap: "0.75rem" }}>
                           <button
                             onClick={() => startEdit(question)}
+                            disabled={isSavingEdit}
                             style={{
                               padding: "9px 16px",
                               border: "none",
@@ -1142,11 +1416,14 @@ function ManageQuestionsPage() {
                               color: "#fff",
                               fontSize: "13px",
                               fontWeight: "600",
-                              cursor: "pointer",
+                              cursor: isSavingEdit ? "not-allowed" : "pointer",
+                              opacity: isSavingEdit ? 0.6 : 1,
                               transition: "all 0.2s",
                             }}
                             onMouseEnter={(e) => {
-                              e.currentTarget.style.background = "#0e3d6e";
+                              if (!isSavingEdit) {
+                                e.currentTarget.style.background = "#0e3d6e";
+                              }
                             }}
                             onMouseLeave={(e) => {
                               e.currentTarget.style.background = "#185FA5";
@@ -1154,8 +1431,10 @@ function ManageQuestionsPage() {
                           >
                             ✏️ Edit
                           </button>
+
                           <button
                             onClick={() => deleteQuestion(question._id)}
+                            disabled={isSavingEdit}
                             style={{
                               padding: "9px 16px",
                               border: "0.5px solid #FCA5A5",
@@ -1164,11 +1443,14 @@ function ManageQuestionsPage() {
                               color: "#DC2626",
                               fontSize: "13px",
                               fontWeight: "600",
-                              cursor: "pointer",
+                              cursor: isSavingEdit ? "not-allowed" : "pointer",
+                              opacity: isSavingEdit ? 0.6 : 1,
                               transition: "all 0.2s",
                             }}
                             onMouseEnter={(e) => {
-                              e.currentTarget.style.background = "#FECACA";
+                              if (!isSavingEdit) {
+                                e.currentTarget.style.background = "#FECACA";
+                              }
                             }}
                             onMouseLeave={(e) => {
                               e.currentTarget.style.background = "#FEE2E2";
@@ -1189,6 +1471,16 @@ function ManageQuestionsPage() {
     </>
   );
 }
+
+const filterLabelStyle = {
+  display: "block",
+  marginBottom: "6px",
+  fontSize: "12px",
+  fontWeight: "600",
+  color: "#64748b",
+  textTransform: "uppercase",
+  letterSpacing: "0.05em",
+};
 
 const selectStyle = {
   width: "100%",

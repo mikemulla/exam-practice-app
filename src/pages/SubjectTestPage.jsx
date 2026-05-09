@@ -397,8 +397,9 @@ function ExplanationToggle({ text }) {
 }
 
 /* ─── Question review card ─── */
-function QuestionReviewCard({ question, index, userAnswer }) {
+function QuestionReviewCard({ question, index, userAnswer, imageSrc }) {
   const isCorrect = userAnswer === question.correctAnswer;
+  const displayImageSrc = imageSrc || questionImageSrc(question);
   return (
     <div
       style={{
@@ -446,7 +447,7 @@ function QuestionReviewCard({ question, index, userAnswer }) {
         </Badge>
       </div>
 
-      {questionImageSrc(question) && (
+      {displayImageSrc && (
         <div
           style={{
             margin: "0 0 1rem",
@@ -457,7 +458,7 @@ function QuestionReviewCard({ question, index, userAnswer }) {
           }}
         >
           <img
-            src={questionImageSrc(question)}
+            src={displayImageSrc}
             alt="Question"
             style={{
               display: "block",
@@ -540,6 +541,8 @@ function SubjectTestPage() {
   const [subject, setSubject] = useState(null);
   const [topic, setTopic] = useState(null);
   const [questions, setQuestions] = useState([]);
+  const [questionImages, setQuestionImages] = useState({});
+  const [isPreloadingImages, setIsPreloadingImages] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState({});
   const [showResults, setShowResults] = useState(false);
@@ -555,6 +558,77 @@ function SubjectTestPage() {
   }, []);
 
   const defaultDuration = subject?.duration || 300;
+
+  const makeImageSrc = (imageData, imageContentType) => {
+    if (!imageData || !imageContentType) return "";
+    if (String(imageData).startsWith("data:")) return imageData;
+    return `data:${imageContentType};base64,${imageData}`;
+  };
+
+  const getDisplayImageSrc = (question) => {
+    if (!question?._id) return "";
+    return questionImages[question._id] || questionImageSrc(question);
+  };
+
+  const fetchQuestionImage = async (questionId) => {
+    const response = await api.get(`/api/questions/${questionId}/image`, {
+      _tokenType: "user",
+    });
+
+    return makeImageSrc(
+      response.data?.imageData,
+      response.data?.imageContentType,
+    );
+  };
+
+  const preloadImagesInBatches = async (questionList, batchSize = 5) => {
+    const imageQuestions = questionList.filter(
+      (question) =>
+        question?._id &&
+        (question.hasImage ||
+          question.imageContentType ||
+          question.imageSize) &&
+        !question.imageData,
+    );
+
+    if (imageQuestions.length === 0) return;
+
+    setIsPreloadingImages(true);
+
+    try {
+      for (let i = 0; i < imageQuestions.length; i += batchSize) {
+        const batch = imageQuestions.slice(i, i + batchSize);
+
+        const loadedImages = await Promise.all(
+          batch.map(async (question) => {
+            try {
+              const imageSrc = await fetchQuestionImage(question._id);
+              return [question._id, imageSrc];
+            } catch (error) {
+              console.error(
+                "Question image preload failed:",
+                question._id,
+                error,
+              );
+              return [question._id, ""];
+            }
+          }),
+        );
+
+        setQuestionImages((previousImages) => {
+          const nextImages = { ...previousImages };
+
+          loadedImages.forEach(([questionId, imageSrc]) => {
+            if (imageSrc) nextImages[questionId] = imageSrc;
+          });
+
+          return nextImages;
+        });
+      }
+    } finally {
+      setIsPreloadingImages(false);
+    }
+  };
 
   useEffect(() => {
     const fetchPageData = async () => {
@@ -599,13 +673,15 @@ function SubjectTestPage() {
             new Map(questionsResponse.data.map((q) => [q._id, q])).values(),
           );
 
+          const preparedQuestions = shuffleArray(
+            unique.map((q) => ({ ...q, options: shuffleArray(q.options) })),
+          );
+
           setTopic(selectedTopic);
           setSubject(subjectResponse.data);
-          setQuestions(
-            shuffleArray(
-              unique.map((q) => ({ ...q, options: shuffleArray(q.options) })),
-            ),
-          );
+          setQuestionImages({});
+          setQuestions(preparedQuestions);
+          preloadImagesInBatches(preparedQuestions);
         } else {
           const [subjectResponse, questionsResponse] = await Promise.all([
             api.get(`/api/subjects/${subjectId}`, userRequest),
@@ -615,13 +691,15 @@ function SubjectTestPage() {
             new Map(questionsResponse.data.map((q) => [q._id, q])).values(),
           );
 
+          const preparedQuestions = shuffleArray(
+            unique.map((q) => ({ ...q, options: shuffleArray(q.options) })),
+          );
+
           setTopic(null);
           setSubject(subjectResponse.data);
-          setQuestions(
-            shuffleArray(
-              unique.map((q) => ({ ...q, options: shuffleArray(q.options) })),
-            ),
-          );
+          setQuestionImages({});
+          setQuestions(preparedQuestions);
+          preloadImagesInBatches(preparedQuestions);
         }
         setCurrentQuestionIndex(0);
         setSelectedAnswers({});
@@ -707,6 +785,9 @@ function SubjectTestPage() {
   ]);
 
   const currentQuestion = questions[currentQuestionIndex];
+  const currentQuestionImageSrc = currentQuestion
+    ? getDisplayImageSrc(currentQuestion)
+    : "";
   const answeredCount = Object.keys(selectedAnswers).length;
   const progressPercent = questions.length
     ? ((currentQuestionIndex + 1) / questions.length) * 100
@@ -1064,6 +1145,7 @@ function SubjectTestPage() {
               question={question}
               index={questions.findIndex((q) => q._id === question._id)}
               userAnswer={selectedAnswers[question._id]}
+              imageSrc={getDisplayImageSrc(question)}
             />
           ))
         )}
@@ -1234,7 +1316,7 @@ function SubjectTestPage() {
           {currentQuestion.questionText}
         </p>
 
-        {questionImageSrc(currentQuestion) && (
+        {currentQuestionImageSrc && (
           <div
             style={{
               margin: "0 0 1.5rem",
@@ -1246,7 +1328,7 @@ function SubjectTestPage() {
             }}
           >
             <img
-              src={questionImageSrc(currentQuestion)}
+              src={currentQuestionImageSrc}
               alt="Question"
               style={{
                 display: "block",
@@ -1263,6 +1345,28 @@ function SubjectTestPage() {
             />
           </div>
         )}
+
+        {!currentQuestionImageSrc &&
+          (Boolean(currentQuestion?.hasImage) ||
+            Boolean(currentQuestion?.imageContentType) ||
+            Boolean(currentQuestion?.imageSize)) && (
+            <div
+              style={{
+                margin: "-0.5rem 0 1.5rem",
+                padding: "14px",
+                background: T.surfaceAlt,
+                border: `1px dashed ${T.borderStrong}`,
+                borderRadius: T.radius,
+                color: T.inkMid,
+                fontSize: "13px",
+                fontFamily: T.fontSans,
+                textAlign: "center",
+                animation: "pulse 1.2s ease-in-out infinite",
+              }}
+            >
+              Loading image...
+            </div>
+          )}
 
         <div>
           {currentQuestion.options.map((option, i) => {
