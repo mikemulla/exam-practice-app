@@ -32,14 +32,14 @@ function UploadIcon() {
     <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
       <path
         d="M11 14V4M7 8l4-4 4 4"
-        stroke="#185FA5"
+        stroke="var(--button-primary)"
         strokeWidth="1.5"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
       <path
         d="M4 17h14"
-        stroke="#185FA5"
+        stroke="var(--button-primary)"
         strokeWidth="1.5"
         strokeLinecap="round"
       />
@@ -233,9 +233,9 @@ function SubjectRequestPage() {
                     onFocus={(e) => Object.assign(e.target.style, S.inputFocus)}
                     onBlur={(e) =>
                       Object.assign(e.target.style, {
-                        borderColor: "rgba(0,0,0,0.12)",
+                        borderColor: "var(--border-color)",
                         boxShadow: "none",
-                        background: "#fafafa",
+                        background: "var(--input-bg)",
                       })
                     }
                   />
@@ -252,9 +252,9 @@ function SubjectRequestPage() {
                     onFocus={(e) => Object.assign(e.target.style, S.inputFocus)}
                     onBlur={(e) =>
                       Object.assign(e.target.style, {
-                        borderColor: "rgba(0,0,0,0.12)",
+                        borderColor: "var(--border-color)",
                         boxShadow: "none",
-                        background: "#fafafa",
+                        background: "var(--input-bg)",
                       })
                     }
                   />
@@ -272,9 +272,9 @@ function SubjectRequestPage() {
                   onFocus={(e) => Object.assign(e.target.style, S.inputFocus)}
                   onBlur={(e) =>
                     Object.assign(e.target.style, {
-                      borderColor: "rgba(0,0,0,0.12)",
+                      borderColor: "var(--border-color)",
                       boxShadow: "none",
-                      background: "#fafafa",
+                      background: "var(--input-bg)",
                     })
                   }
                 />
@@ -292,15 +292,15 @@ function SubjectRequestPage() {
                   style={{
                     ...S.dropZone,
                     borderColor: dragOver
-                      ? "#185FA5"
+                      ? "var(--button-primary)"
                       : file
-                        ? "#185FA5"
-                        : "rgba(0,0,0,0.12)",
+                        ? "var(--button-primary)"
+                        : "var(--border-color)",
                     background: dragOver
-                      ? "#E6F1FB"
+                      ? "var(--surface-alt)"
                       : file
                         ? "#f0f7ff"
-                        : "#fafafa",
+                        : "var(--input-bg)",
                   }}
                 >
                   <input
@@ -325,7 +325,7 @@ function SubjectRequestPage() {
                     <div style={{ textAlign: "center" }}>
                       <p style={S.dropLabel}>
                         File is required. Drag and drop or{" "}
-                        <span style={{ color: "#185FA5", fontWeight: "600" }}>
+                        <span style={{ color: "var(--button-primary)", fontWeight: "600" }}>
                           browse
                         </span>
                       </p>
@@ -387,7 +387,7 @@ export default SubjectRequestPage;
 const S = {
   page: {
     minHeight: "100vh",
-    background: "#f8f9fb",
+    background: "var(--bg-primary)",
     padding: "2rem 1.25rem 4rem",
   },
   inner: { maxWidth: "680px", margin: "0 auto" },
@@ -403,10 +403,10 @@ const S = {
     alignItems: "center",
     gap: "5px",
     padding: "7px 12px",
-    border: "0.5px solid rgba(0,0,0,0.12)",
+    border: "0.5px solid var(--border-color)",
     borderRadius: "8px",
-    background: "#fff",
-    color: "#334155",
+    background: "var(--bg-secondary)",
+    color: "var(--text-secondary)",
     fontSize: "13px",
     fontWeight: "500",
     cursor: "pointer",
@@ -414,7 +414,7 @@ const S = {
   breadcrumb: {
     fontSize: "11px",
     fontWeight: "600",
-    color: "#94a3b8",
+    color: "var(--text-secondary)",
     textTransform: "uppercase",
     letterSpacing: "0.07em",
   },
@@ -422,13 +422,13 @@ const S = {
   heading: {
     fontSize: "clamp(22px, 3.5vw, 28px)",
     fontWeight: "600",
-    color: "#0f172a",
+    color: "var(--text-primary)",
     margin: "0 0 0.5rem",
     letterSpacing: "-0.02em",
   },
   subheading: {
     fontSize: "14px",
-    color: "#64748b",
+    color: "var(--text-secondary)",
     lineHeight: "1.65",
     margin: 0,
     maxWidth: "500px",
@@ -460,11 +460,11 @@ const S = {
     marginBottom: "1rem",
   },
   card: {
-    background: "#fff",
-    border: "0.5px solid rgba(0,0,0,0.08)",
+    background: "var(--bg-secondary)",
+    border: "0.5px solid var(--border-color)",
     borderRadius: "16px",
     padding: "2rem",
-    boxShadow: "0 2px 12px rgba(0,0,0,0.05)",
+    boxShadow: "0 2px 12px var(--border-color)",
   },
   twoCol: {
     display: "grid",
@@ -478,23 +478,23 @@ const S = {
     gap: "8px",
     marginBottom: "6px",
   },
-  label: { fontSize: "13px", fontWeight: "600", color: "#0f172a" },
-  hint: { fontSize: "11px", color: "#94a3b8", fontWeight: "500" },
+  label: { fontSize: "13px", fontWeight: "600", color: "var(--text-primary)" },
+  hint: { fontSize: "11px", color: "var(--text-secondary)", fontWeight: "500" },
   input: {
     width: "100%",
     padding: "10px 13px",
     borderRadius: "8px",
-    border: "0.5px solid rgba(0,0,0,0.12)",
+    border: "0.5px solid var(--border-color)",
     fontSize: "14px",
     boxSizing: "border-box",
-    color: "#0f172a",
-    background: "#fafafa",
+    color: "var(--text-primary)",
+    background: "var(--input-bg)",
     transition: "border-color 0.15s, box-shadow 0.15s",
   },
   inputFocus: {
-    borderColor: "#185FA5",
+    borderColor: "var(--button-primary)",
     boxShadow: "0 0 0 3px rgba(24,95,165,0.10)",
-    background: "#fff",
+    background: "var(--bg-secondary)",
   },
   dropZone: {
     border: "1.5px dashed",
@@ -507,18 +507,18 @@ const S = {
     cursor: "pointer",
     transition: "border-color 0.15s, background 0.15s",
   },
-  dropLabel: { fontSize: "13px", color: "#475569", margin: "0 0 2px" },
+  dropLabel: { fontSize: "13px", color: "var(--text-secondary)", margin: "0 0 2px" },
   fileName: {
     fontSize: "13px",
     fontWeight: "600",
-    color: "#185FA5",
+    color: "var(--button-primary)",
     margin: "0 0 2px",
     wordBreak: "break-all",
   },
-  fileHint: { fontSize: "11px", color: "#94a3b8", margin: 0 },
+  fileHint: { fontSize: "11px", color: "var(--text-secondary)", margin: 0 },
   divider: {
     height: "0.5px",
-    background: "rgba(0,0,0,0.07)",
+    background: "var(--border-color)",
     margin: "0.5rem 0 1.5rem",
   },
   actions: { display: "flex", gap: "10px", flexWrap: "wrap" },
@@ -526,8 +526,8 @@ const S = {
     padding: "10px 22px",
     border: "none",
     borderRadius: "8px",
-    background: "#185FA5",
-    color: "#fff",
+    background: "var(--button-primary)",
+    color: "var(--bg-secondary)",
     fontSize: "13px",
     fontWeight: "600",
     display: "flex",
@@ -541,10 +541,10 @@ const S = {
     alignItems: "center",
     gap: "6px",
     padding: "10px 18px",
-    border: "0.5px solid rgba(0,0,0,0.15)",
+    border: "0.5px solid var(--border-color)",
     borderRadius: "8px",
-    background: "#fff",
-    color: "#64748b",
+    background: "var(--bg-secondary)",
+    color: "var(--text-secondary)",
     fontSize: "13px",
     fontWeight: "500",
     cursor: "pointer",
@@ -554,7 +554,7 @@ const S = {
     width: "12px",
     height: "12px",
     border: "2px solid rgba(255,255,255,0.35)",
-    borderTopColor: "#fff",
+    borderTopColor: "var(--bg-secondary)",
     borderRadius: "50%",
     animation: "spin 0.7s linear infinite",
   },

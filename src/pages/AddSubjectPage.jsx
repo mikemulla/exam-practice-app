@@ -145,14 +145,14 @@ function AddSubjectPage() {
 }
 
 const pageStyle = { minHeight: "100vh", background: "linear-gradient(135deg, #f8fbff 0%, #eef4ff 50%, #f7f9fc 100%)", padding: "32px 20px" };
-const eyebrowStyle = { margin: 0, color: "#64748b", fontSize: "14px", fontWeight: 600 };
-const headingStyle = { margin: "10px 0 8px", fontSize: "36px", color: "#0f172a" };
-const subheadingStyle = { margin: "0 0 24px", color: "#475569", fontSize: "16px", lineHeight: 1.6 };
+const eyebrowStyle = { margin: 0, color: "var(--text-secondary)", fontSize: "14px", fontWeight: 600 };
+const headingStyle = { margin: "10px 0 8px", fontSize: "36px", color: "var(--text-primary)" };
+const subheadingStyle = { margin: "0 0 24px", color: "var(--text-secondary)", fontSize: "16px", lineHeight: 1.6 };
 const cardStyle = { backgroundColor: "white", border: "1px solid #e2e8f0", borderRadius: "20px", padding: "28px", boxShadow: "0 12px 30px rgba(15,23,42,0.06)" };
-const labelStyle = { display: "block", marginBottom: "8px", fontWeight: 600, color: "#0f172a" };
+const labelStyle = { display: "block", marginBottom: "8px", fontWeight: 600, color: "var(--text-primary)" };
 const inputStyle = { width: "100%", padding: "14px 16px", borderRadius: "10px", border: "1px solid #cbd5e1", fontSize: "15px", outline: "none", boxSizing: "border-box", marginBottom: "14px", backgroundColor: "white" };
 const buttonRowStyle = { display: "flex", gap: "12px", flexWrap: "wrap" };
-const primaryButton = { padding: "14px 22px", border: "none", borderRadius: "10px", backgroundColor: "#185FA5", color: "white", fontSize: "15px", fontWeight: 600, cursor: "pointer" };
-const secondaryButton = { padding: "14px 22px", border: "1px solid #cbd5e1", borderRadius: "10px", backgroundColor: "white", color: "#0f172a", fontSize: "15px", fontWeight: 600, cursor: "pointer" };
+const primaryButton = { padding: "14px 22px", border: "none", borderRadius: "10px", backgroundColor: "var(--button-primary)", color: "white", fontSize: "15px", fontWeight: 600, cursor: "pointer" };
+const secondaryButton = { padding: "14px 22px", border: "1px solid #cbd5e1", borderRadius: "10px", backgroundColor: "white", color: "var(--text-primary)", fontSize: "15px", fontWeight: 600, cursor: "pointer" };
 
 export default AddSubjectPage;

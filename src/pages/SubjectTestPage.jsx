@@ -4,15 +4,15 @@ import api from "../lib/api";
 
 /* ─── Design tokens ─── */
 const T = {
-  bg: "#f8f9fb",
-  surface: "#ffffff",
-  surfaceAlt: "#f8fafc",
-  border: "rgba(0,0,0,0.08)",
+  bg: "var(--bg-primary)",
+  surface: "var(--bg-secondary)",
+  surfaceAlt: "var(--surface-alt)",
+  border: "var(--border-color)",
   borderStrong: "rgba(0,0,0,0.12)",
-  ink: "#0f172a",
-  inkMid: "#64748b",
-  inkFaint: "#94a3b8",
-  accent: "#185FA5",
+  ink: "var(--text-primary)",
+  inkMid: "var(--text-secondary)",
+  inkFaint: "var(--text-secondary)",
+  accent: "var(--button-primary)",
   accentLight: "#E6F1FB",
   accentMid: "#0e3d6e",
   accentDark: "#042C53",
@@ -226,7 +226,7 @@ function Badge({ variant, children }) {
     correct: { bg: T.successLight, color: T.success, border: "#86efac" },
     incorrect: { bg: T.dangerLight, color: T.danger, border: T.dangerBorder },
     info: { bg: T.accentLight, color: T.accent, border: "#bfdbfe" },
-    neutral: { bg: "#f1f5f9", color: T.inkMid, border: T.border },
+    neutral: { bg: "var(--surface-alt)", color: T.inkMid, border: T.border },
   };
   const c = variants[variant] || variants.neutral;
   return (

@@ -21,7 +21,7 @@ function BookmarkIcon() {
     <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
       <path
         d="M5 2h10a1 1 0 0 1 1 1v14l-6-3-6 3V3a1 1 0 0 1 1-1Z"
-        stroke="#185FA5"
+        stroke="var(--button-primary)"
         strokeWidth="1.3"
         strokeLinejoin="round"
       />
@@ -34,13 +34,13 @@ function LayersIcon() {
     <svg width="16" height="16" viewBox="0 0 14 14" fill="none">
       <path
         d="M2 5l5-3 5 3-5 3-5-3Z"
-        stroke="#185FA5"
+        stroke="var(--button-primary)"
         strokeWidth="1.2"
         strokeLinejoin="round"
       />
       <path
         d="M2 9l5 3 5-3"
-        stroke="#185FA5"
+        stroke="var(--button-primary)"
         strokeWidth="1.2"
         strokeLinejoin="round"
       />
@@ -60,7 +60,7 @@ function TopicSelectionPage() {
   const S = {
     page: {
       minHeight: "100vh",
-      background: "#f8f9fb",
+      background: "var(--bg-primary)",
       padding: "2.5rem 1.25rem 4rem",
     },
     inner: {
@@ -76,10 +76,10 @@ function TopicSelectionPage() {
       gap: "6px",
       marginBottom: "1.25rem",
       padding: "7px 14px",
-      border: "0.5px solid rgba(0,0,0,0.12)",
+      border: "0.5px solid var(--border-color)",
       borderRadius: "8px",
-      background: "#fff",
-      color: "#334155",
+      background: "var(--bg-secondary)",
+      color: "var(--text-secondary)",
       fontSize: "13px",
       fontWeight: "500",
       cursor: "pointer",
@@ -88,7 +88,7 @@ function TopicSelectionPage() {
     eyebrow: {
       fontSize: "11px",
       fontWeight: "600",
-      color: "#94a3b8",
+      color: "var(--text-secondary)",
       textTransform: "uppercase",
       letterSpacing: "0.08em",
       marginBottom: "0.75rem",
@@ -96,13 +96,13 @@ function TopicSelectionPage() {
     heading: {
       fontSize: "clamp(24px, 4vw, 32px)",
       fontWeight: "600",
-      color: "#0f172a",
+      color: "var(--text-primary)",
       margin: "0 0 0.625rem",
       letterSpacing: "-0.02em",
     },
     subheading: {
       fontSize: "14px",
-      color: "#64748b",
+      color: "var(--text-secondary)",
       lineHeight: "1.65",
       maxWidth: "540px",
       margin: "0",
@@ -118,11 +118,11 @@ function TopicSelectionPage() {
       display: "flex",
       alignItems: "center",
       gap: "6px",
-      color: "#64748b",
+      color: "var(--text-secondary)",
     },
     statValue: {
       fontWeight: "600",
-      color: "#185FA5",
+      color: "var(--button-primary)",
     },
     grid: {
       display: "grid",
@@ -130,8 +130,8 @@ function TopicSelectionPage() {
       gap: "16px",
     },
     card: {
-      background: "#fff",
-      border: "0.5px solid rgba(0,0,0,0.08)",
+      background: "var(--bg-secondary)",
+      border: "0.5px solid var(--border-color)",
       borderRadius: "14px",
       padding: "1.5rem",
       display: "flex",
@@ -148,7 +148,7 @@ function TopicSelectionPage() {
       width: "44px",
       height: "44px",
       borderRadius: "11px",
-      background: "#E6F1FB",
+      background: "var(--surface-alt)",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
@@ -158,13 +158,13 @@ function TopicSelectionPage() {
     cardTitle: {
       fontSize: "16px",
       fontWeight: "600",
-      color: "#0f172a",
+      color: "var(--text-primary)",
       margin: "0 0 8px",
       letterSpacing: "-0.01em",
     },
     cardDescription: {
       fontSize: "13px",
-      color: "#64748b",
+      color: "var(--text-secondary)",
       margin: "0 0 1.25rem",
       lineHeight: "1.65",
       flex: 1,
@@ -175,8 +175,8 @@ function TopicSelectionPage() {
       gap: "4px",
       padding: "6px 10px",
       borderRadius: "999px",
-      background: "#f1f5f9",
-      color: "#64748b",
+      background: "var(--surface-alt)",
+      color: "var(--text-secondary)",
       fontSize: "12px",
       fontWeight: "500",
       marginBottom: "1.25rem",
@@ -184,7 +184,7 @@ function TopicSelectionPage() {
     },
     divider: {
       height: "0.5px",
-      background: "rgba(0,0,0,0.07)",
+      background: "var(--border-color)",
       marginBottom: "1.25rem",
     },
     button: {
@@ -203,16 +203,16 @@ function TopicSelectionPage() {
       letterSpacing: "-0.01em",
     },
     buttonPrimary: {
-      background: "#185FA5",
+      background: "var(--button-primary)",
       color: "#fff",
     },
     buttonSecondary: {
-      background: "#f1f5f9",
-      color: "#185FA5",
+      background: "var(--surface-alt)",
+      color: "var(--button-primary)",
     },
     emptyState: {
-      background: "#fff",
-      border: "0.5px solid rgba(0,0,0,0.08)",
+      background: "var(--bg-secondary)",
+      border: "0.5px solid var(--border-color)",
       borderRadius: "14px",
       padding: "3.5rem 2rem",
       textAlign: "center",
@@ -224,12 +224,12 @@ function TopicSelectionPage() {
     emptyTitle: {
       fontSize: "16px",
       fontWeight: "600",
-      color: "#0f172a",
+      color: "var(--text-primary)",
       margin: "0 0 8px",
     },
     emptyBody: {
       fontSize: "13px",
-      color: "#64748b",
+      color: "var(--text-secondary)",
       lineHeight: "1.65",
       maxWidth: "360px",
       margin: "0 auto",
@@ -311,14 +311,14 @@ function TopicSelectionPage() {
             100% { background-position:  400px 0 }
           }
           .shimmer {
-            background     : linear-gradient(90deg, #f1f5f9 25%, #e8edf4 50%, #f1f5f9 75%);
+            background     : linear-gradient(90deg, var(--surface-alt) 25%, #e8edf4 50%, var(--surface-alt) 75%);
             background-size: 800px 100%;
             animation      : shimmer 1.4s infinite;
             border-radius  : 6px;
           }
           .skeleton-card {
-            background    : #fff;
-            border        : 0.5px solid rgba(0,0,0,0.08);
+            background    : var(--bg-secondary);
+            border        : 0.5px solid var(--border-color);
             border-radius : 14px;
             padding       : 1.5rem;
             display       : flex;
@@ -371,7 +371,7 @@ function TopicSelectionPage() {
               style={{
                 marginTop: "1.5rem",
                 padding: "10px 20px",
-                background: "#185FA5",
+                background: "var(--button-primary)",
                 color: "#fff",
                 border: "none",
                 borderRadius: "8px",
@@ -424,7 +424,7 @@ function TopicSelectionPage() {
             if (hovered) e.currentTarget.style.backgroundColor = "#0e3d6e";
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = "#185FA5";
+            e.currentTarget.style.backgroundColor = "var(--button-primary)";
           }}
         >
           <span>Start topic test</span>
@@ -471,7 +471,7 @@ function TopicSelectionPage() {
             if (hovered) e.currentTarget.style.backgroundColor = "#e2e8f0";
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = "#f1f5f9";
+            e.currentTarget.style.backgroundColor = "var(--surface-alt)";
           }}
         >
           <span>Start full test</span>
@@ -501,10 +501,10 @@ function TopicSelectionPage() {
               onClick={() => navigate("/user")}
               style={S.backBtn}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = "#f1f5f9";
+                e.currentTarget.style.backgroundColor = "var(--surface-alt)";
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = "#fff";
+                e.currentTarget.style.backgroundColor = "var(--bg-secondary)";
               }}
             >
               ← Back

@@ -7,12 +7,12 @@ function BookIcon() {
     <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
       <path
         d="M4 4.5C4 3.12 5.12 2 6.5 2H16v13H6.5A2.5 2.5 0 0 0 4 17.5v-13Z"
-        stroke="#185FA5"
+        stroke="var(--button-primary)"
         strokeWidth="1.4"
       />
       <path
         d="M4 15.5A2.5 2.5 0 0 1 6.5 13H16"
-        stroke="#185FA5"
+        stroke="var(--button-primary)"
         strokeWidth="1.4"
       />
     </svg>
@@ -36,10 +36,16 @@ function ChevronRight() {
 function ClockIcon() {
   return (
     <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
-      <circle cx="7" cy="7" r="5.5" stroke="#94a3b8" strokeWidth="1.2" />
+      <circle
+        cx="7"
+        cy="7"
+        r="5.5"
+        stroke="var(--text-secondary)"
+        strokeWidth="1.2"
+      />
       <path
         d="M7 4.5V7l1.5 1.5"
-        stroke="#94a3b8"
+        stroke="var(--text-secondary)"
         strokeWidth="1.2"
         strokeLinecap="round"
       />
@@ -52,13 +58,13 @@ function LayersIcon() {
     <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
       <path
         d="M2 5l5-3 5 3-5 3-5-3Z"
-        stroke="#94a3b8"
+        stroke="var(--text-secondary)"
         strokeWidth="1.2"
         strokeLinejoin="round"
       />
       <path
         d="M2 9l5 3 5-3"
-        stroke="#94a3b8"
+        stroke="var(--text-secondary)"
         strokeWidth="1.2"
         strokeLinejoin="round"
       />
@@ -75,7 +81,7 @@ function SkeletonCard() {
           100% { background-position:  400px 0 }
         }
         .shimmer {
-          background: linear-gradient(90deg, #f1f5f9 25%, #e8edf4 50%, #f1f5f9 75%);
+          background: linear-gradient(90deg, var(--surface-alt) 25%, #e8edf4 50%, var(--surface-alt) 75%);
           background-size: 800px 100%;
           animation: shimmer 1.4s infinite;
           border-radius: 6px;
@@ -114,10 +120,10 @@ function SubjectCard({ subject, topicCount, index, onViewTopics }) {
       onMouseLeave={() => setHovered(false)}
       style={{
         ...S.card,
-        border: `0.5px solid ${hovered ? "rgba(24,95,165,0.25)" : "rgba(0,0,0,0.08)"}`,
+        border: `0.5px solid ${hovered ? "rgba(24,95,165,0.25)" : "var(--border-color)"}`,
         boxShadow: hovered
-          ? "0 8px 32px rgba(24,95,165,0.10), 0 2px 8px rgba(0,0,0,0.06)"
-          : "0 1px 4px rgba(0,0,0,0.04)",
+          ? "0 8px 32px rgba(24,95,165,0.10), 0 2px 8px var(--border-color)"
+          : "0 1px 4px var(--border-color)",
         transform: hovered ? "translateY(-2px)" : "translateY(0)",
         animationDelay: `${index * 60}ms`,
       }}
@@ -137,7 +143,11 @@ function SubjectCard({ subject, topicCount, index, onViewTopics }) {
           {topicCount} topic{topicCount === 1 ? "" : "s"}
         </span>
         <span
-          style={{ ...S.metaPill, background: "#E6F1FB", color: "#185FA5" }}
+          style={{
+            ...S.metaPill,
+            background: "var(--surface-alt)",
+            color: "var(--button-primary)",
+          }}
         >
           Timed
         </span>
@@ -145,7 +155,10 @@ function SubjectCard({ subject, topicCount, index, onViewTopics }) {
       <div style={S.divider} />
       <button
         onClick={onViewTopics}
-        style={{ ...S.cta, background: hovered ? "#145390" : "#185FA5" }}
+        style={{
+          ...S.cta,
+          background: hovered ? "#145390" : "var(--button-primary)",
+        }}
       >
         <span>View topics</span>
         <span style={S.ctaArrow}>
@@ -322,7 +335,7 @@ export default UserPage;
 const S = {
   page: {
     minHeight: "100vh",
-    background: "#f8f9fb",
+    background: "var(--bg-primary)",
     padding: "2.5rem 1.25rem 4rem",
   },
   inner: { maxWidth: "1080px", margin: "0 auto" },
@@ -330,7 +343,7 @@ const S = {
   eyebrow: {
     fontSize: "11px",
     fontWeight: "600",
-    color: "#94a3b8",
+    color: "var(--text-secondary)",
     textTransform: "uppercase",
     letterSpacing: "0.08em",
     marginBottom: "0.75rem",
@@ -346,13 +359,13 @@ const S = {
   heading: {
     fontSize: "clamp(22px, 3.5vw, 30px)",
     fontWeight: "600",
-    color: "#0f172a",
+    color: "var(--text-primary)",
     margin: 0,
     letterSpacing: "-0.02em",
   },
   subheading: {
     fontSize: "14px",
-    color: "#64748b",
+    color: "var(--text-secondary)",
     lineHeight: "1.65",
     maxWidth: "520px",
     margin: 0,
@@ -369,8 +382,8 @@ const S = {
     gap: "4px",
     padding: "4px 12px",
     borderRadius: "999px",
-    background: "#E6F1FB",
-    color: "#185FA5",
+    background: "var(--surface-alt)",
+    color: "var(--button-primary)",
     fontSize: "12px",
     fontWeight: "500",
   },
@@ -380,20 +393,20 @@ const S = {
     gap: "6px",
     marginBottom: "1.25rem",
     padding: "7px 14px",
-    border: "0.5px solid rgba(0,0,0,0.12)",
+    border: "0.5px solid var(--border-color)",
     borderRadius: "8px",
-    background: "#fff",
-    color: "#334155",
+    background: "var(--bg-secondary)",
+    color: "var(--text-secondary)",
     fontSize: "13px",
     fontWeight: "500",
     cursor: "pointer",
   },
   requestBtn: {
     padding: "9px 16px",
-    border: "0.5px solid rgba(0,0,0,0.15)",
+    border: "0.5px solid var(--border-color)",
     borderRadius: "8px",
-    background: "#fff",
-    color: "#334155",
+    background: "var(--bg-secondary)",
+    color: "var(--text-secondary)",
     fontSize: "13px",
     fontWeight: "500",
     cursor: "pointer",
@@ -405,7 +418,7 @@ const S = {
     gap: "14px",
   },
   card: {
-    background: "#fff",
+    background: "var(--bg-secondary)",
     borderRadius: "14px",
     padding: "1.375rem",
     display: "flex",
@@ -416,7 +429,7 @@ const S = {
     width: "40px",
     height: "40px",
     borderRadius: "10px",
-    background: "#E6F1FB",
+    background: "var(--surface-alt)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -426,7 +439,7 @@ const S = {
   subjectName: {
     fontSize: "15px",
     fontWeight: "600",
-    color: "#0f172a",
+    color: "var(--text-primary)",
     marginBottom: "0.625rem",
     textTransform: "capitalize",
     letterSpacing: "-0.01em",
@@ -443,14 +456,14 @@ const S = {
     gap: "4px",
     padding: "3px 8px",
     borderRadius: "999px",
-    background: "#f1f5f9",
-    color: "#64748b",
+    background: "var(--surface-alt)",
+    color: "var(--text-secondary)",
     fontSize: "11px",
     fontWeight: "500",
   },
   divider: {
     height: "0.5px",
-    background: "rgba(0,0,0,0.07)",
+    background: "var(--border-color)",
     marginBottom: "1.125rem",
   },
   cta: {
@@ -461,7 +474,7 @@ const S = {
     fontSize: "13px",
     fontWeight: "600",
     cursor: "pointer",
-    color: "#fff",
+    color: "var(--bg-secondary)",
     border: "none",
     display: "flex",
     alignItems: "center",
@@ -471,8 +484,8 @@ const S = {
   },
   ctaArrow: { display: "flex", alignItems: "center", opacity: 0.8 },
   emptyState: {
-    background: "#fff",
-    border: "0.5px solid rgba(0,0,0,0.08)",
+    background: "var(--bg-secondary)",
+    border: "0.5px solid var(--border-color)",
     borderRadius: "14px",
     padding: "3.5rem 2rem",
     textAlign: "center",
@@ -481,12 +494,12 @@ const S = {
   emptyTitle: {
     fontSize: "15px",
     fontWeight: "600",
-    color: "#0f172a",
+    color: "var(--text-primary)",
     marginBottom: "6px",
   },
   emptyBody: {
     fontSize: "13px",
-    color: "#64748b",
+    color: "var(--text-secondary)",
     lineHeight: "1.65",
     maxWidth: "360px",
     margin: "0 auto",

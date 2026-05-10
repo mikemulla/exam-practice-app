@@ -435,7 +435,7 @@ const pageStyle = {
 
 const eyebrowStyle = {
   margin: 0,
-  color: "#64748b",
+  color: "var(--text-secondary)",
   fontSize: "14px",
   fontWeight: "600",
 };
@@ -443,12 +443,12 @@ const eyebrowStyle = {
 const headingStyle = {
   margin: "10px 0 8px",
   fontSize: "36px",
-  color: "#0f172a",
+  color: "var(--text-primary)",
 };
 
 const subheadingStyle = {
   margin: 0,
-  color: "#475569",
+  color: "var(--text-secondary)",
   fontSize: "16px",
   lineHeight: "1.6",
 };
@@ -471,7 +471,7 @@ const labelStyle = {
   display: "block",
   marginBottom: "8px",
   fontWeight: "600",
-  color: "#0f172a",
+  color: "var(--text-primary)",
 };
 
 const inputStyle = {
@@ -522,7 +522,7 @@ const primaryButton = {
   padding: "14px 22px",
   border: "none",
   borderRadius: "10px",
-  backgroundColor: "#185FA5",
+  backgroundColor: "var(--button-primary)",
   color: "white",
   fontSize: "15px",
   fontWeight: "600",
@@ -534,7 +534,7 @@ const secondaryButton = {
   border: "1px solid #cbd5e1",
   borderRadius: "10px",
   backgroundColor: "white",
-  color: "#0f172a",
+  color: "var(--text-primary)",
   fontSize: "15px",
   fontWeight: "600",
   cursor: "pointer",

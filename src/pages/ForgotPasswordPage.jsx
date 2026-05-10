@@ -18,10 +18,7 @@ function ForgotPasswordPage() {
       await api.post("/api/users/forgot-password", { email });
       setSent(true);
     } catch (err) {
-      setError(
-        err.message ||
-          "Something went wrong. Please try again.",
-      );
+      setError(err.message || "Something went wrong. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -47,7 +44,13 @@ function ForgotPasswordPage() {
                 >
                   Check your email
                 </p>
-                <p style={{ margin: 0, fontSize: "13px", color: "#475569" }}>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: "13px",
+                    color: "var(--text-secondary)",
+                  }}
+                >
                   If <strong>{email}</strong> is registered, you'll receive a
                   reset link shortly. Check your spam folder too.
                 </p>
@@ -109,35 +112,35 @@ const pageStyle = {
   alignItems: "center",
   justifyContent: "center",
   padding: "24px",
-  background: "linear-gradient(135deg, #f8fbff 0%, #eef4ff 50%, #f7f9fc 100%)",
+  background: "var(--bg-primary)",
 };
 
 const cardStyle = {
   width: "100%",
   maxWidth: "440px",
-  background: "#fff",
-  border: "1px solid #e2e8f0",
+  background: "var(--bg-secondary)",
+  border: "1px solid var(--border-color)",
   borderRadius: "20px",
   padding: "28px",
-  boxShadow: "0 12px 30px rgba(15,23,42,0.06)",
+  boxShadow: "var(--card-shadow)",
 };
 
 const labelTop = {
   margin: 0,
-  color: "#64748b",
+  color: "var(--text-secondary)",
   fontSize: "14px",
   fontWeight: "700",
 };
 
 const titleStyle = {
   margin: "10px 0 8px",
-  color: "#0f172a",
+  color: "var(--text-primary)",
   fontSize: "32px",
 };
 
 const subtitleStyle = {
   margin: "0 0 22px",
-  color: "#64748b",
+  color: "var(--text-secondary)",
   lineHeight: "1.6",
   fontSize: "14px",
 };
@@ -146,7 +149,7 @@ const labelStyle = {
   display: "block",
   marginBottom: "8px",
   fontWeight: "600",
-  color: "#0f172a",
+  color: "var(--text-primary)",
   fontSize: "14px",
 };
 
@@ -155,10 +158,12 @@ const inputStyle = {
   padding: "14px 16px",
   marginBottom: "16px",
   borderRadius: "10px",
-  border: "1px solid #cbd5e1",
+  border: "1px solid var(--border-strong)",
   boxSizing: "border-box",
   fontSize: "15px",
   outline: "none",
+  background: "var(--input-bg)",
+  color: "var(--text-primary)",
 };
 
 const primaryButton = {
@@ -166,7 +171,7 @@ const primaryButton = {
   padding: "14px",
   border: "none",
   borderRadius: "10px",
-  backgroundColor: "#185FA5",
+  backgroundColor: "var(--button-primary)",
   color: "white",
   fontWeight: "700",
   fontSize: "15px",
@@ -179,20 +184,20 @@ const plainButton = {
   padding: "10px",
   border: "none",
   backgroundColor: "transparent",
-  color: "#64748b",
+  color: "var(--text-secondary)",
   cursor: "pointer",
   fontSize: "14px",
 };
 
 const successBox = {
-  display: "flex",
-  alignItems: "flex-start",
-  gap: "12px",
-  padding: "16px",
+  display     : "flex",
+  alignItems  : "flex-start",
+  gap         : "12px",
+  padding     : "16px",
   borderRadius: "10px",
-  background: "#f0fdf4",
-  border: "1px solid #86efac",
-  color: "#15803d",
+  background  : "#f0fdf4",
+  border      : "1px solid #86efac",
+  color       : "#15803d",
   marginBottom: "20px",
 };
 

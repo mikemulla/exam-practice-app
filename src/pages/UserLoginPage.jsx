@@ -33,16 +33,40 @@ function UserLoginPage() {
     <>
       <style>{`
         @keyframes fadeInUp {
-           from  { opacity: 0; transform: translateY(20px); }
+            from   { opacity: 0; transform: translateY(20px); }
           to { opacity: 1; transform: translateY(0); }
         }
         .auth-card { animation: fadeInUp 0.5s ease-out; }
+        
+        /* Input field styling for dark mode visibility */
+        input[type="email"],
+        input[type="password"] {
+          background-color: var(--bg-secondary);
+          color: var(--text-primary);
+          border: 0.5px solid var(--border-color);
+          caret-color: var(--button-primary);
+        }
+        
+        input[type="email"]:focus,
+        input[type="password"]:focus {
+          background-color: var(--bg-secondary);
+          color: var(--text-primary);
+          border-color: var(--button-primary);
+          box-shadow: 0 0 0 3px rgba(24, 95, 165, 0.08);
+          outline: none;
+        }
+        
+        input[type="email"]::placeholder,
+        input[type="password"]::placeholder {
+          color: var(--text-secondary);
+          opacity: 0.7;
+        }
       `}</style>
 
       <div
         style={{
           minHeight: "100vh",
-          background: "#f8f9fb",
+          background: "var(--bg-primary)",
           padding: "2rem 1.25rem",
           display: "flex",
           alignItems: "center",
@@ -71,7 +95,7 @@ function UserLoginPage() {
           style={{
             width: "100%",
             maxWidth: "420px",
-            background: "#ffffff",
+            background: "var(--bg-secondary)",
             border: "0.5px solid rgba(0,0,0,0.08)",
             borderRadius: "14px",
             padding: "2rem",
@@ -86,7 +110,7 @@ function UserLoginPage() {
             <p
               style={{
                 margin: "0 0 0.75rem",
-                color: "#94a3b8",
+                color: "var(--text-secondary)",
                 fontSize: "12px",
                 fontWeight: "600",
                 textTransform: "uppercase",
@@ -98,7 +122,7 @@ function UserLoginPage() {
             <h1
               style={{
                 margin: "0 0 0.5rem",
-                color: "#0f172a",
+                color: "var(--text-primary)",
                 fontSize: "28px",
                 fontWeight: "700",
                 letterSpacing: "-0.02em",
@@ -109,7 +133,7 @@ function UserLoginPage() {
             <p
               style={{
                 margin: 0,
-                color: "#64748b",
+                color: "var(--text-secondary)",
                 fontSize: "14px",
                 lineHeight: "1.6",
               }}
@@ -144,7 +168,7 @@ function UserLoginPage() {
                   display: "block",
                   marginBottom: "8px",
                   fontWeight: "600",
-                  color: "#0f172a",
+                  color: "var(--text-primary)",
                   fontSize: "14px",
                 }}
               >
@@ -164,17 +188,17 @@ function UserLoginPage() {
                   fontSize: "14px",
                   boxSizing: "border-box",
                   background: "#fff",
-                  color: "#0f172a",
+                  color: "var(--text-primary)",
                   transition: "all 0.2s",
                   outline: "none",
                 }}
                 onFocus={(e) => {
-                  e.currentTarget.style.borderColor = "rgba(24, 95, 165, 0.3)";
+                  e.currentTarget.style.borderColor = "var(--button-primary)";
                   e.currentTarget.style.boxShadow =
                     "0 0 0 3px rgba(24, 95, 165, 0.08)";
                 }}
                 onBlur={(e) => {
-                  e.currentTarget.style.borderColor = "rgba(0,0,0,0.12)";
+                  e.currentTarget.style.borderColor = "var(--border-color)";
                   e.currentTarget.style.boxShadow = "none";
                 }}
               />
@@ -193,7 +217,7 @@ function UserLoginPage() {
                 <label
                   style={{
                     fontWeight: "600",
-                    color: "#0f172a",
+                    color: "var(--text-primary)",
                     fontSize: "14px",
                   }}
                 >
@@ -205,7 +229,7 @@ function UserLoginPage() {
                   style={{
                     background: "none",
                     border: "none",
-                    color: "#185FA5",
+                    color: "var(--button-primary)",
                     fontSize: "12px",
                     fontWeight: "600",
                     cursor: "pointer",
@@ -213,10 +237,10 @@ function UserLoginPage() {
                     transition: "color 0.2s",
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.color = "#0e3d6e";
+                    e.currentTarget.style.color = "var(--button-primary-hover)";
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.color = "#185FA5";
+                    e.currentTarget.style.color = "var(--button-primary)";
                   }}
                 >
                   Forgot password?
@@ -236,17 +260,17 @@ function UserLoginPage() {
                   fontSize: "14px",
                   boxSizing: "border-box",
                   background: "#fff",
-                  color: "#0f172a",
+                  color: "var(--text-primary)",
                   transition: "all 0.2s",
                   outline: "none",
                 }}
                 onFocus={(e) => {
-                  e.currentTarget.style.borderColor = "rgba(24, 95, 165, 0.3)";
+                  e.currentTarget.style.borderColor = "var(--button-primary)";
                   e.currentTarget.style.boxShadow =
                     "0 0 0 3px rgba(24, 95, 165, 0.08)";
                 }}
                 onBlur={(e) => {
-                  e.currentTarget.style.borderColor = "rgba(0,0,0,0.12)";
+                  e.currentTarget.style.borderColor = "var(--border-color)";
                   e.currentTarget.style.boxShadow = "none";
                 }}
               />
@@ -261,7 +285,7 @@ function UserLoginPage() {
                 padding: "11px 16px",
                 border: "none",
                 borderRadius: "8px",
-                backgroundColor: "#185FA5",
+                backgroundColor: "var(--button-primary)",
                 color: "white",
                 fontSize: "14px",
                 fontWeight: "600",
@@ -272,13 +296,14 @@ function UserLoginPage() {
               }}
               onMouseEnter={(e) => {
                 if (!isSubmitting) {
-                  e.currentTarget.style.backgroundColor = "#0e3d6e";
+                  e.currentTarget.style.backgroundColor =
+                    "var(--button-primary-hover)";
                   e.currentTarget.style.boxShadow =
                     "0 4px 12px rgba(24, 95, 165, 0.2)";
                 }
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = "#185FA5";
+                e.currentTarget.style.backgroundColor = "var(--button-primary)";
                 e.currentTarget.style.boxShadow = "none";
               }}
             >
@@ -299,11 +324,15 @@ function UserLoginPage() {
               style={{
                 flex: 1,
                 height: "0.5px",
-                background: "rgba(0,0,0,0.08)",
+                background: "var(--border-color)",
               }}
             />
             <span
-              style={{ fontSize: "12px", color: "#94a3b8", fontWeight: "500" }}
+              style={{
+                fontSize: "12px",
+                color: "var(--text-secondary)",
+                fontWeight: "500",
+              }}
             >
               New here?
             </span>
@@ -311,7 +340,7 @@ function UserLoginPage() {
               style={{
                 flex: 1,
                 height: "0.5px",
-                background: "rgba(0,0,0,0.08)",
+                background: "var(--border-color)",
               }}
             />
           </div>
@@ -326,7 +355,7 @@ function UserLoginPage() {
               border: "0.5px solid rgba(0,0,0,0.12)",
               borderRadius: "8px",
               backgroundColor: "#fff",
-              color: "#185FA5",
+              color: "var(--button-primary)",
               fontSize: "14px",
               fontWeight: "600",
               cursor: "pointer",
@@ -334,12 +363,12 @@ function UserLoginPage() {
               marginBottom: "1rem",
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = "#E6F1FB";
+              e.currentTarget.style.backgroundColor = "var(--surface-alt)";
               e.currentTarget.style.borderColor = "rgba(24, 95, 165, 0.25)";
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.backgroundColor = "#fff";
-              e.currentTarget.style.borderColor = "rgba(0,0,0,0.12)";
+              e.currentTarget.style.borderColor = "var(--border-color)";
             }}
           >
             Create new account
@@ -354,17 +383,17 @@ function UserLoginPage() {
               padding: "10px 16px",
               border: "none",
               background: "none",
-              color: "#64748b",
+              color: "var(--text-secondary)",
               fontSize: "13px",
               fontWeight: "500",
               cursor: "pointer",
               transition: "color 0.2s",
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.color = "#334155";
+              e.currentTarget.style.color = "var(--text-secondary)";
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.color = "#64748b";
+              e.currentTarget.style.color = "var(--text-secondary)";
             }}
           >
             ← Back to home
