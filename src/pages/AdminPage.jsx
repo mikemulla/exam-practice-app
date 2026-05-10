@@ -325,6 +325,12 @@ function AdminPage() {
       icon: "👥",
       path: "/admin-users",
     },
+    {
+      title: "Notify Users",
+      description: "Send email notifications about new questions.",
+      icon: "📧",
+      path: "/admin-notifications",
+    },
   ];
 
   const getScoreColor = (percent) => {
@@ -338,11 +344,11 @@ function AdminPage() {
       style={S.card}
       onClick={() => navigate(item.path)}
       onMouseEnter={(e) => {
-        e.currentTarget.style.borderColor = "#185fa5";
+        e.currentTarget.style.borderColor = "var(--button-primary)";
         e.currentTarget.style.boxShadow = "0 4px 12px rgba(24, 95, 165, 0.08)";
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = "#e2e8f0";
+        e.currentTarget.style.borderColor = "var(--border-color)";
         e.currentTarget.style.boxShadow = "none";
       }}
     >

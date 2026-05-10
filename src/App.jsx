@@ -16,6 +16,7 @@ import AdminLoginPage from "./pages/AdminLoginPage";
 import ProtectedAdminRoute from "./components/ProtectedAdminRoute";
 import AdminRequestsPage from "./pages/AdminRequestdPage";
 import AdminUsersPage from "./pages/AdminUsersPage";
+import AdminNotifyUsersPage from "./pages/AdminNotifyUsersPage";
 import UserLoginPage from "./pages/UserLoginPage";
 import UserSignupPage from "./pages/UserSignupPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
@@ -163,6 +164,14 @@ function App() {
           element={
             <ProtectedAdminRoute>
               <ManageQuestionsPage />
+            </ProtectedAdminRoute>
+          }
+        />
+        <Route
+          path="/admin-notifications"
+          element={
+            <ProtectedAdminRoute>
+              <AdminNotifyUsersPage />
             </ProtectedAdminRoute>
           }
         />
