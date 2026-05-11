@@ -1,6 +1,26 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import api from "../lib/api";
+import * as FireworksPreset from "react-canvas-confetti/dist/presets/fireworks";
+
+const resolvePresetComponent = (presetModule) => {
+  const candidates = [
+    presetModule?.default?.default,
+    presetModule?.default?.Fireworks,
+    presetModule?.Fireworks?.default,
+    presetModule?.Fireworks,
+    presetModule?.default,
+    presetModule,
+  ];
+
+  return candidates.find(
+    (candidate) =>
+      typeof candidate === "function" ||
+      Boolean(candidate && candidate.$$typeof),
+  );
+};
+
+const Fireworks = resolvePresetComponent(FireworksPreset);
 
 /* ─── Design tokens ─── */
 const T = {
@@ -8,7 +28,7 @@ const T = {
   surface: "var(--bg-secondary)",
   surfaceAlt: "var(--surface-alt)",
   border: "var(--border-color)",
-  borderStrong: "rgba(0,0,0,0.12)",
+  borderStrong: "var(--border-strong)",
   ink: "var(--text-primary)",
   inkMid: "var(--text-secondary)",
   inkFaint: "var(--text-secondary)",
@@ -26,6 +46,7 @@ const T = {
   radiusLg: "14px",
   shadow: "0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)",
   shadowMd: "0 2px 8px rgba(0,0,0,0.08), 0 8px 32px rgba(0,0,0,0.06)",
+  fontSans: "Inter, system-ui, sans-serif",
 };
 
 const injectFonts = () => {
@@ -37,6 +58,8 @@ const injectFonts = () => {
     "https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap";
   document.head.appendChild(link);
 };
+
+
 
 const globalCSS = `
   @keyframes fadeUp {
@@ -740,6 +763,10 @@ function SubjectTestPage() {
     [questions, selectedAnswers],
   );
 
+  const isPerfectScore =
+    showResults && questions.length > 0 && score === questions.length;
+
+
   useEffect(() => {
     if (
       !showResults ||
@@ -932,6 +959,28 @@ function SubjectTestPage() {
 
     return page(
       <>
+        {isPerfectScore && Fireworks && (
+          <div
+            style={{
+              position: "fixed",
+              inset: 0,
+              width: "100vw",
+              height: "100vh",
+              pointerEvents: "none",
+              zIndex: 9999,
+            }}
+          >
+            <Fireworks
+              key={`perfect-fireworks-${score}-${questions.length}`}
+              autorun={{ speed: 3 }}
+              style={{
+                width: "100%",
+                height: "100%",
+              }}
+            />
+          </div>
+        )}
+
         {/* Score card */}
         <div
           style={{
@@ -1473,7 +1522,7 @@ function SubjectTestPage() {
                     ? T.accent
                     : isAnswered
                       ? `${T.accent}66`
-                      : "#cbd5e1",
+                      : "var(--border-strong)",
                   cursor: "pointer",
                   transition: "all 0.25s cubic-bezier(0.4,0,0.2,1)",
                 }}
