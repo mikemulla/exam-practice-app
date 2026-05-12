@@ -16,6 +16,9 @@ function AdminUsersPage() {
   const [search, setSearch] = useState("");
   const [filterCourse, setFilterCourse] = useState("");
   const [filterLevel, setFilterLevel] = useState("");
+  const [totalUsers, setTotalUsers] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
   // Design tokens matching AdminPage
   const S = {
@@ -283,10 +286,34 @@ function AdminUsersPage() {
     try {
       setIsLoading(true);
       const adminToken = localStorage.getItem("adminToken");
-      const { data } = await api.get("/api/users/admin/all", {
-        headers: { Authorization: `Bearer ${adminToken}` },
-      });
-      setUsers(apiArray(data, "users"));
+      const response = await api.get(
+        `/api/users/admin/all?page=${currentPage}&limit=50`,
+        {
+          headers: { Authorization: `Bearer ${adminToken}` },
+        },
+      );
+
+      // Handle the response structure
+      const responseData = response.data;
+      console.log("Full API Response:", responseData);
+
+      // Extract the values - they might be at response.data or nested
+      const users = responseData.users || responseData.data || [];
+      const total = responseData.total || 0;
+      const totalPages = responseData.totalPages || 1;
+
+      console.log(
+        "Extracted - Users:",
+        users.length,
+        "Total:",
+        total,
+        "Pages:",
+        totalPages,
+      );
+
+      setUsers(users);
+      setTotalUsers(total);
+      setTotalPages(totalPages);
     } catch (err) {
       console.error("Error fetching users:", err);
       alert("Failed to load users");
@@ -297,7 +324,7 @@ function AdminUsersPage() {
 
   useEffect(() => {
     fetchUsers();
-  }, []);
+  }, [currentPage]);
 
   const handleDelete = async (id, name) => {
     if (!window.confirm(`Remove ${name} from the platform?`)) return;
@@ -479,10 +506,10 @@ function AdminUsersPage() {
         </div>
 
         {/* Stats Strip */}
-        {!isLoading && users.length > 0 && (
+        {!isLoading && totalUsers > 0 && (
           <div style={S.statsGrid}>
             <div style={S.statCard}>
-              <div style={S.statValue}>{users.length}</div>
+              <div style={S.statValue}>{totalUsers}</div>
               <p style={S.statLabel}>Total users</p>
             </div>
             <div style={S.statCard}>
@@ -564,10 +591,15 @@ function AdminUsersPage() {
           {/* Count bar */}
           <div style={S.countBar}>
             <span>
-              {filtered.length} user{filtered.length !== 1 ? "s" : ""}
+              {filtered.length} user{filtered.length !== 1 ? "s" : ""} on page{" "}
+              {currentPage}
               {filtered.length !== users.length
-                ? ` (filtered from ${users.length})`
+                ? ` (filtered from ${users.length} on page)`
                 : ""}
+            </span>
+            <span style={{ color: "#94a3b8", fontSize: "13px" }}>
+              {totalUsers} total users across {totalPages} page
+              {totalPages !== 1 ? "s" : ""}
             </span>
           </div>
 
@@ -599,6 +631,93 @@ function AdminUsersPage() {
             ))
           )}
         </div>
+
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div
+            style={{
+              display: "flex",
+              gap: "12px",
+              marginTop: "20px",
+              justifyContent: "center",
+              alignItems: "center",
+              padding: "16px",
+            }}
+          >
+            <button
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage((p) => p - 1)}
+              style={{
+                padding: "10px 16px",
+                border: "1px solid #e2e8f0",
+                borderRadius: "8px",
+                background: currentPage === 1 ? "#f1f5f9" : "white",
+                color: currentPage === 1 ? "#94a3b8" : "#334155",
+                fontSize: "14px",
+                fontWeight: "600",
+                cursor: currentPage === 1 ? "not-allowed" : "pointer",
+                transition: "all 0.2s",
+              }}
+              onMouseEnter={(e) => {
+                if (currentPage !== 1) {
+                  e.currentTarget.style.backgroundColor = "#f1f5f9";
+                  e.currentTarget.style.borderColor = "#cbd5e1";
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (currentPage !== 1) {
+                  e.currentTarget.style.backgroundColor = "white";
+                  e.currentTarget.style.borderColor = "#e2e8f0";
+                }
+              }}
+            >
+              ← Previous
+            </button>
+
+            <span
+              style={{
+                padding: "0 16px",
+                fontSize: "14px",
+                fontWeight: "600",
+                color: "#0f172a",
+                minWidth: "100px",
+                textAlign: "center",
+              }}
+            >
+              Page {currentPage} of {totalPages}
+            </span>
+
+            <button
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage((p) => p + 1)}
+              style={{
+                padding: "10px 16px",
+                border: "1px solid #e2e8f0",
+                borderRadius: "8px",
+                background: currentPage === totalPages ? "#f1f5f9" : "white",
+                color: currentPage === totalPages ? "#94a3b8" : "#334155",
+                fontSize: "14px",
+                fontWeight: "600",
+                cursor: currentPage === totalPages ? "not-allowed" : "pointer",
+                transition: "all 0.2s",
+              }}
+              onMouseEnter={(e) => {
+                if (currentPage !== totalPages) {
+                  e.currentTarget.style.backgroundColor = "#f1f5f9";
+                  e.currentTarget.style.borderColor = "#cbd5e1";
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (currentPage !== totalPages) {
+                  e.currentTarget.style.backgroundColor = "white";
+                  e.currentTarget.style.borderColor = "#e2e8f0";
+                }
+              }}
+            >
+              Next →
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
