@@ -59,8 +59,6 @@ const injectFonts = () => {
   document.head.appendChild(link);
 };
 
-
-
 const globalCSS = `
   @keyframes fadeUp {
     from { opacity: 0; transform: translateY(10px); }
@@ -766,7 +764,6 @@ function SubjectTestPage() {
   const isPerfectScore =
     showResults && questions.length > 0 && score === questions.length;
 
-
   useEffect(() => {
     if (
       !showResults ||
@@ -782,7 +779,7 @@ function SubjectTestPage() {
         resultSavedRef.current = true;
         const timeUsed = Math.max(0, (subject.duration || 300) - timeLeft);
 
-        await api.post(
+        const response = await api.post(
           "/api/results",
           {
             subjectId: subject._id,
@@ -794,6 +791,13 @@ function SubjectTestPage() {
           },
           { _tokenType: "user" },
         );
+
+        if (response.data?.unlockedBadges?.length) {
+          sessionStorage.setItem(
+            "newBadge",
+            JSON.stringify(response.data.unlockedBadges[0]),
+          );
+        }
       } catch (error) {
         resultSavedRef.current = false;
         console.error("Failed to save result:", error);

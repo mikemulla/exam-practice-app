@@ -310,6 +310,12 @@ function AdminPage() {
       icon: "⚙️",
       path: "/manage-questions",
     },
+    {
+      title: "Manage Courses",
+      description: "Add and manage available courses.",
+      icon: "📚",
+      path: "/admin-courses",
+    },
   ];
 
   const otherMenuItems = [
@@ -324,6 +330,12 @@ function AdminPage() {
       description: "View and manage student accounts.",
       icon: "👥",
       path: "/admin-users",
+    },
+    {
+      title: "Manage Users",
+      description: "Bulk update user course and level assignments.",
+      icon: "👥",
+      path: "/admin-user-management",
     },
     {
       title: "Notify Users",

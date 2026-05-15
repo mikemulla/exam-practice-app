@@ -23,6 +23,8 @@ import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import ProtectedUserRoute from "./components/ProtectedUserRoute";
 import UserDashboardPage from "./pages/UserDashboardPage";
+import AdminUserManagementPage from "./pages/AdminUserManagementPage";
+import AdminCoursesPage from "./pages/AdminCoursesPage";
 
 function App() {
   return (
@@ -168,10 +170,26 @@ function App() {
           }
         />
         <Route
+          path="/admin-user-management"
+          element={
+            <ProtectedAdminRoute>
+              <AdminUserManagementPage />
+            </ProtectedAdminRoute>
+          }
+        />
+        <Route
           path="/admin-notifications"
           element={
             <ProtectedAdminRoute>
               <AdminNotifyUsersPage />
+            </ProtectedAdminRoute>
+          }
+        />
+        <Route
+          path="/admin-courses"
+          element={
+            <ProtectedAdminRoute>
+              <AdminCoursesPage />
             </ProtectedAdminRoute>
           }
         />

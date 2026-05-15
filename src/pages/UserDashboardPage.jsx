@@ -331,7 +331,7 @@ function ProgressChart({ results }) {
     y: H - PY - (d.score / 100) * (H - PY * 2),
   }));
   const polyline = pts.map((p) => `${p.x},${p.y}`).join(" ");
-  const area = `${pts.map((p) => `${p.x},${p.y}`).join(" ")} ${pts[pts.length - 1].x},${H} ${pts[0].x},${H}`;
+  const area = `${pts.map((p) => `${p.x}, ${p.y}`).join(" ")} ${pts[pts.length - 1].x},${H} ${pts[0].x},${H}`;
 
   return (
     <div
@@ -472,20 +472,26 @@ export default function UserDashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [tab, setTab] = useState("overview");
 
+  const [badges, setBadges] = useState([]);
+  const [badgePopup, setbadgePopup] = useState(null);
+
   const fetchData = async () => {
     try {
       setIsLoading(true);
-      const [summaryRes, historyRes] = await Promise.all([
+      const [summaryRes, historyRes, badgeRes] = await Promise.all([
         api.get("/api/results/me/summary", { _tokenType: "user" }),
         api.get("/api/results/me", { _tokenType: "user" }),
+        api.get("/api/badges/me", { _tokenType: "user" }),
       ]);
 
       setSummary(normalizeSummary(summaryRes.data));
       setResults(safeArray(historyRes.data));
+      setBadges(badgeRes.data?.badges || []);
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
       setSummary(normalizeSummary(null));
       setResults([]);
+      setBadges([]);
     } finally {
       setIsLoading(false);
     }
@@ -493,6 +499,28 @@ export default function UserDashboardPage() {
 
   useEffect(() => {
     fetchData();
+  }, []);
+
+  useEffect(() => {
+    const storedBadge = sessionStorage.getItem("newBadge");
+
+    if (!storedBadge) return undefined;
+
+    try {
+      const parsedBadge = JSON.parse(storedBadge);
+      setbadgePopup(parsedBadge);
+
+      const timer = setTimeout(() => {
+        setbadgePopup(null);
+        sessionStorage.removeItem("newBadge");
+      }, 5000);
+
+      return () => clearTimeout(timer);
+    } catch (error) {
+      console.error("Badge popup parse error:", error);
+      sessionStorage.removeItem("newBadge");
+      return undefined;
+    }
   }, []);
 
   const handleLogout = () => {
@@ -782,6 +810,53 @@ export default function UserDashboardPage() {
             ))}
           </div>
         )}
+        {badgePopup && (
+          <div
+            style={{
+              position: "fixed",
+              top: "24px",
+              right: "24px",
+              background: "#111827",
+              color: "white",
+              padding: "18px",
+              borderRadius: "16px",
+              zIndex: 9999,
+              width: "320px",
+              boxShadow: "0 15px 40px rgba(0,0,0,0.3)",
+            }}
+          >
+            <div style={{ fontSize: "42px" }}>{badgePopup?.icon}</div>
+
+            <div
+              style={{
+                fontSize: "18px",
+                fontWeight: "700",
+                marginTop: "10px",
+              }}
+            >
+              New Badge Unlocked!
+            </div>
+
+            <div
+              style={{
+                fontSize: "16px",
+                marginTop: "8px",
+              }}
+            >
+              {badgePopup?.title}
+            </div>
+
+            <div
+              style={{
+                fontSize: "13px",
+                opacity: 0.8,
+                marginTop: "6px",
+              }}
+            >
+              {badgePopup?.description}
+            </div>
+          </div>
+        )}
 
         <div>
           <SectionLabel>Your stats</SectionLabel>
@@ -876,6 +951,67 @@ export default function UserDashboardPage() {
 
             <ProgressChart results={resultList} />
 
+            <div
+              style={{
+                background: t.surface,
+                border: `0.5px solid ${t.border}`,
+                borderRadius: 12,
+                padding: 18,
+              }}
+            >
+              <SectionLabel>Achievements</SectionLabel>
+
+              {badges.length === 0 ? (
+                <div style={{ fontSize: 12, color: t.textSec }}>
+                  No badges earned yet. Complete tests to unlock achievements.
+                </div>
+              ) : (
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: isMobile
+                      ? "repeat(2, 1fr)"
+                      : "repeat(auto-fit, minmax(150px, 1fr))",
+                    gap: 12,
+                  }}
+                >
+                  {badges.map((badge) => (
+                    <div
+                      key={badge._id || badge.key}
+                      style={{
+                        background: t.surface2,
+                        borderRadius: 12,
+                        padding: 14,
+                        border: `0.5px solid ${t.border}`,
+                      }}
+                    >
+                      <div style={{ fontSize: 30 }}>{badge.icon}</div>
+                      <div
+                        style={{
+                          marginTop: 8,
+                          fontWeight: 600,
+                          fontSize: 12,
+                          color: t.text,
+                        }}
+                      >
+                        {badge.title}
+                      </div>
+                      <div
+                        style={{
+                          marginTop: 4,
+                          fontSize: 10,
+                          color: t.textSec,
+                          lineHeight: 1.4,
+                        }}
+                      >
+                        {badge.description}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <div style={s.ctaRow}>
               <div
                 style={s.ctaMain}
@@ -892,10 +1028,10 @@ export default function UserDashboardPage() {
                 <div
                   style={{
                     position: "absolute",
-                    top     : 18,
-                    right   : 18,
+                    top: 18,
+                    right: 18,
                     fontSize: 16,
-                    color   : "rgba(255,255,255,0.3)",
+                    color: "rgba(255,255,255,0.3)",
                   }}
                 >
                   →
