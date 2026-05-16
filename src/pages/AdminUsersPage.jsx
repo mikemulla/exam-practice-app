@@ -331,7 +331,7 @@ function AdminUsersPage() {
     try {
       const adminToken = localStorage.getItem("adminToken");
       await api.delete(`/api/users/${id}`, {
-        headers: { Authorization: `Bearer ${adminToken}` },
+        _tokenType: "admin",
       });
       setUsers((prev) => prev.filter((u) => u._id !== id));
     } catch (err) {
