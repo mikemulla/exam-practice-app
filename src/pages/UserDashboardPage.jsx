@@ -471,27 +471,22 @@ export default function UserDashboardPage() {
   const [results, setResults] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [tab, setTab] = useState("overview");
-
-  const [badges, setBadges] = useState([]);
-  const [badgePopup, setbadgePopup] = useState(null);
+  const [isSideNavOpen, setIsSideNavOpen] = useState(false);
 
   const fetchData = async () => {
     try {
       setIsLoading(true);
-      const [summaryRes, historyRes, badgeRes] = await Promise.all([
+      const [summaryRes, historyRes] = await Promise.all([
         api.get("/api/results/me/summary", { _tokenType: "user" }),
         api.get("/api/results/me", { _tokenType: "user" }),
-        api.get("/api/badges/me", { _tokenType: "user" }),
       ]);
 
       setSummary(normalizeSummary(summaryRes.data));
       setResults(safeArray(historyRes.data));
-      setBadges(badgeRes.data?.badges || []);
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
       setSummary(normalizeSummary(null));
       setResults([]);
-      setBadges([]);
     } finally {
       setIsLoading(false);
     }
@@ -501,32 +496,24 @@ export default function UserDashboardPage() {
     fetchData();
   }, []);
 
-  useEffect(() => {
-    const storedBadge = sessionStorage.getItem("newBadge");
-
-    if (!storedBadge) return undefined;
-
-    try {
-      const parsedBadge = JSON.parse(storedBadge);
-      setbadgePopup(parsedBadge);
-
-      const timer = setTimeout(() => {
-        setbadgePopup(null);
-        sessionStorage.removeItem("newBadge");
-      }, 5000);
-
-      return () => clearTimeout(timer);
-    } catch (error) {
-      console.error("Badge popup parse error:", error);
-      sessionStorage.removeItem("newBadge");
-      return undefined;
-    }
-  }, []);
-
   const handleLogout = () => {
     localStorage.removeItem("userToken");
     localStorage.removeItem("userInfo");
     navigate("/user-login");
+  };
+
+  const closeSideNav = () => {
+    setIsSideNavOpen(false);
+  };
+
+  const goToPage = (path) => {
+    closeSideNav();
+    navigate(path);
+  };
+
+  const switchTab = (nextTab) => {
+    setTab(nextTab);
+    closeSideNav();
   };
 
   const resultList = safeArray(results);
@@ -543,9 +530,9 @@ export default function UserDashboardPage() {
       paddingBottom: isMobile ? 88 : 0,
     },
     topbar: {
-      background: t.surface,
-      borderBottom: `0.5px solid ${t.border}`,
-      padding: isMobile ? "12px 16px" : "14px 24px",
+      background: "transparent",
+      borderBottom: "none",
+      padding: isMobile ? "14px 16px 4px" : "18px 28px 4px",
       display: "flex",
       justifyContent: "space-between",
       alignItems: "center",
@@ -587,13 +574,41 @@ export default function UserDashboardPage() {
       color: "var(--bg-secondary)",
       cursor: "pointer",
     },
+    sideNavItem: (active) => ({
+      width: "100%",
+      textAlign: "left",
+      padding: "12px 14px",
+      borderRadius: 12,
+      border: `0.5px solid ${active ? t.blue : t.border}`,
+      background: active ? t.blueLight : t.surface,
+      color: active ? t.blue : t.text,
+      fontSize: 13,
+      fontWeight: 600,
+      cursor: "pointer",
+      fontFamily: "'Sora', sans-serif",
+    }),
     main: {
       maxWidth: 960,
       margin: "0 auto",
-      padding: isMobile ? "16px 14px 24px" : "24px 20px 40px",
+      padding: isMobile ? "10px 14px 24px" : "20px 20px 40px",
       display: "flex",
       flexDirection: "column",
       gap: 20,
+    },
+    welcomeBlock: {
+      background: "transparent",
+      padding: isMobile ? "4px 0 8px" : "6px 0 10px",
+    },
+    welcomeTitle: {
+      fontSize: isMobile ? 18 : 22,
+      fontWeight: 700,
+      color: t.text,
+      lineHeight: 1.15,
+    },
+    welcomeMeta: {
+      fontSize: isMobile ? 12 : 13,
+      color: t.textSec,
+      marginTop: 3,
     },
     statsGrid: {
       display: "grid",
@@ -680,105 +695,199 @@ export default function UserDashboardPage() {
       />
 
       <header style={s.topbar}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <button
-            onClick={() => navigate("/")}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              background: "none",
-              border: `0.5px solid ${t.border}`,
-              borderRadius: 20,
-              padding: "6px 10px",
-              fontSize: 11,
-              color: t.textSec,
-              cursor: "pointer",
-              fontFamily: "'Sora', sans-serif",
-            }}
-          >
-            <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-              <path
-                d="M10 3L5 8L10 13"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-            {!isMobile && "Home"}
-          </button>
+        <button
+          type="button"
+          onClick={() => setIsSideNavOpen(true)}
+          aria-label="Open navigation"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: 38,
+            height: 38,
+            borderRadius: 999,
+            border: `0.5px solid ${t.border}`,
+            background: "rgba(255,255,255,0.04)",
+            color: t.text,
+            cursor: "pointer",
+          }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path
+              d="M4 7h16M4 12h16M4 17h16"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+            />
+          </svg>
+        </button>
 
-          <div style={s.avatar}>
-            {(userInfo.fullName || "S")
-              .split(" ")
-              .map((w) => w[0])
-              .slice(0, 2)
-              .join("")
-              .toUpperCase()}
-          </div>
-          <div>
-            <div style={{ fontSize: 15, fontWeight: 600, color: t.text }}>
-              {userInfo.fullName || "Student"}
-            </div>
-            <div style={{ fontSize: 11, color: t.textSec, marginTop: 1 }}>
-              {userInfo.course?.name || "Course"} ·{" "}
-              {userInfo.level ? `${userInfo.level}L` : "Level"}
-            </div>
-          </div>
-        </div>
-
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          {!isMobile && (
-            <>
-              <button
-                style={s.navPill(tab === "overview")}
-                onClick={() => setTab("overview")}
-              >
-                Overview
-              </button>
-              <button
-                style={s.navPill(tab === "history")}
-                onClick={() => setTab("history")}
-              >
-                History
-              </button>
-            </>
-          )}
-          <button style={s.ctaPill} onClick={() => navigate("/user")}>
-            + Practice
-          </button>
-          <button
-            onClick={handleLogout}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 5,
-              background: "none",
-              border: `0.5px solid ${t.border}`,
-              borderRadius: 20,
-              padding: "7px 12px",
-              fontSize: 12,
-              fontFamily: "'Sora', sans-serif",
-              color: t.textSec,
-              cursor: "pointer",
-            }}
-          >
-            <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-              <path
-                d="M6 2H3a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3M10 11l3-3-3-3M13 8H6"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-            {!isMobile && "Sign out"}
-          </button>
-        </div>
+        <button style={s.ctaPill} onClick={() => navigate("/user")}>
+          + Practice
+        </button>
       </header>
 
+      {isSideNavOpen && (
+        <div
+          onClick={closeSideNav}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(15, 23, 42, 0.45)",
+            zIndex: 900,
+          }}
+        />
+      )}
+
+      <aside
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          width: isMobile ? "82vw" : 320,
+          maxWidth: 340,
+          height: "100vh",
+          background: t.surface,
+          borderRight: `0.5px solid ${t.border}`,
+          zIndex: 1000,
+          transform: isSideNavOpen ? "translateX(0)" : "translateX(-105%)",
+          transition: "transform 0.25s ease",
+          boxShadow: isSideNavOpen ? "18px 0 45px rgba(15,23,42,0.18)" : "none",
+          display: "flex",
+          flexDirection: "column",
+          padding: 18,
+          boxSizing: "border-box",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 22,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={s.avatar}>
+              {(userInfo.fullName || "S")
+                .split(" ")
+                .map((w) => w[0])
+                .slice(0, 2)
+                .join("")
+                .toUpperCase()}
+            </div>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: t.text }}>
+                {userInfo.fullName || "Student"}
+              </div>
+              <div style={{ fontSize: 11, color: t.textSec }}>
+                {userInfo.course?.name || "Course"} ·{" "}
+                {userInfo.level ? `${userInfo.level}L` : "Level"}
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={closeSideNav}
+            aria-label="Close navigation"
+            style={{
+              width: 34,
+              height: 34,
+              borderRadius: 999,
+              border: `0.5px solid ${t.border}`,
+              background: t.surface2,
+              color: t.text,
+              cursor: "pointer",
+            }}
+          >
+            ×
+          </button>
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <button
+            type="button"
+            onClick={() => goToPage("/")}
+            style={s.sideNavItem(false)}
+          >
+            Home
+          </button>
+
+          <button
+            type="button"
+            onClick={() => switchTab("overview")}
+            style={s.sideNavItem(tab === "overview")}
+          >
+            Overview
+          </button>
+
+          <button
+            type="button"
+            onClick={() => switchTab("history")}
+            style={s.sideNavItem(tab === "history")}
+          >
+            History
+          </button>
+
+          <button
+            type="button"
+            onClick={() => goToPage("/user")}
+            style={s.sideNavItem(false)}
+          >
+            Practice
+          </button>
+
+          <button
+            type="button"
+            onClick={() => goToPage("/request-subject")}
+            style={s.sideNavItem(false)}
+          >
+            Request Subject
+          </button>
+        </div>
+
+        <div style={{ marginTop: "auto" }}>
+          <button
+            type="button"
+            onClick={handleLogout}
+            style={{
+              ...s.sideNavItem(false),
+              color: t.red,
+              background: t.redLight,
+              borderColor: t.redLight,
+              width: "100%",
+            }}
+          >
+            Sign out
+          </button>
+        </div>
+      </aside>
+
       <main style={s.main}>
+        <div style={s.welcomeBlock}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={s.avatar}>
+              {(userInfo.fullName || "S")
+                .split(" ")
+                .map((w) => w[0])
+                .slice(0, 2)
+                .join("")
+                .toUpperCase()}
+            </div>
+
+            <div>
+              <div style={s.welcomeTitle}>
+                Welcome, {userInfo.fullName || "Student"}
+              </div>
+              <div style={s.welcomeMeta}>
+                {userInfo.course?.name || "Course"} ·{" "}
+                {userInfo.level ? `${userInfo.level}L` : "Level"}
+              </div>
+            </div>
+          </div>
+        </div>
+
         {isMobile && (
           <div
             style={{
@@ -808,53 +917,6 @@ export default function UserDashboardPage() {
                 {item.charAt(0).toUpperCase() + item.slice(1)}
               </button>
             ))}
-          </div>
-        )}
-        {badgePopup && (
-          <div
-            style={{
-              position: "fixed",
-              top: "24px",
-              right: "24px",
-              background: "#111827",
-              color: "white",
-              padding: "18px",
-              borderRadius: "16px",
-              zIndex: 9999,
-              width: "320px",
-              boxShadow: "0 15px 40px rgba(0,0,0,0.3)",
-            }}
-          >
-            <div style={{ fontSize: "42px" }}>{badgePopup?.icon}</div>
-
-            <div
-              style={{
-                fontSize: "18px",
-                fontWeight: "700",
-                marginTop: "10px",
-              }}
-            >
-              New Badge Unlocked!
-            </div>
-
-            <div
-              style={{
-                fontSize: "16px",
-                marginTop: "8px",
-              }}
-            >
-              {badgePopup?.title}
-            </div>
-
-            <div
-              style={{
-                fontSize: "13px",
-                opacity: 0.8,
-                marginTop: "6px",
-              }}
-            >
-              {badgePopup?.description}
-            </div>
           </div>
         )}
 
@@ -950,67 +1012,6 @@ export default function UserDashboardPage() {
             </div>
 
             <ProgressChart results={resultList} />
-
-            <div
-              style={{
-                background: t.surface,
-                border: `0.5px solid ${t.border}`,
-                borderRadius: 12,
-                padding: 18,
-              }}
-            >
-              <SectionLabel>Achievements</SectionLabel>
-
-              {badges.length === 0 ? (
-                <div style={{ fontSize: 12, color: t.textSec }}>
-                  No badges earned yet. Complete tests to unlock achievements.
-                </div>
-              ) : (
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: isMobile
-                      ? "repeat(2, 1fr)"
-                      : "repeat(auto-fit, minmax(150px, 1fr))",
-                    gap: 12,
-                  }}
-                >
-                  {badges.map((badge) => (
-                    <div
-                      key={badge._id || badge.key}
-                      style={{
-                        background: t.surface2,
-                        borderRadius: 12,
-                        padding: 14,
-                        border: `0.5px solid ${t.border}`,
-                      }}
-                    >
-                      <div style={{ fontSize: 30 }}>{badge.icon}</div>
-                      <div
-                        style={{
-                          marginTop: 8,
-                          fontWeight: 600,
-                          fontSize: 12,
-                          color: t.text,
-                        }}
-                      >
-                        {badge.title}
-                      </div>
-                      <div
-                        style={{
-                          marginTop: 4,
-                          fontSize: 10,
-                          color: t.textSec,
-                          lineHeight: 1.4,
-                        }}
-                      >
-                        {badge.description}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
 
             <div style={s.ctaRow}>
               <div
@@ -1258,121 +1259,6 @@ export default function UserDashboardPage() {
           </div>
         )}
       </main>
-
-      {isMobile && (
-        <nav
-          style={{
-            position: "fixed",
-            bottom: 0,
-            left: 0,
-            right: 0,
-            background: t.surface,
-            borderTop: `0.5px solid ${t.border}`,
-            padding: "10px 0 18px",
-            zIndex: 200,
-          }}
-        >
-          <div style={{ display: "flex", justifyContent: "space-around" }}>
-            {[
-              {
-                label: "Overview",
-                key: "overview",
-                icon: (
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                    <rect
-                      x="3"
-                      y="3"
-                      width="8"
-                      height="8"
-                      rx="1"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                    />
-                    <rect
-                      x="13"
-                      y="3"
-                      width="8"
-                      height="8"
-                      rx="1"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                    />
-                    <rect
-                      x="3"
-                      y="13"
-                      width="8"
-                      height="8"
-                      rx="1"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                    />
-                    <rect
-                      x="13"
-                      y="13"
-                      width="8"
-                      height="8"
-                      rx="1"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                    />
-                  </svg>
-                ),
-              },
-              {
-                label: "History",
-                key: "history",
-                icon: (
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                    <path
-                      d="M4 6h16M4 12h10M4 18h7"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                ),
-              },
-              {
-                label: "Practice",
-                key: "practice",
-                icon: (
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                    <path
-                      d="M5 3l14 9-14 9V3z"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                ),
-                action: () => navigate("/user"),
-              },
-            ].map(({ label, key, icon, action }) => {
-              const active = tab === key;
-              return (
-                <button
-                  key={key}
-                  onClick={action || (() => setTab(key))}
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    gap: 4,
-                    background: "none",
-                    border: "none",
-                    cursor: "pointer",
-                    padding: "4px 12px",
-                    color: active ? t.blue : t.textTert,
-                  }}
-                >
-                  {icon}
-                  <span style={{ fontSize: 10, fontWeight: 500 }}>{label}</span>
-                </button>
-              );
-            })}
-          </div>
-        </nav>
-      )}
     </div>
   );
 }
