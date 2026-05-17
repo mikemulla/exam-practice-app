@@ -861,7 +861,7 @@ export default function UserDashboardPage() {
           display: "flex",
           flexDirection: "column",
           padding: 18,
-          paddingBottom: "55px",
+          paddingBottom: "35px",
           boxSizing: "border-box",
           overflowY: "auto",
         }}
