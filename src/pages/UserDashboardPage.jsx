@@ -851,7 +851,7 @@ export default function UserDashboardPage() {
           left: 0,
           width: isMobile ? "82vw" : 320,
           maxWidth: 340,
-          height: "100vh",
+          height: "100dvh",
           background: t.surface,
           borderRight: `0.5px solid ${t.border}`,
           zIndex: 1000,
@@ -861,6 +861,7 @@ export default function UserDashboardPage() {
           display: "flex",
           flexDirection: "column",
           padding: 18,
+          paddingBottom: "120px",
           boxSizing: "border-box",
           overflowY: "auto",
         }}
