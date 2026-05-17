@@ -472,21 +472,45 @@ export default function UserDashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [tab, setTab] = useState("overview");
   const [isSideNavOpen, setIsSideNavOpen] = useState(false);
+  const [badges, setBadges] = useState([]);
+  const [badgePopup, setBadgePopup] = useState(null);
 
   const fetchData = async () => {
     try {
       setIsLoading(true);
-      const [summaryRes, historyRes] = await Promise.all([
-        api.get("/api/results/me/summary", { _tokenType: "user" }),
-        api.get("/api/results/me", { _tokenType: "user" }),
-      ]);
 
-      setSummary(normalizeSummary(summaryRes.data));
-      setResults(safeArray(historyRes.data));
+      const [summaryResult, historyResult, badgesResult] =
+        await Promise.allSettled([
+          api.get("/api/results/me/summary", { _tokenType: "user" }),
+          api.get("/api/results/me", { _tokenType: "user" }),
+          api.get("/api/badges/me", { _tokenType: "user" }),
+        ]);
+
+      if (summaryResult.status === "fulfilled") {
+        setSummary(normalizeSummary(summaryResult.value.data));
+      } else {
+        console.error("Summary load error:", summaryResult.reason);
+        setSummary(normalizeSummary(null));
+      }
+
+      if (historyResult.status === "fulfilled") {
+        setResults(safeArray(historyResult.value.data));
+      } else {
+        console.error("History load error:", historyResult.reason);
+        setResults([]);
+      }
+
+      if (badgesResult.status === "fulfilled") {
+        setBadges(safeArray(badgesResult.value.data?.badges));
+      } else {
+        console.error("Badges load error:", badgesResult.reason);
+        setBadges([]);
+      }
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
       setSummary(normalizeSummary(null));
       setResults([]);
+      setBadges([]);
     } finally {
       setIsLoading(false);
     }
@@ -494,6 +518,28 @@ export default function UserDashboardPage() {
 
   useEffect(() => {
     fetchData();
+  }, []);
+
+  useEffect(() => {
+    const storedBadge = sessionStorage.getItem("newBadge");
+
+    if (!storedBadge) return undefined;
+
+    try {
+      const parsedBadge = JSON.parse(storedBadge);
+      setBadgePopup(parsedBadge);
+
+      const timer = setTimeout(() => {
+        setBadgePopup(null);
+        sessionStorage.removeItem("newBadge");
+      }, 5000);
+
+      return () => clearTimeout(timer);
+    } catch (error) {
+      console.error("Badge popup parse error:", error);
+      sessionStorage.removeItem("newBadge");
+      return undefined;
+    }
   }, []);
 
   const handleLogout = () => {
@@ -656,6 +702,32 @@ export default function UserDashboardPage() {
       display: "flex",
       flexDirection: "column",
     },
+    achievementGrid: {
+      display: "grid",
+      gridTemplateColumns: isMobile
+        ? "repeat(2, minmax(0, 1fr))"
+        : "repeat(auto-fit, minmax(150px, 1fr))",
+      gap: 12,
+    },
+    achievementCard: {
+      background: t.surface2,
+      border: `0.5px solid ${t.border}`,
+      borderRadius: 12,
+      padding: 14,
+    },
+    badgePopup: {
+      position: "fixed",
+      top: isMobile ? 14 : 24,
+      right: isMobile ? 14 : 24,
+      left: isMobile ? 14 : "auto",
+      background: "#111827",
+      color: "white",
+      padding: 18,
+      borderRadius: 16,
+      zIndex: 2000,
+      maxWidth: isMobile ? "unset" : 320,
+      boxShadow: "0 15px 40px rgba(0,0,0,0.3)",
+    },
     histTableHead: {
       display: "grid",
       gridTemplateColumns: isMobile ? "1fr auto auto" : "1fr auto auto auto",
@@ -693,6 +765,39 @@ export default function UserDashboardPage() {
         href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600&family=DM+Serif+Display:ital@0;1&display=swap"
         rel="stylesheet"
       />
+
+      {badgePopup && (
+        <div style={s.badgePopup}>
+          <div style={{ fontSize: 42 }}>{badgePopup?.icon}</div>
+          <div
+            style={{
+              fontSize: 18,
+              fontWeight: 700,
+              marginTop: 10,
+            }}
+          >
+            New Badge Unlocked!
+          </div>
+          <div
+            style={{
+              fontSize: 16,
+              marginTop: 8,
+            }}
+          >
+            {badgePopup?.title}
+          </div>
+          <div
+            style={{
+              fontSize: 13,
+              opacity: 0.8,
+              marginTop: 6,
+              lineHeight: 1.5,
+            }}
+          >
+            {badgePopup?.description}
+          </div>
+        </div>
+      )}
 
       <header style={s.topbar}>
         <button
@@ -1012,6 +1117,50 @@ export default function UserDashboardPage() {
             </div>
 
             <ProgressChart results={resultList} />
+
+            <div style={s.card}>
+              <SectionLabel>Achievements</SectionLabel>
+
+              {isLoading ? (
+                <div style={{ color: t.textTert, fontSize: 13 }}>
+                  Loading achievements...
+                </div>
+              ) : badges.length === 0 ? (
+                <div
+                  style={{ fontSize: 12, color: t.textSec, lineHeight: 1.5 }}
+                >
+                  No badges earned yet. Complete tests to unlock achievements.
+                </div>
+              ) : (
+                <div style={s.achievementGrid}>
+                  {badges.map((badge) => (
+                    <div key={badge._id || badge.key} style={s.achievementCard}>
+                      <div style={{ fontSize: 30 }}>{badge.icon}</div>
+                      <div
+                        style={{
+                          marginTop: 8,
+                          fontWeight: 600,
+                          fontSize: 12,
+                          color: t.text,
+                        }}
+                      >
+                        {badge.title}
+                      </div>
+                      <div
+                        style={{
+                          marginTop: 4,
+                          fontSize: 10,
+                          color: t.textSec,
+                          lineHeight: 1.4,
+                        }}
+                      >
+                        {badge.description}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
             <div style={s.ctaRow}>
               <div
