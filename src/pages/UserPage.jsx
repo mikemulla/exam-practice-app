@@ -81,10 +81,10 @@ function SkeletonCard() {
           100% { background-position:  400px 0 }
         }
         .shimmer {
-          background: linear-gradient(90deg, var(--surface-alt) 25%, #e8edf4 50%, var(--surface-alt) 75%);
+          background     : linear-gradient(90deg, var(--surface-alt) 25%, #e8edf4 50%, var(--surface-alt) 75%);
           background-size: 800px 100%;
-          animation: shimmer 1.4s infinite;
-          border-radius: 6px;
+          animation      : shimmer 1.4s infinite;
+          border-radius  : 6px;
         }
       `}</style>
       <div
@@ -246,11 +246,11 @@ function UserPage() {
     <>
       <style>{`
         @keyframes fadeUp {
-          from { opacity: 0; transform: translateY(14px); }
+           from  { opacity: 0; transform: translateY(14px); }
           to   { opacity: 1; transform: translateY(0); }
         }
         .subject-card-enter {
-          animation: fadeUp 0.35s ease both;
+          animation : fadeUp 0.35s ease both;
           transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
         }
         .header-fade { animation: fadeUp 0.4s ease both; }
@@ -290,6 +290,265 @@ function UserPage() {
                 )}
               </div>
             )}
+          </div>
+
+          {/* Features Alert Banner */}
+          <div
+            style={{
+              background: "linear-gradient(135deg, #E6F1FB 0%, #F0F6FC 100%)",
+              border: "1px solid var(--button-primary)",
+              borderRadius: 14,
+              padding: "18px",
+              marginBottom: "2rem",
+              display: "flex",
+              flexDirection: "column",
+              gap: 14,
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+              }}
+            >
+              <div style={{ fontSize: 20 }}>✨</div>
+              <div
+                style={{
+                  fontSize: 14,
+                  fontWeight: 700,
+                  color: "#042C53",
+                }}
+              >
+                New Test Features
+              </div>
+            </div>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))",
+                gap: 10,
+              }}
+            >
+              {/* Skip Questions */}
+              <div
+                style={{
+                  background: "rgba(255,255,255,0.8)",
+                  borderRadius: 8,
+                  padding: 10,
+                  display: "flex",
+                  gap: 8,
+                  alignItems: "flex-start",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 16,
+                    flexShrink: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path d="M2 4l6 4-6 4V4z" fill="var(--button-primary)" />
+                    <path
+                      d="M10 4v8"
+                      stroke="var(--button-primary)"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </div>
+                <div>
+                  <div
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: "#042C53",
+                    }}
+                  >
+                    Skip Questions
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 10,
+                      color: "var(--text-secondary)",
+                      marginTop: 2,
+                      lineHeight: 1.3,
+                    }}
+                  >
+                    Move past difficult ones
+                  </div>
+                </div>
+              </div>
+
+              {/* Flag Questions */}
+              <div
+                style={{
+                  background: "rgba(255,255,255,0.8)",
+                  borderRadius: 8,
+                  padding: 10,
+                  display: "flex",
+                  gap: 8,
+                  alignItems: "flex-start",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 16,
+                    flexShrink: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path
+                      d="M3 2v12m0 0h7a2 2 0 002-2V4a2 2 0 00-2-2H3"
+                      stroke="var(--button-primary)"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      fill="var(--button-primary)"
+                    />
+                  </svg>
+                </div>
+                <div>
+                  <div
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: "#042C53",
+                    }}
+                  >
+                    Flag Questions
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 10,
+                      color: "var(--text-secondary)",
+                      marginTop: 2,
+                      lineHeight: 1.3,
+                    }}
+                  >
+                    Mark for review
+                  </div>
+                </div>
+              </div>
+
+              {/* Review Flags */}
+              <div
+                style={{
+                  background: "rgba(255,255,255,0.8)",
+                  borderRadius: 8,
+                  padding: 10,
+                  display: "flex",
+                  gap: 8,
+                  alignItems: "flex-start",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 16,
+                    flexShrink: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path
+                      d="M2 2h12a1 1 0 011 1v10a1 1 0 01-1 1H2a1 1 0 01-1-1V3a1 1 0 011-1z"
+                      stroke="var(--button-primary)"
+                      strokeWidth="1.5"
+                    />
+                    <path
+                      d="M2 4h12M5 7h6"
+                      stroke="var(--button-primary)"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </div>
+                <div>
+                  <div
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: "#042C53",
+                    }}
+                  >
+                    Review Flags
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 10,
+                      color: "var(--text-secondary)",
+                      marginTop: 2,
+                      lineHeight: 1.3,
+                    }}
+                  >
+                    Jump to flagged items
+                  </div>
+                </div>
+              </div>
+
+              {/* Stop Test */}
+              <div
+                style={{
+                  background: "rgba(255,255,255,0.8)",
+                  borderRadius: 8,
+                  padding: 10,
+                  display: "flex",
+                  gap: 8,
+                  alignItems: "flex-start",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 16,
+                    flexShrink: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <rect
+                      x="3"
+                      y="3"
+                      width="10"
+                      height="10"
+                      rx="1.5"
+                      fill="var(--button-primary)"
+                    />
+                  </svg>
+                </div>
+                <div>
+                  <div
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: "#042C53",
+                    }}
+                  >
+                    Stop Test
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 10,
+                      color: "var(--text-secondary)",
+                      marginTop: 2,
+                      lineHeight: 1.3,
+                    }}
+                  >
+                    Review without scoring
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           {isLoading ? (

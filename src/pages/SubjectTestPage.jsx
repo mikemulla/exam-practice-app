@@ -12,7 +12,6 @@ const resolvePresetComponent = (presetModule) => {
     presetModule?.default,
     presetModule,
   ];
-
   return candidates.find(
     (candidate) =>
       typeof candidate === "function" ||
@@ -41,6 +40,11 @@ const T = {
   danger: "#DC2626",
   dangerLight: "#FEE2E2",
   dangerBorder: "#FCA5A5",
+  warning: "#F59E0B",
+  warningLight: "#FEF3C7",
+  warningBorder: "#FCD34D",
+  flag: "#EF4444",
+  flagLight: "#FEE2E2",
   radius: "10px",
   radiusSm: "6px",
   radiusLg: "14px",
@@ -68,9 +72,27 @@ const globalCSS = `
     from { opacity: 0; }
     to   { opacity: 1; }
   }
+  @keyframes modalScale {
+    from { 
+      opacity: 0; 
+      transform: translate(-50%, -50%) scale(0.95);
+    }
+    to { 
+      opacity: 1; 
+      transform: translate(-50%, -50%) scale(1);
+    }
+  }
   @keyframes pulse {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.5; }
+  }
+  @keyframes flagPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+  }
+  @keyframes slideInRight {
+    from { opacity: 0; transform: translateX(12px); }
+    to { opacity: 1; transform: translateX(0); }
   }
   .quiz-option {
     transition: all 0.2s ease;
@@ -85,6 +107,26 @@ const globalCSS = `
     transition: all 0.25s cubic-bezier(0.4,0,0.2,1);
   }
   .dot-nav:hover { transform: scale(1.4); }
+  .flag-btn {
+    position: relative;
+    overflow: hidden;
+  }
+  .flag-btn::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: rgba(255,255,255,0.3);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.3s, height 0.3s;
+  }
+  .flag-btn:active::after {
+    width: 40px;
+    height: 40px;
+  }
 `;
 
 const injectStyles = () => {
@@ -183,6 +225,18 @@ const Icon = {
       />
     </svg>
   ),
+  flag: ({ filled = false }) => (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+      <path
+        d="M3 2v12m0 0h7a2 2 0 002-2V4a2 2 0 00-2-2H3"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill={filled ? "currentColor" : "none"}
+      />
+    </svg>
+  ),
   check: () => (
     <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
       <path
@@ -200,6 +254,17 @@ const Icon = {
         d="M2.5 2.5l7 7M9.5 2.5l-7 7"
         stroke="currentColor"
         strokeWidth="1.7"
+        strokeLinecap="round"
+      />
+    </svg>
+  ),
+  skip: () => (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+      <path d="M2 4l6 4-6 4V4z" fill="currentColor" />
+      <path
+        d="M10 4v8"
+        stroke="currentColor"
+        strokeWidth="1.5"
         strokeLinecap="round"
       />
     </svg>
@@ -246,6 +311,7 @@ function Badge({ variant, children }) {
   const variants = {
     correct: { bg: T.successLight, color: T.success, border: "#86efac" },
     incorrect: { bg: T.dangerLight, color: T.danger, border: T.dangerBorder },
+    flagged: { bg: T.flagLight, color: T.flag, border: "#FCA5A5" },
     info: { bg: T.accentLight, color: T.accent, border: "#bfdbfe" },
     neutral: { bg: "var(--surface-alt)", color: T.inkMid, border: T.border },
   };
@@ -264,6 +330,7 @@ function Badge({ variant, children }) {
         border: `1px solid ${c.border}`,
         letterSpacing: "0.01em",
         flexShrink: 0,
+        gap: "4px",
       }}
     >
       {children}
@@ -272,13 +339,20 @@ function Badge({ variant, children }) {
 }
 
 /* ─── Button ─── */
-function Btn({ variant = "ghost", children, onClick, disabled, style = {} }) {
+function Btn({
+  variant = "ghost",
+  children,
+  onClick,
+  disabled,
+  style = {},
+  isIconOnly = false,
+}) {
   const base = {
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
     gap: "6px",
-    padding: "10px 16px",
+    padding: isIconOnly ? "8px" : "10px 16px",
     borderRadius: T.radiusSm,
     fontSize: "13px",
     fontWeight: "600",
@@ -300,16 +374,253 @@ function Btn({ variant = "ghost", children, onClick, disabled, style = {} }) {
       color: T.danger,
       border: `1px solid ${T.dangerBorder}`,
     },
+    flag: {
+      background: "transparent",
+      color: T.flag,
+      border: `1.5px solid ${T.flag}`,
+    },
+    flagActive: {
+      background: T.flag,
+      color: "#fff",
+      border: `1.5px solid ${T.flag}`,
+    },
   };
   return (
     <button
-      className="quiz-btn"
+      className="quiz-btn flag-btn"
       onClick={!disabled ? onClick : undefined}
       disabled={disabled}
       style={{ ...base, ...variants[variant], ...style }}
+      title={variant === "flag" ? "Flag for review" : ""}
     >
       {children}
     </button>
+  );
+}
+
+/* ─── Flagged indicator badge with dropdown ─── */
+function FlaggedBadge({
+  count,
+  questions,
+  selectedAnswers,
+  currentQuestionIndex,
+  onSelectFlagged,
+  flaggedQuestions,
+}) {
+  const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowDropdown(false);
+      }
+    };
+
+    if (showDropdown) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [showDropdown]);
+
+  if (count === 0) return null;
+
+  const flaggedQuestionsList = questions.filter((q) =>
+    flaggedQuestions.has(q._id),
+  );
+
+  return (
+    <div
+      ref={dropdownRef}
+      style={{
+        position: "relative",
+      }}
+    >
+      <button
+        onClick={() => setShowDropdown(!showDropdown)}
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: "6px",
+          padding: "6px 12px",
+          borderRadius: "20px",
+          background: T.flagLight,
+          border: `1.5px solid ${T.flag}`,
+          cursor: "pointer",
+          transition: "all 0.2s",
+          fontSize: "12px",
+          fontWeight: "600",
+          color: T.flag,
+          animation: "slideInRight 0.3s ease",
+          fontFamily: T.fontSans,
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background = T.flag;
+          e.currentTarget.style.color = "#fff";
+          e.currentTarget.style.transform = "scale(1.05)";
+        }}
+        onMouseLeave={(e) => {
+          if (!showDropdown) {
+            e.currentTarget.style.background = T.flagLight;
+            e.currentTarget.style.color = T.flag;
+            e.currentTarget.style.transform = "scale(1)";
+          }
+        }}
+      >
+        <Icon.flag filled />
+        <span>{count}</span>
+      </button>
+
+      {showDropdown && (
+        <div
+          style={{
+            position: "fixed",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            width: "calc(100vw - 32px)",
+            maxWidth: "320px",
+            maxHeight: "60vh",
+            background: T.surface,
+            border: `1px solid ${T.border}`,
+            borderRadius: T.radiusLg,
+            boxShadow: T.shadowMd,
+            zIndex: 1000,
+            overflowY: "auto",
+            animation: "modalScale 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
+          }}
+        >
+          <div
+            style={{
+              padding: "12px",
+              borderBottom: `1px solid ${T.border}`,
+              fontSize: "12px",
+              fontWeight: "600",
+              color: T.inkFaint,
+              textTransform: "uppercase",
+              letterSpacing: "0.05em",
+              position: "sticky",
+              top: 0,
+              background: T.surface,
+              zIndex: 10,
+            }}
+          >
+            Flagged Questions ({count})
+          </div>
+
+          {flaggedQuestionsList.map((question, idx) => {
+            const questionIndex = questions.findIndex(
+              (q) => q._id === question._id,
+            );
+            const isAnswered = Boolean(selectedAnswers[question._id]);
+            const isCurrent = questionIndex === currentQuestionIndex;
+
+            return (
+              <button
+                key={question._id}
+                onClick={() => {
+                  onSelectFlagged(questionIndex);
+                  setShowDropdown(false);
+                }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "10px",
+                  padding: "12px",
+                  borderBottom:
+                    idx < flaggedQuestionsList.length - 1
+                      ? `1px solid ${T.border}`
+                      : "none",
+                  background: isCurrent ? T.accentLight : "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                  width: "100%",
+                  textAlign: "left",
+                  transition: "all 0.15s",
+                  fontSize: "13px",
+                  color: T.ink,
+                  fontFamily: T.fontSans,
+                }}
+                onMouseEnter={(e) => {
+                  if (!isCurrent) {
+                    e.currentTarget.style.background = "var(--surface-alt)";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isCurrent) {
+                    e.currentTarget.style.background = "transparent";
+                  }
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: "24px",
+                    height: "24px",
+                    borderRadius: "6px",
+                    background: T.flagLight,
+                    color: T.flag,
+                    fontSize: "12px",
+                    fontWeight: "600",
+                    flexShrink: 0,
+                  }}
+                >
+                  {questionIndex + 1}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: "13px",
+                      fontWeight: "500",
+                      color: T.ink,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    Q{String(questionIndex + 1).padStart(2, "0")}
+                  </p>
+                  <p
+                    style={{
+                      margin: "2px 0 0",
+                      fontSize: "12px",
+                      color: T.inkMid,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {question.questionText}
+                  </p>
+                </div>
+                {isAnswered && (
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      width: "20px",
+                      height: "20px",
+                      borderRadius: "50%",
+                      background: T.accentLight,
+                      color: T.accent,
+                      fontSize: "11px",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <Icon.check />
+                  </div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -418,18 +729,26 @@ function ExplanationToggle({ text }) {
 }
 
 /* ─── Question review card ─── */
-function QuestionReviewCard({ question, index, userAnswer, imageSrc }) {
+function QuestionReviewCard({
+  question,
+  index,
+  userAnswer,
+  imageSrc,
+  isFlagged,
+}) {
   const isCorrect = userAnswer === question.correctAnswer;
   const displayImageSrc = imageSrc || questionImageSrc(question);
   return (
     <div
       style={{
         background: T.surface,
-        border: `1px solid ${T.border}`,
+        border: `1px solid ${isFlagged ? T.flag : T.border}`,
         borderRadius: T.radiusLg,
         padding: "1.5rem",
         marginBottom: "1rem",
-        boxShadow: T.shadow,
+        boxShadow: isFlagged
+          ? `0 0 0 2px ${T.flagLight}, ${T.shadow}`
+          : T.shadow,
         animation: `fadeUp 0.3s ease ${Math.min(index * 0.03, 0.3)}s both`,
       }}
     >
@@ -440,32 +759,41 @@ function QuestionReviewCard({ question, index, userAnswer, imageSrc }) {
           alignItems: "flex-start",
           gap: "12px",
           marginBottom: "1rem",
+          flexWrap: "wrap",
         }}
       >
-        <p
-          style={{
-            fontSize: "14px",
-            lineHeight: "1.65",
-            color: T.ink,
-            flex: 1,
-            margin: 0,
-          }}
-        >
-          <span
+        <div style={{ flex: 1 }}>
+          <p
             style={{
-              fontSize: "12px",
-              color: T.inkFaint,
-              marginRight: "8px",
-              fontWeight: "600",
+              fontSize: "14px",
+              lineHeight: "1.65",
+              color: T.ink,
+              margin: 0,
             }}
           >
-            {String(index + 1).padStart(2, "0")}
-          </span>
-          {question.questionText}
-        </p>
-        <Badge variant={isCorrect ? "correct" : "incorrect"}>
-          {isCorrect ? "✓ Correct" : "✗ Incorrect"}
-        </Badge>
+            <span
+              style={{
+                fontSize: "12px",
+                color: T.inkFaint,
+                marginRight: "8px",
+                fontWeight: "600",
+              }}
+            >
+              {String(index + 1).padStart(2, "0")}
+            </span>
+            {question.questionText}
+          </p>
+        </div>
+        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+          {isFlagged && (
+            <Badge variant="flagged">
+              <Icon.flag filled /> Flagged
+            </Badge>
+          )}
+          <Badge variant={isCorrect ? "correct" : "incorrect"}>
+            {isCorrect ? "✓ Correct" : "✗ Incorrect"}
+          </Badge>
+        </div>
       </div>
 
       {displayImageSrc && (
@@ -566,11 +894,14 @@ function SubjectTestPage() {
   const [isPreloadingImages, setIsPreloadingImages] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState({});
+  const [flaggedQuestions, setFlaggedQuestions] = useState(new Set());
   const [showResults, setShowResults] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [timeLeft, setTimeLeft] = useState(300);
   const [reviewMode, setReviewMode] = useState("all");
+  const [showFlaggedFilter, setShowFlaggedFilter] = useState(false);
+  const [stoppedTest, setStoppedTest] = useState(false);
   const resultSavedRef = useRef(false);
 
   useEffect(() => {
@@ -724,6 +1055,7 @@ function SubjectTestPage() {
         }
         setCurrentQuestionIndex(0);
         setSelectedAnswers({});
+        setFlaggedQuestions(new Set());
         setShowResults(false);
         setReviewMode("all");
         resultSavedRef.current = false;
@@ -769,7 +1101,8 @@ function SubjectTestPage() {
       !showResults ||
       resultSavedRef.current ||
       !subject ||
-      questions.length === 0
+      questions.length === 0 ||
+      stoppedTest
     ) {
       return;
     }
@@ -813,6 +1146,7 @@ function SubjectTestPage() {
     timeLeft,
     isTopicMode,
     topicId,
+    stoppedTest,
   ]);
 
   const currentQuestion = questions[currentQuestionIndex];
@@ -826,6 +1160,39 @@ function SubjectTestPage() {
   const breadcrumb = isTopicMode
     ? `${subject?.name} · ${topic?.name || ""}`
     : subject?.name || "";
+  const flaggedCount = flaggedQuestions.size;
+  const isFlaggedCurrentQuestion = flaggedQuestions.has(currentQuestion?._id);
+
+  const toggleFlag = () => {
+    setFlaggedQuestions((prev) => {
+      const next = new Set(prev);
+      if (next.has(currentQuestion._id)) {
+        next.delete(currentQuestion._id);
+      } else {
+        next.add(currentQuestion._id);
+      }
+      return next;
+    });
+  };
+
+  const handleSkipQuestion = () => {
+    // Move to next unanswered question or next question overall
+    const nextIndex = questions.findIndex(
+      (q, i) => i > currentQuestionIndex && !selectedAnswers[q._id],
+    );
+    if (nextIndex !== -1) {
+      setCurrentQuestionIndex(nextIndex);
+    } else {
+      // No unanswered questions ahead, go to next question
+      if (currentQuestionIndex < questions.length - 1) {
+        setCurrentQuestionIndex(currentQuestionIndex + 1);
+      }
+    }
+  };
+
+  const handleGoToFlagged = (questionIndex) => {
+    setCurrentQuestionIndex(questionIndex);
+  };
 
   const getPerformanceMessage = () => {
     if (!questions.length) return "";
@@ -846,6 +1213,7 @@ function SubjectTestPage() {
       ),
     );
     setSelectedAnswers({});
+    setFlaggedQuestions(new Set());
     setCurrentQuestionIndex(0);
     setShowResults(false);
     setTimeLeft(defaultDuration);
@@ -853,8 +1221,11 @@ function SubjectTestPage() {
 
   const handleStopTest = () => {
     if (
-      window.confirm("Stop test? Unanswered questions will count as incorrect.")
+      window.confirm(
+        "Stop test? You'll see corrections for all questions you attempted.",
+      )
     ) {
+      setStoppedTest(true);
       setShowResults(true);
     }
   };
@@ -955,6 +1326,179 @@ function SubjectTestPage() {
   ══════════════════════════════════════ */
   if (showResults) {
     const timeUsed = Math.max(0, defaultDuration - timeLeft);
+
+    // Show corrections view when test is stopped (no grading)
+    if (stoppedTest) {
+      return page(
+        <>
+          {/* Corrections header */}
+          <div
+            style={{
+              background: T.surface,
+              border: `1px solid ${T.border}`,
+              borderRadius: T.radiusLg,
+              padding: "2rem",
+              marginBottom: "1.5rem",
+              boxShadow: T.shadowMd,
+              animation: "fadeUp 0.4s ease",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "14px",
+                marginBottom: "0",
+              }}
+            >
+              <div
+                style={{
+                  width: "52px",
+                  height: "52px",
+                  borderRadius: T.radius,
+                  background: T.warningLight,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                  fontSize: "24px",
+                }}
+              >
+                📋
+              </div>
+              <div>
+                <p
+                  style={{
+                    fontSize: "12px",
+                    color: T.inkFaint,
+                    fontWeight: "600",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.08em",
+                    marginBottom: "4px",
+                  }}
+                >
+                  {breadcrumb}
+                </p>
+                <h2
+                  style={{
+                    fontSize: "22px",
+                    fontWeight: "700",
+                    color: T.ink,
+                    margin: 0,
+                  }}
+                >
+                  Review Your Answers
+                </h2>
+              </div>
+            </div>
+          </div>
+
+          {/* Summary stats */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+              gap: "1rem",
+              marginBottom: "1.5rem",
+            }}
+          >
+            <StatCell value={answeredCount} label="Answered" />
+            <StatCell
+              value={questions.length - answeredCount}
+              label="Not Answered"
+            />
+            <StatCell value={flaggedCount} label="Flagged" />
+          </div>
+
+          {/* Review filter */}
+          <div
+            style={{
+              display: "flex",
+              gap: "8px",
+              flexWrap: "wrap",
+              marginBottom: "1.5rem",
+            }}
+          >
+            <Btn
+              variant={reviewMode === "all" ? "primary" : "ghost"}
+              onClick={() => setReviewMode("all")}
+            >
+              All questions ({questions.length})
+            </Btn>
+            <Btn
+              variant={reviewMode === "answered" ? "primary" : "ghost"}
+              onClick={() => setReviewMode("answered")}
+            >
+              Answered ({answeredCount})
+            </Btn>
+            {flaggedCount > 0 && (
+              <Btn
+                variant={reviewMode === "flagged" ? "primary" : "ghost"}
+                onClick={() => setReviewMode("flagged")}
+              >
+                <Icon.flag filled /> Flagged ({flaggedCount})
+              </Btn>
+            )}
+          </div>
+
+          {/* Questions review */}
+          {(reviewMode === "all"
+            ? questions
+            : reviewMode === "answered"
+              ? questions.filter((q) => selectedAnswers[q._id])
+              : questions.filter((q) => flaggedQuestions.has(q._id))
+          ).map((question) => (
+            <QuestionReviewCard
+              key={question._id}
+              question={question}
+              index={questions.findIndex((q) => q._id === question._id)}
+              userAnswer={selectedAnswers[question._id]}
+              imageSrc={getDisplayImageSrc(question)}
+              isFlagged={flaggedQuestions.has(question._id)}
+            />
+          ))}
+
+          {/* Footer actions */}
+          <div
+            style={{
+              display: "flex",
+              gap: "8px",
+              justifyContent: "center",
+              flexWrap: "wrap",
+              marginTop: "2rem",
+            }}
+          >
+            <Btn
+              variant="primary"
+              onClick={() => {
+                setStoppedTest(false);
+                setReviewMode("all");
+                setQuestions(
+                  shuffleArray(
+                    questions.map((q) => ({
+                      ...q,
+                      options: shuffleArray(q.options),
+                    })),
+                  ),
+                );
+                setSelectedAnswers({});
+                setFlaggedQuestions(new Set());
+                setCurrentQuestionIndex(0);
+                setShowResults(false);
+                setTimeLeft(defaultDuration);
+              }}
+            >
+              Retake Test
+            </Btn>
+            <Btn onClick={() => navigate(`/subject/${subject._id}/topics`)}>
+              ← Back to topics
+            </Btn>
+          </div>
+        </>,
+      );
+    }
+
+    // Show normal graded results view
     const percentage = Math.round((score / questions.length) * 100);
     const wrongQuestions = questions.filter(
       (question) => selectedAnswers[question._id] !== question.correctAnswer,
@@ -1128,6 +1672,7 @@ function SubjectTestPage() {
           <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
             {questions.map((q, i) => {
               const correct = selectedAnswers[q._id] === q.correctAnswer;
+              const isFlagged = flaggedQuestions.has(q._id);
               return (
                 <span
                   key={q._id}
@@ -1135,17 +1680,33 @@ function SubjectTestPage() {
                     width: "32px",
                     height: "32px",
                     borderRadius: "6px",
-                    background: correct ? T.successLight : T.dangerLight,
-                    color: correct ? T.success : T.danger,
+                    background: isFlagged
+                      ? T.flagLight
+                      : correct
+                        ? T.successLight
+                        : T.dangerLight,
+                    color: isFlagged ? T.flag : correct ? T.success : T.danger,
                     fontSize: "12px",
                     fontWeight: "600",
                     display: "inline-flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    border: `1px solid ${correct ? "#86efac" : T.dangerBorder}`,
+                    border: `1px solid ${
+                      isFlagged ? T.flag : correct ? "#86efac" : T.dangerBorder
+                    }`,
+                    position: "relative",
                   }}
                 >
-                  {i + 1}
+                  {isFlagged && (
+                    <Icon.flag
+                      filled
+                      style={{
+                        position: "absolute",
+                        fontSize: "10px",
+                      }}
+                    />
+                  )}
+                  {!isFlagged && i + 1}
                 </span>
               );
             })}
@@ -1173,6 +1734,14 @@ function SubjectTestPage() {
           >
             Incorrect ({wrongQuestions.length})
           </Btn>
+          {flaggedCount > 0 && (
+            <Btn
+              variant={reviewMode === "flagged" ? "primary" : "ghost"}
+              onClick={() => setReviewMode("flagged")}
+            >
+              <Icon.flag filled /> Flagged ({flaggedCount})
+            </Btn>
+          )}
         </div>
 
         {/* Perfect score message */}
@@ -1192,13 +1761,17 @@ function SubjectTestPage() {
             🎉 Perfect score! No incorrect answers to review.
           </div>
         ) : (
-          reviewQuestions.map((question) => (
+          (reviewMode === "flagged"
+            ? questions.filter((q) => flaggedQuestions.has(q._id))
+            : reviewQuestions
+          ).map((question) => (
             <QuestionReviewCard
               key={question._id}
               question={question}
               index={questions.findIndex((q) => q._id === question._id)}
               userAnswer={selectedAnswers[question._id]}
               imageSrc={getDisplayImageSrc(question)}
+              isFlagged={flaggedQuestions.has(question._id)}
             />
           ))
         )}
@@ -1267,7 +1840,24 @@ function SubjectTestPage() {
             Start the test
           </h2>
         </div>
-        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+        <div
+          style={{
+            display: "flex",
+            gap: "8px",
+            alignItems: "center",
+            flexWrap: "wrap",
+          }}
+        >
+          {flaggedCount > 0 && (
+            <FlaggedBadge
+              count={flaggedCount}
+              questions={questions}
+              selectedAnswers={selectedAnswers}
+              currentQuestionIndex={currentQuestionIndex}
+              onSelectFlagged={handleGoToFlagged}
+              flaggedQuestions={flaggedQuestions}
+            />
+          )}
           <div
             style={{
               display: "inline-flex",
@@ -1344,18 +1934,47 @@ function SubjectTestPage() {
         key={currentQuestionIndex}
         style={{
           background: T.surface,
-          border: `1px solid ${T.border}`,
+          border: `1px solid ${isFlaggedCurrentQuestion ? T.flag : T.border}`,
           borderRadius: T.radiusLg,
           padding: "2rem",
-          boxShadow: T.shadowMd,
+          boxShadow: isFlaggedCurrentQuestion
+            ? `0 0 0 2px ${T.flagLight}, ${T.shadowMd}`
+            : T.shadowMd,
           animation: `fadeUp 0.3s ease`,
           marginBottom: "1.5rem",
+          transition: "all 0.2s",
         }}
       >
-        <div style={{ marginBottom: "1rem" }}>
-          <Badge variant="neutral">
-            Q{String(currentQuestionIndex + 1).padStart(2, "0")}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: "1rem",
+            gap: "12px",
+            flexWrap: "wrap",
+          }}
+        >
+          <Badge variant={isFlaggedCurrentQuestion ? "flagged" : "neutral"}>
+            {isFlaggedCurrentQuestion && <Icon.flag filled />}Q
+            {String(currentQuestionIndex + 1).padStart(2, "0")}
           </Badge>
+          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+            <Btn
+              onClick={handleSkipQuestion}
+              isIconOnly
+              title="Skip this question"
+            >
+              <Icon.skip />
+            </Btn>
+            <Btn
+              variant={isFlaggedCurrentQuestion ? "flagActive" : "flag"}
+              onClick={toggleFlag}
+              isIconOnly
+            >
+              <Icon.flag filled={isFlaggedCurrentQuestion} />
+            </Btn>
+          </div>
         </div>
 
         <p
@@ -1495,12 +2114,15 @@ function SubjectTestPage() {
       {/* Navigation */}
       <div
         style={{
-          display: "flex",
-          justifyContent: "space-between",
+          display: "grid",
+          gridTemplateColumns: "auto 1fr auto",
+          gridTemplateRows: "auto auto",
           alignItems: "center",
           gap: "1rem",
+          marginTop: "1.5rem",
         }}
       >
+        {/* Back button - top left */}
         <Btn
           onClick={() => setCurrentQuestionIndex((p) => p - 1)}
           disabled={currentQuestionIndex === 0}
@@ -1508,11 +2130,25 @@ function SubjectTestPage() {
           <Icon.left /> Back
         </Btn>
 
-        {/* Dot nav */}
-        <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+        {/* Dot nav - spans middle columns */}
+        <div
+          style={{
+            display: "flex",
+            gap: "6px",
+            alignItems: "center",
+            justifyContent: "center",
+            flexWrap: "wrap",
+            gridColumn: "2",
+            gridRow: "1",
+            minWidth: 0,
+            overflowX: "auto",
+            paddingBottom: "4px",
+          }}
+        >
           {questions.slice(0, Math.min(questions.length, 12)).map((q, i) => {
             const isActive = i === currentQuestionIndex;
             const isAnswered = Boolean(selectedAnswers[q._id]);
+            const isFlagged = flaggedQuestions.has(q._id);
             return (
               <div
                 key={i}
@@ -1522,19 +2158,24 @@ function SubjectTestPage() {
                   width: isActive ? "22px" : "8px",
                   height: "8px",
                   borderRadius: "999px",
-                  background: isActive
-                    ? T.accent
-                    : isAnswered
-                      ? `${T.accent}66`
-                      : "var(--border-strong)",
+                  background: isFlagged
+                    ? T.flag
+                    : isActive
+                      ? T.accent
+                      : isAnswered
+                        ? `${T.accent}66`
+                        : "var(--border-strong)",
                   cursor: "pointer",
                   transition: "all 0.25s cubic-bezier(0.4,0,0.2,1)",
+                  border: isFlagged ? `1px solid ${T.flag}` : "none",
+                  flexShrink: 0,
                 }}
               />
             );
           })}
         </div>
 
+        {/* Next/Submit button - top right */}
         {currentQuestionIndex < questions.length - 1 ? (
           <Btn
             variant="primary"
