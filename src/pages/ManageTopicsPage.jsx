@@ -11,6 +11,29 @@ const apiArray = (payload, key) => {
   return [];
 };
 
+async function fetchAllPages(url, key, config = {}) {
+  let page = 1;
+  let totalPages = 1;
+  const allItems = [];
+
+  do {
+    const separator = url.includes("?") ? "&" : "?";
+
+    const response = await api.get(
+      `${url}${separator}page=${page}&limit=50`,
+      config,
+    );
+
+    const items = apiArray(response.data, key);
+
+    allItems.push(...items);
+    totalPages = Number(response.data?.totalPages || 1);
+    page += 1;
+  } while (page <= totalPages);
+
+  return allItems;
+}
+
 const subjectOf = (topic) => topic?.subjectId || {};
 const getCourseId = (subject) =>
   typeof subject?.courseId === "object"
@@ -31,24 +54,69 @@ function ManageTopicsPage() {
   const [subjectFilter, setSubjectFilter] = useState("");
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({ name: "", subjectId: "" });
-  const [isLoading, setIsLoading] = useState(true);
+  const [hasLoadedTopics, setHasLoadedTopics] = useState(false);
+  const [isLoadingSetup, setIsLoadingSetup] = useState(true);
+  const [isLoadingTopics, setIsLoadingTopics] = useState(false);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   const fetchData = async () => {
     try {
-      setIsLoading(true);
-      const [coursesRes, subjectsRes, topicsRes] = await Promise.all([
-        api.get("/api/courses"),
-        api.get("/api/subjects/admin/all?limit=100", { _tokenType: "admin" }),
-        api.get("/api/topics/admin/all?limit=100", { _tokenType: "admin" }),
+      setIsLoadingSetup(true);
+
+      const [coursesRes, allSubjects] = await Promise.all([
+        api.get("/api/courses?limit=100"),
+        fetchAllPages("/api/subjects/admin/all", "subjects", {
+          _tokenType: "admin",
+        }),
       ]);
+
       setCourses(apiArray(coursesRes.data, "courses"));
-      setSubjects(apiArray(subjectsRes.data, "subjects"));
-      setTopics(apiArray(topicsRes.data, "topics"));
+      setSubjects(allSubjects);
+      setTopics([]);
+      setHasLoadedTopics(false);
+    } catch (error) {
+      console.error("Error loading topic filter data:", error);
+      alert(error.message || "Error loading filter data");
+    } finally {
+      setIsLoadingSetup(false);
+    }
+  };
+
+  const cancelEdit = () => {
+    if (isSavingEdit) return;
+
+    setEditingId(null);
+    setEditForm({ name: "", subjectId: "" });
+  };
+
+  const loadTopics = async () => {
+    if (isSavingEdit) return;
+
+    if (!subjectFilter) {
+      alert("Please select a subject first.");
+      return;
+    }
+
+    try {
+      setIsLoadingTopics(true);
+      cancelEdit();
+
+      const params = new URLSearchParams();
+      params.set("subjectId", subjectFilter);
+
+      const allTopics = await fetchAllPages(
+        `/api/topics/admin/all?${params.toString()}`,
+        "topics",
+        { _tokenType: "admin" },
+      );
+
+      setTopics(allTopics);
+      setHasLoadedTopics(true);
     } catch (error) {
       console.error("Error loading topics:", error);
       alert(error.message || "Error loading topics");
     } finally {
-      setIsLoading(false);
+      setIsLoadingTopics(false);
     }
   };
 
@@ -69,13 +137,23 @@ function ManageTopicsPage() {
   }, [subjects, courseFilter, levelFilter]);
 
   useEffect(() => {
+    setTopics([]);
+    setHasLoadedTopics(false);
+    cancelEdit();
+
     if (
       subjectFilter &&
       !filteredSubjects.some((subject) => subject._id === subjectFilter)
     ) {
       setSubjectFilter("");
     }
-  }, [filteredSubjects, subjectFilter]);
+  }, [courseFilter, levelFilter]);
+
+  useEffect(() => {
+    setTopics([]);
+    setHasLoadedTopics(false);
+    cancelEdit();
+  }, [subjectFilter]);
 
   const filteredTopics = useMemo(() => {
     return topics.filter((topic) => {
@@ -94,6 +172,8 @@ function ManageTopicsPage() {
   }, [topics, courseFilter, levelFilter, subjectFilter]);
 
   const startEdit = (topic) => {
+    if (isSavingEdit) return;
+
     setEditingId(topic._id);
     setEditForm({
       name: topic.name || "",
@@ -101,37 +181,49 @@ function ManageTopicsPage() {
     });
   };
 
-  const cancelEdit = () => {
-    setEditingId(null);
-    setEditForm({ name: "", subjectId: "" });
-  };
-
   const saveEdit = async (id) => {
+    if (isSavingEdit) return;
+
+    if (!editForm.name.trim() || !editForm.subjectId) {
+      alert("Please enter topic name and select a subject.");
+      return;
+    }
+
     try {
+      setIsSavingEdit(true);
+
       await api.put(
         `/api/topics/${id}`,
         { name: editForm.name.trim(), subjectId: editForm.subjectId },
         { _tokenType: "admin" },
       );
+
       cancelEdit();
-      fetchData();
+      await loadTopics();
     } catch (error) {
       console.error("Error updating topic:", error);
       alert(error.message || "Error updating topic");
+    } finally {
+      setIsSavingEdit(false);
     }
   };
 
   const deleteTopic = async (id) => {
+    if (isSavingEdit) return;
+
     if (
       !window.confirm(
         "Delete this topic? Related questions will also be deleted.",
       )
-    )
+    ) {
       return;
+    }
 
     try {
       await api.delete(`/api/topics/${id}`, { _tokenType: "admin" });
-      fetchData();
+      setTopics((previousTopics) =>
+        previousTopics.filter((topic) => topic._id !== id),
+      );
     } catch (error) {
       console.error("Error deleting topic:", error);
       alert(error.message || "Error deleting topic");
@@ -158,7 +250,12 @@ function ManageTopicsPage() {
       });
 
       alert("Questions deleted successfully.");
-      fetchData();
+
+      setTopics((previousTopics) =>
+        previousTopics.map((item) =>
+          item._id === topic._id ? { ...item, questionCount: 0 } : item,
+        ),
+      );
     } catch (error) {
       console.error("Error deleting topic questions:", error);
       alert(error.message || "Error deleting questions under this topic");
@@ -171,7 +268,8 @@ function ManageTopicsPage() {
         <p style={eyebrowStyle}>Admin / Topics</p>
         <h1 style={headingStyle}>Manage topics</h1>
         <p style={subheadingStyle}>
-          Filter topics by course, level, and subject.
+          Select course, level, and subject, then load only the topics you want
+          to manage.
         </p>
 
         <div style={filterCardStyle}>
@@ -179,6 +277,7 @@ function ManageTopicsPage() {
             value={courseFilter}
             onChange={(e) => setCourseFilter(e.target.value)}
             style={inputStyle}
+            disabled={isLoadingSetup || isSavingEdit}
           >
             <option value="">All courses</option>
             {courses.map((course) => (
@@ -192,6 +291,7 @@ function ManageTopicsPage() {
             value={levelFilter}
             onChange={(e) => setLevelFilter(e.target.value)}
             style={inputStyle}
+            disabled={isLoadingSetup || isSavingEdit}
           >
             <option value="">All levels</option>
             {LEVELS.map((level) => (
@@ -205,8 +305,9 @@ function ManageTopicsPage() {
             value={subjectFilter}
             onChange={(e) => setSubjectFilter(e.target.value)}
             style={inputStyle}
+            disabled={isLoadingSetup || isSavingEdit}
           >
-            <option value="">All subjects</option>
+            <option value="">Select subject</option>
             {filteredSubjects.map((subject) => (
               <option key={subject._id} value={subject._id}>
                 {subject.name}
@@ -214,14 +315,49 @@ function ManageTopicsPage() {
             ))}
           </select>
 
+          <button
+            onClick={loadTopics}
+            style={{
+              ...primaryButton,
+              opacity:
+                isLoadingSetup || isLoadingTopics || isSavingEdit ? 0.6 : 1,
+              cursor:
+                isLoadingSetup || isLoadingTopics || isSavingEdit
+                  ? "not-allowed"
+                  : "pointer",
+            }}
+            disabled={isLoadingSetup || isLoadingTopics || isSavingEdit}
+          >
+            {isLoadingTopics ? "Loading..." : "Load Topics"}
+          </button>
+
           <button onClick={() => navigate("/admin")} style={secondaryButton}>
             Back to Admin
           </button>
         </div>
 
+        <p
+          style={{
+            marginBottom: "1.5rem",
+            color: "#64748b",
+            fontSize: "13px",
+            fontWeight: "600",
+          }}
+        >
+          {hasLoadedTopics
+            ? `📋 Showing ${filteredTopics.length} topic(s)`
+            : "Select filters, then click Load Topics."}
+        </p>
+
         <div style={cardStyle}>
-          {isLoading ? (
+          {isLoadingSetup ? (
+            <p style={emptyStyle}>Loading filters...</p>
+          ) : isLoadingTopics ? (
             <p style={emptyStyle}>Loading topics...</p>
+          ) : !hasLoadedTopics ? (
+            <p style={emptyStyle}>
+              Select course, level, and subject, then click Load Topics.
+            </p>
           ) : filteredTopics.length === 0 ? (
             <p style={emptyStyle}>No topics found.</p>
           ) : (
