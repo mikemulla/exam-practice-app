@@ -138,6 +138,33 @@ function ManageTopicsPage() {
     }
   };
 
+  const deleteTopicQuestions = async (topic) => {
+    const count = topic.questionCount || 0;
+
+    if (count === 0) {
+      alert("This topic has no questions to delete.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Delete all ${count} question${count !== 1 ? "s" : ""} under "${topic.name}"? The topic itself will remain.`,
+    );
+
+    if (!confirmed) return;
+
+    try {
+      await api.delete(`/api/questions/admin/topic/${topic._id}/questions`, {
+        _tokenType: "admin",
+      });
+
+      alert("Questions deleted successfully.");
+      fetchData();
+    } catch (error) {
+      console.error("Error deleting topic questions:", error);
+      alert(error.message || "Error deleting questions under this topic");
+    }
+  };
+
   return (
     <div style={pageStyle}>
       <div style={{ maxWidth: "1050px", margin: "0 auto" }}>
@@ -247,19 +274,14 @@ function ManageTopicsPage() {
                       <div>
                         <h3 style={itemTitleStyle}>{topic.name}</h3>
                         <p style={itemMetaStyle}>
-                          Subject: {subject?.name || "Deleted subject"} |
-                          Course: {getCourseName(subject)} | Level:{" "}
+                          Subject: {subject?.name || "Deleted subject"} | Course
+                          : {getCourseName(subject)} | Level:{" "}
                           {subject?.level || "N/A"}
                         </p>
-                        <div
-                          style={{
-                            fontSize: "13px",
-                            color: "var(--text-secondary)",
-                            marginTop: "6px",
-                            fontWeight: "600",
-                          }}
-                        >
-                          {topic.questionCount || 0} Questions
+
+                        <div style={questionCountStyle}>
+                          {topic.questionCount || 0} Question
+                          {(topic.questionCount || 0) !== 1 ? "s" : ""}
                         </div>
                       </div>
                       <div style={buttonRowStyle}>
@@ -270,10 +292,26 @@ function ManageTopicsPage() {
                           Edit
                         </button>
                         <button
+                          onClick={() => deleteTopicQuestions(topic)}
+                          style={{
+                            ...warningButton,
+                            opacity:
+                              (topic.questionCount || 0) === 0 ? 0.55 : 1,
+                            cursor:
+                              (topic.questionCount || 0) === 0
+                                ? "not-allowed"
+                                : "pointer",
+                          }}
+                          disabled={(topic.questionCount || 0) === 0}
+                        >
+                          Delete Questions
+                        </button>
+
+                        <button
                           onClick={() => deleteTopic(topic._id)}
                           style={dangerButton}
                         >
-                          Delete
+                          Delete Topic
                         </button>
                       </div>
                     </>
@@ -377,6 +415,21 @@ const dangerButton = {
   color: "white",
   fontWeight: 700,
   cursor: "pointer",
+};
+const warningButton = {
+  padding: "10px 14px",
+  border: "none",
+  borderRadius: "8px",
+  backgroundColor: "#f59e0b",
+  color: "white",
+  fontWeight: 700,
+  cursor: "pointer",
+};
+const questionCountStyle = {
+  fontSize: "13px",
+  color: "var(--text-secondary)",
+  marginTop: "6px",
+  fontWeight: "600",
 };
 const emptyStyle = { color: "#64748b", textAlign: "center" };
 const itemTitleStyle = { margin: "0 0 6px", color: "#0f172a" };
