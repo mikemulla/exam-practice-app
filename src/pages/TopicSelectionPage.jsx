@@ -56,6 +56,7 @@ function TopicSelectionPage() {
   const [topics, setTopics] = useState([]);
   const [subjectQuestions, setSubjectQuestions] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [randomQuestionCount, setRandomQuestionCount] = useState(20);
 
   const S = {
     page: {
@@ -210,6 +211,29 @@ function TopicSelectionPage() {
       background: "var(--surface-alt)",
       color: "var(--button-primary)",
     },
+    countControl: {
+      display: "flex",
+      flexDirection: "column",
+      gap: "6px",
+      marginBottom: "1.25rem",
+    },
+    countLabel: {
+      fontSize: "12px",
+      color: "var(--text-secondary)",
+      fontWeight: "600",
+    },
+    countSelect: {
+      width: "100%",
+      padding: "10px 12px",
+      borderRadius: "8px",
+      border: "0.5px solid var(--border-color)",
+      background: "var(--bg-secondary)",
+      color: "var(--text-primary)",
+      fontSize: "13px",
+      fontWeight: "600",
+      outline: "none",
+      cursor: "pointer",
+    },
     emptyState: {
       background: "var(--bg-secondary)",
       border: "0.5px solid var(--border-color)",
@@ -301,6 +325,29 @@ function TopicSelectionPage() {
   const totalQuestionCount = Array.isArray(subjectQuestions)
     ? subjectQuestions.length
     : 0;
+
+  const randomCountOptions = useMemo(() => {
+    const baseOptions = [10, 20, 30, 40, 50, 75, 100];
+
+    const availableOptions = baseOptions.filter(
+      (count) => count <= totalQuestionCount,
+    );
+
+    if (
+      totalQuestionCount > 0 &&
+      !availableOptions.includes(totalQuestionCount)
+    ) {
+      availableOptions.push(totalQuestionCount);
+    }
+
+    return availableOptions;
+  }, [totalQuestionCount]);
+
+  useEffect(() => {
+    if (totalQuestionCount > 0 && randomQuestionCount > totalQuestionCount) {
+      setRandomQuestionCount(totalQuestionCount);
+    }
+  }, [totalQuestionCount, randomQuestionCount]);
 
   if (isLoading) {
     return (
@@ -434,8 +481,21 @@ function TopicSelectionPage() {
     );
   };
 
-  const FullSubjectCard = () => {
+  const RandomSubjectCard = () => {
     const [hovered, setHovered] = useState(false);
+
+    const selectedCount =
+      totalQuestionCount > 0
+        ? Math.min(Number(randomQuestionCount || 10), totalQuestionCount)
+        : 0;
+
+    const startRandomTest = () => {
+      if (!selectedCount) return;
+
+      navigate(
+        `/test/subject/${subject._id}?mode=random&limit=${selectedCount}`,
+      );
+    };
 
     return (
       <div
@@ -449,32 +509,59 @@ function TopicSelectionPage() {
         <div style={S.iconBubble}>
           <BookmarkIcon />
         </div>
-        <h3 style={S.cardTitle}>Full subject test</h3>
+        <h3 style={S.cardTitle}>Randomized practice</h3>
         <p style={S.cardDescription}>
-          Challenge yourself with all available questions across every topic in
-          this subject.
+          Practice randomized questions from all topics in this subject. Choose
+          how many questions you want before you start.
         </p>
         <div style={S.cardMeta}>
-          <span style={{ fontSize: "11px" }}>📚</span>
+          <span style={{ fontSize: "11px" }}>🔀</span>
           <span>
-            {totalQuestionCount} question{totalQuestionCount === 1 ? "" : "s"}
+            {totalQuestionCount} available question
+            {totalQuestionCount === 1 ? "" : "s"}
           </span>
         </div>
+
+        <div style={S.countControl}>
+          <label style={S.countLabel}>Number of questions</label>
+          <select
+            value={selectedCount || ""}
+            onChange={(e) => setRandomQuestionCount(Number(e.target.value))}
+            style={S.countSelect}
+            disabled={totalQuestionCount === 0}
+          >
+            {randomCountOptions.length === 0 ? (
+              <option value="">No questions available</option>
+            ) : (
+              randomCountOptions.map((count) => (
+                <option key={count} value={count}>
+                  {count} question{count === 1 ? "" : "s"}
+                </option>
+              ))
+            )}
+          </select>
+        </div>
+
         <div style={S.divider} />
         <button
-          onClick={() => navigate(`/test/subject/${subject._id}`)}
+          onClick={startRandomTest}
+          disabled={!selectedCount}
           style={{
             ...S.button,
             ...S.buttonSecondary,
+            opacity: selectedCount ? 1 : 0.6,
+            cursor: selectedCount ? "pointer" : "not-allowed",
           }}
           onMouseEnter={(e) => {
-            if (hovered) e.currentTarget.style.backgroundColor = "#e2e8f0";
+            if (hovered && selectedCount) {
+              e.currentTarget.style.backgroundColor = "#e2e8f0";
+            }
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.backgroundColor = "var(--surface-alt)";
           }}
         >
-          <span>Start full test</span>
+          <span>Start randomized test</span>
           <ChevronRight />
         </button>
       </div>
@@ -513,8 +600,8 @@ function TopicSelectionPage() {
             <p style={S.eyebrow}>Topic selection</p>
             <h1 style={S.heading}>{subject.name}</h1>
             <p style={S.subheading}>
-              Choose between focused topic practice or a comprehensive full
-              subject test.
+              Choose focused topic practice or randomized questions from all
+              topics in this subject.
             </p>
 
             {/* Stats */}
@@ -538,14 +625,14 @@ function TopicSelectionPage() {
               <div style={S.emptyIcon}>🎯</div>
               <p style={S.emptyTitle}>No topics available</p>
               <p style={S.emptyBody}>
-                This subject doesn't have any topics yet, but you can still take
-                the full subject test below.
+                This subject doesn't have any topics yet, but you can still use
+                randomized practice if questions are available.
               </p>
             </div>
           ) : null}
 
           <div style={S.grid}>
-            <FullSubjectCard />
+            <RandomSubjectCard />
             {(Array.isArray(topics) ? topics : []).map((topic, index) => {
               const topicCount = topicQuestionCounts[topic._id] || 0;
               return (

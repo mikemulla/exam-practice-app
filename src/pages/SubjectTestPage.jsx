@@ -886,6 +886,10 @@ function SubjectTestPage() {
   const subjectId = params.subjectId || searchParams.get("subjectId") || "";
   const topicId = params.topicId || searchParams.get("topicId") || "";
   const isTopicMode = Boolean(topicId);
+  const testMode = searchParams.get("mode") || "";
+  const requestedLimit = Number(searchParams.get("limit") || 0);
+  const isRandomMode =
+    !isTopicMode && testMode === "random" && requestedLimit > 0;
 
   const [subject, setSubject] = useState(null);
   const [topic, setTopic] = useState(null);
@@ -1043,9 +1047,16 @@ function SubjectTestPage() {
             new Map(questionsResponse.data.map((q) => [q._id, q])).values(),
           );
 
-          const preparedQuestions = shuffleArray(
+          const randomizedQuestions = shuffleArray(
             unique.map((q) => ({ ...q, options: shuffleArray(q.options) })),
           );
+
+          const preparedQuestions = isRandomMode
+            ? randomizedQuestions.slice(
+                0,
+                Math.min(requestedLimit, randomizedQuestions.length),
+              )
+            : randomizedQuestions;
 
           setTopic(null);
           setSubject(subjectResponse.data);
@@ -1067,7 +1078,7 @@ function SubjectTestPage() {
       }
     };
     fetchPageData();
-  }, [subjectId, topicId, isTopicMode, navigate]);
+  }, [subjectId, topicId, isTopicMode, isRandomMode, requestedLimit, navigate]);
 
   useEffect(() => {
     if (!subject) return;
@@ -1120,7 +1131,7 @@ function SubjectTestPage() {
             score,
             total: questions.length,
             timeTaken: timeUsed,
-            mode: isTopicMode ? "topic" : "subject",
+            mode: isTopicMode ? "topic" : isRandomMode ? "random" : "subject",
           },
           { _tokenType: "user" },
         );
@@ -1145,6 +1156,7 @@ function SubjectTestPage() {
     score,
     timeLeft,
     isTopicMode,
+    isRandomMode,
     topicId,
     stoppedTest,
   ]);
@@ -1159,7 +1171,9 @@ function SubjectTestPage() {
     : 0;
   const breadcrumb = isTopicMode
     ? `${subject?.name} · ${topic?.name || ""}`
-    : subject?.name || "";
+    : isRandomMode
+      ? `${subject?.name || ""} · Randomized Practice`
+      : subject?.name || "";
   const flaggedCount = flaggedQuestions.size;
   const isFlaggedCurrentQuestion = flaggedQuestions.has(currentQuestion?._id);
 
