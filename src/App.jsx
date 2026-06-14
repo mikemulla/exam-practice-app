@@ -37,7 +37,6 @@ function App() {
         <Route path="/user-signup" element={<UserSignupPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
-
         {/* Protected user routes */}
         <Route
           path="/user-dashboard"

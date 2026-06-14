@@ -907,6 +907,8 @@ function SubjectTestPage() {
   const [showFlaggedFilter, setShowFlaggedFilter] = useState(false);
   const [stoppedTest, setStoppedTest] = useState(false);
   const resultSavedRef = useRef(false);
+  const perfectScoreAudioRef = useRef(null);
+  const hasPlayedPerfectScoreRef = useRef(false);
 
   useEffect(() => {
     injectFonts();
@@ -1106,7 +1108,32 @@ function SubjectTestPage() {
 
   const isPerfectScore =
     showResults && questions.length > 0 && score === questions.length;
+  useEffect(() => {
+    if (
+      isPerfectScore &&
+      !hasPlayedPerfectScoreRef.current &&
+      perfectScoreAudioRef.current
+    ) {
+      hasPlayedPerfectScoreRef.current = true;
 
+      perfectScoreAudioRef.current.currentTime = 0;
+
+      perfectScoreAudioRef.current.play().catch(() => {});
+    }
+  }, [isPerfectScore]);
+
+  useEffect(() => {
+    perfectScoreAudioRef.current = new Audio("/sounds/perfect-score.mp3");
+
+    perfectScoreAudioRef.current.volume = 0.8;
+
+    return () => {
+      if (perfectScoreAudioRef.current) {
+        perfectScoreAudioRef.current.pause();
+        perfectScoreAudioRef.current = null;
+      }
+    };
+  }, []);
   useEffect(() => {
     if (
       !showResults ||
@@ -1220,6 +1247,7 @@ function SubjectTestPage() {
 
   const handleRetakeTest = () => {
     resultSavedRef.current = false;
+    hasPlayedPerfectScoreRef.current = false;
     setReviewMode("all");
     setQuestions(
       shuffleArray(
