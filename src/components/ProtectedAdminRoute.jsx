@@ -3,7 +3,10 @@ import { jwtDecode } from "jwt-decode";
 
 export default function ProtectedAdminRoute({ children }) {
   const token = localStorage.getItem("adminToken");
-  if (!token) return <Navigate to="/admin-login" replace />;
+
+  if (!token) {
+    return <Navigate to="/403" replace />;
+  }
 
   try {
     const decoded = jwtDecode(token);
@@ -11,13 +14,13 @@ export default function ProtectedAdminRoute({ children }) {
 
     if (expired || decoded.role !== "admin") {
       localStorage.removeItem("adminToken");
-      return <Navigate to="/admin-login" replace />;
+      return <Navigate to="/403" replace />;
     }
 
     return children;
   } catch (err) {
     console.error("JWT decode error:", err);
     localStorage.removeItem("adminToken");
-    return <Navigate to="/admin-login" replace />;
+    return <Navigate to="/403" replace />;
   }
 }

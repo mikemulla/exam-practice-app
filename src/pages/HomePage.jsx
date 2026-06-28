@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDarkMode } from "../context/DarkModeContext";
+import PublicFooter from "../components/PublicFooter";
 
 function ArrowRight() {
   return (
@@ -139,7 +140,7 @@ function HomePage() {
         }
 
         @keyframes fadeIn {
-            from   { opacity: 0; }
+             from    { opacity: 0; }
           to { opacity: 1; }
         }
 
@@ -902,6 +903,8 @@ function HomePage() {
           </div>
         </div>
       </div>
+
+      <PublicFooter />
 
       {/* Add pulse animation */}
       <style>{`

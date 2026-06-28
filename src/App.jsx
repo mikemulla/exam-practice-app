@@ -25,6 +25,14 @@ import ProtectedUserRoute from "./components/ProtectedUserRoute";
 import UserDashboardPage from "./pages/UserDashboardPage";
 import AdminUserManagementPage from "./pages/AdminUserManagementPage";
 import AdminCoursesPage from "./pages/AdminCoursesPage";
+import NotFoundPage from "./pages/NotFoundPage";
+import AccessDeniedPage from "./pages/AccessDeniedPage";
+import ServerErrorPage from "./pages/ServerErrorPage";
+import NetworkErrorPage from "./pages/NetworkErrorPage";
+import ContactPage from "./pages/ContactPage";
+import TermsPage from "./pages/TermsPage";
+import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
+import AboutPage from "./pages/AboutPage";
 
 function App() {
   return (
@@ -32,6 +40,10 @@ function App() {
       <Routes>
         {/* Public routes */}
         <Route path="/" element={<HomePage />} />
+        <Route path="/about" element={<AboutPage />} />
+        <Route path="/contact" element={<ContactPage />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+        <Route path="/terms" element={<TermsPage />} />
         <Route path="/admin-login" element={<AdminLoginPage />} />
         <Route path="/user-login" element={<UserLoginPage />} />
         <Route path="/user-signup" element={<UserSignupPage />} />
@@ -200,6 +212,10 @@ function App() {
             </ProtectedAdminRoute>
           }
         />
+        <Route path="/403" element={<AccessDeniedPage />} />
+        <Route path="/500" element={<ServerErrorPage />} />
+        <Route path="/network-error" element={<NetworkErrorPage />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </BrowserRouter>
   );
