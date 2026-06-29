@@ -33,6 +33,9 @@ import ContactPage from "./pages/ContactPage";
 import TermsPage from "./pages/TermsPage";
 import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
 import AboutPage from "./pages/AboutPage";
+import QuickReviewListPage from "./pages/QuickReviewListPage";
+import QuickReviewDetailPage from "./pages/QuickReviewDetailPage";
+import AdminQuickReviewsPage from "./pages/AdminQuickReviewsPage";
 
 function App() {
   return (
@@ -91,6 +94,23 @@ function App() {
           }
         />
         <Route
+          path="/subject/:subjectId/quick-review"
+          element={
+            <ProtectedUserRoute>
+              <QuickReviewListPage />
+            </ProtectedUserRoute>
+          }
+        />
+
+        <Route
+          path="/quick-review/topic/:topicId"
+          element={
+            <ProtectedUserRoute>
+              <QuickReviewDetailPage />
+            </ProtectedUserRoute>
+          }
+        />
+        <Route
           path="/test/topic/:topicId"
           element={
             <ProtectedUserRoute>
@@ -121,6 +141,14 @@ function App() {
           element={
             <ProtectedAdminRoute>
               <AddSubjectPage />
+            </ProtectedAdminRoute>
+          }
+        />
+        <Route
+          path="/admin-quick-reviews"
+          element={
+            <ProtectedAdminRoute>
+              <AdminQuickReviewsPage />
             </ProtectedAdminRoute>
           }
         />

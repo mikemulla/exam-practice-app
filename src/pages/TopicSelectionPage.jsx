@@ -29,6 +29,26 @@ function BookmarkIcon() {
   );
 }
 
+function QuickReviewIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+      <path
+        d="M4 3.5h8.5A2.5 2.5 0 0 1 15 6v10.5H6.5A2.5 2.5 0 0 0 4 19V3.5Z"
+        stroke="var(--button-primary)"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M7 7h5M7 10h5M7 13h3"
+        stroke="var(--button-primary)"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 function LayersIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 14 14" fill="none">
@@ -481,6 +501,54 @@ function TopicSelectionPage() {
     );
   };
 
+  const QuickReviewCard = () => {
+    const [hovered, setHovered] = useState(false);
+
+    return (
+      <div
+        style={{
+          ...S.card,
+          ...(hovered ? S.cardHover : {}),
+        }}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+      >
+        <div style={S.iconBubble}>
+          <QuickReviewIcon />
+        </div>
+        <h3 style={S.cardTitle}>Quick Review</h3>
+        <p style={S.cardDescription}>
+          Read important notes, key points, clinical pearls, mnemonics, and exam
+          tips before starting your practice session.
+        </p>
+        <div style={S.cardMeta}>
+          <span style={{ fontSize: "11px" }}>📖</span>
+          <span>
+            {Array.isArray(topics) ? topics.length : 0} review topic
+            {Array.isArray(topics) && topics.length === 1 ? "" : "s"}
+          </span>
+        </div>
+        <div style={S.divider} />
+        <button
+          onClick={() => navigate(`/subject/${subject._id}/quick-review`)}
+          style={{
+            ...S.button,
+            ...S.buttonPrimary,
+          }}
+          onMouseEnter={(e) => {
+            if (hovered) e.currentTarget.style.backgroundColor = "#0e3d6e";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = "var(--button-primary)";
+          }}
+        >
+          <span>Open Quick Review</span>
+          <ChevronRight />
+        </button>
+      </div>
+    );
+  };
+
   const RandomSubjectCard = () => {
     const [hovered, setHovered] = useState(false);
 
@@ -600,8 +668,8 @@ function TopicSelectionPage() {
             <p style={S.eyebrow}>Topic selection</p>
             <h1 style={S.heading}>{subject.name}</h1>
             <p style={S.subheading}>
-              Choose focused topic practice or randomized questions from all
-              topics in this subject.
+              Review key notes first, then choose focused topic practice or
+              randomized questions from all topics in this subject.
             </p>
 
             {/* Stats */}
@@ -632,6 +700,7 @@ function TopicSelectionPage() {
           ) : null}
 
           <div style={S.grid}>
+            <QuickReviewCard />
             <RandomSubjectCard />
             {(Array.isArray(topics) ? topics : []).map((topic, index) => {
               const topicCount = topicQuestionCounts[topic._id] || 0;

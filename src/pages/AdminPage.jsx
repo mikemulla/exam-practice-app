@@ -316,6 +316,12 @@ function AdminPage() {
       icon: "📚",
       path: "/admin-courses",
     },
+    {
+      title: "Quick Reviews",
+      description: "Create and manage quick review notes for each topic.",
+      icon: "📖",
+      path: "/admin-quick-reviews",
+    },
   ];
 
   const otherMenuItems = [
