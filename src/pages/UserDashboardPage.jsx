@@ -611,14 +611,33 @@ export default function UserDashboardPage() {
       whiteSpace: "nowrap",
     }),
     ctaPill: {
+      display: "inline-flex",
+      alignItems: "center",
+      gap: 8,
       fontSize: 12,
       fontWeight: 500,
-      padding: "6px 14px",
+      padding: "7px 16px 7px 12px",
       borderRadius: 999,
       border: `0.5px solid ${t.blue}`,
-      background: t.blue,
-      color: "var(--bg-secondary)",
+      background: `${t.blue}1a`, // soft tinted background instead of solid fill
+      color: t.blue,
       cursor: "pointer",
+    },
+    dotPing: {
+      position: "relative",
+      width: 7,
+      height: 7,
+      borderRadius: 999,
+      background: t.blue,
+      display: "inline-block",
+    },
+    dotPingPulse: {
+      position: "absolute",
+      inset: -3,
+      borderRadius: 999,
+      background: t.blue,
+      opacity: 0.35,
+      animation: "ctaPing 1.6s ease-out infinite",
     },
     sideNavItem: (active) => ({
       width: "100%",
@@ -761,6 +780,12 @@ export default function UserDashboardPage() {
 
   return (
     <div style={s.page}>
+      <style>{`
+  @keyframes ctaPing {
+    0% { transform: scale(1); opacity: 0.35; }
+    70%, 100% { transform: scale(2.4); opacity: 0; }
+  }
+`}</style>
       <link
         href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600&family=DM+Serif+Display:ital@0;1&display=swap"
         rel="stylesheet"
@@ -828,7 +853,10 @@ export default function UserDashboardPage() {
         </button>
 
         <button style={s.ctaPill} onClick={() => navigate("/user")}>
-          + Practice
+          <span style={s.dotPing}>
+            <span style={s.dotPingPulse} />
+          </span>
+          Practice now
         </button>
       </header>
 

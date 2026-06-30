@@ -68,12 +68,33 @@ function LayersIcon() {
   );
 }
 
+function SearchIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
+      <circle
+        cx="8.5"
+        cy="8.5"
+        r="5.5"
+        stroke="currentColor"
+        strokeWidth="1.5"
+      />
+      <path
+        d="M13 13l4 4"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 function TopicSelectionPage() {
   const { subjectId } = useParams();
   const navigate = useNavigate();
 
   const [subject, setSubject] = useState(null);
   const [topics, setTopics] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [subjectQuestions, setSubjectQuestions] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [randomQuestionCount, setRandomQuestionCount] = useState(20);
@@ -144,6 +165,55 @@ function TopicSelectionPage() {
     statValue: {
       fontWeight: "600",
       color: "var(--button-primary)",
+    },
+    searchWrapper: {
+      position: "relative",
+      marginTop: "1.5rem",
+      marginBottom: "1.5rem",
+      maxWidth: "560px",
+    },
+    searchIcon: {
+      position: "absolute",
+      left: "14px",
+      top: "50%",
+      transform: "translateY(-50%)",
+      color: "var(--text-secondary)",
+      pointerEvents: "none",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    searchInput: {
+      width: "100%",
+      boxSizing: "border-box",
+      border: "0.5px solid var(--border-color)",
+      borderRadius: "10px",
+      padding: "12px 14px 12px 42px",
+      background: "var(--bg-secondary)",
+      color: "var(--text-primary)",
+      fontSize: "14px",
+      fontWeight: "500",
+      outline: "none",
+      transition: "all 0.2s ease",
+    },
+    clearSearchButton: {
+      position: "absolute",
+      right: "10px",
+      top: "50%",
+      transform: "translateY(-50%)",
+      width: "26px",
+      height: "26px",
+      border: "none",
+      borderRadius: "50%",
+      background: "var(--surface-alt)",
+      color: "var(--text-secondary)",
+      cursor: "pointer",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      fontSize: "16px",
+      fontWeight: "700",
+      lineHeight: 1,
     },
     grid: {
       display: "grid",
@@ -342,6 +412,20 @@ function TopicSelectionPage() {
     return counts;
   }, [subjectQuestions]);
 
+  const filteredTopics = useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLowerCase();
+
+    if (!normalizedQuery) {
+      return Array.isArray(topics) ? topics : [];
+    }
+
+    return (Array.isArray(topics) ? topics : []).filter((topic) =>
+      String(topic.name || "")
+        .toLowerCase()
+        .includes(normalizedQuery),
+    );
+  }, [topics, searchQuery]);
+
   const totalQuestionCount = Array.isArray(subjectQuestions)
     ? subjectQuestions.length
     : 0;
@@ -377,7 +461,7 @@ function TopicSelectionPage() {
             0%   { background-position: -400px 0 }
             100% { background-position:  400px 0 }
           }
-          .shimmer {
+.shimmer {
             background     : linear-gradient(90deg, var(--surface-alt) 25%, #e8edf4 50%, var(--surface-alt) 75%);
             background-size: 800px 100%;
             animation      : shimmer 1.4s infinite;
@@ -640,12 +724,23 @@ function TopicSelectionPage() {
     <>
       <style>{`
         @keyframes fadeUp {
-          from { opacity: 0; transform: translateY(14px); }
+            from   { opacity: 0; transform: translateY(14px); }
           to   { opacity: 1; transform: translateY(0); }
         }
         .topic-page-header { animation: fadeUp 0.4s ease both; }
         .topic-card-enter {
           animation: fadeUp 0.35s ease both;
+        }
+
+        .topic-search-input:focus {
+          border-color: rgba(24, 95, 165, 0.45) !important;
+          box-shadow  : 0 0 0 3px rgba(24, 95, 165, 0.08);
+        }
+
+        @media (max-width: 640px) {
+          .topic-search-wrapper {
+            max-width: 100% !important;
+          }
         }
       `}</style>
       <div style={S.page}>
@@ -685,6 +780,35 @@ function TopicSelectionPage() {
                 <span>question{totalQuestionCount === 1 ? "" : "s"}</span>
               </div>
             </div>
+
+            <div className="topic-search-wrapper" style={S.searchWrapper}>
+              <div style={S.searchIcon}>
+                <SearchIcon />
+              </div>
+
+              <input
+                className="topic-search-input"
+                type="text"
+                placeholder="Search topics..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{
+                  ...S.searchInput,
+                  paddingRight: searchQuery ? "44px" : "14px",
+                }}
+              />
+
+              {searchQuery && (
+                <button
+                  type="button"
+                  aria-label="Clear search"
+                  style={S.clearSearchButton}
+                  onClick={() => setSearchQuery("")}
+                >
+                  ×
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Cards Grid */}
@@ -697,12 +821,20 @@ function TopicSelectionPage() {
                 randomized practice if questions are available.
               </p>
             </div>
+          ) : searchQuery && filteredTopics.length === 0 ? (
+            <div style={S.emptyState}>
+              <div style={S.emptyIcon}>🔍</div>
+              <p style={S.emptyTitle}>No matching topics found</p>
+              <p style={S.emptyBody}>
+                No topic matches "{searchQuery}". Try another keyword.
+              </p>
+            </div>
           ) : null}
 
           <div style={S.grid}>
             <QuickReviewCard />
             <RandomSubjectCard />
-            {(Array.isArray(topics) ? topics : []).map((topic, index) => {
+            {filteredTopics.map((topic, index) => {
               const topicCount = topicQuestionCounts[topic._id] || 0;
               return (
                 <div
