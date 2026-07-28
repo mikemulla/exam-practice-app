@@ -25,84 +25,133 @@ function ForgotPasswordPage() {
   };
 
   return (
-    <div style={pageStyle}>
-      <div style={cardStyle}>
-        <p style={labelTop}>Account recovery</p>
-        <h1 style={titleStyle}>Forgot Password</h1>
+    <>
+      <style>{`
+        @keyframes driftA {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          50%      { transform: translate(26px, -20px) scale(1.05); }
+        }
+        @keyframes driftB {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          50%      { transform: translate(-18px, 16px) scale(1.04); }
+        }
+        .blob-a {
+          position  : absolute; top: -130px; right: -160px;
+          width     : 380px; height: 380px;
+          background: 
+            radial-gradient(circle at 27% 24%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 24%),
+            radial-gradient(circle at 62% 70%, #7dd8ff 0%, #33b5f0 32%, #1a7fd4 58%, #0f5aa6 80%, #0a3f7a 100%);
+          border-radius: 58% 42% 65% 35% / 45% 55% 45% 55%;
+          filter       : blur(1px);
+          box-shadow   : 0 60px 110px -25px rgba(15, 90, 166, 0.4);
+          animation    : driftA 18s ease-in-out infinite;
+        }
+        .blob-b {
+          position  : absolute; bottom: -60px; left: -70px;
+          width     : 200px; height   : 200px;
+          background: 
+            radial-gradient(circle at 30% 26%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 26%),
+            radial-gradient(circle at 62% 68%, #66cdf4 0%, #1f8fdc 45%, #0e5a9e 100%);
+          border-radius: 50%;
+          filter       : blur(0.5px);
+          box-shadow   : 0 22px 42px -12px rgba(15, 90, 166, 0.4);
+          animation    : driftB 13s ease-in-out infinite;
+        }
+      `}</style>
+      <div style={pageStyle}>
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            zIndex: 0,
+            overflow: "hidden",
+            pointerEvents: "none",
+          }}
+        >
+          <div className="blob-a" />
+          <div className="blob-b" />
+        </div>
+        <div style={cardStyle}>
+          <p style={labelTop}>Account recovery</p>
+          <h1 style={titleStyle}>Forgot Password</h1>
 
-        {sent ? (
-          <>
-            <div style={successBox}>
-              <span style={{ fontSize: "20px" }}>✓</span>
-              <div>
-                <p
-                  style={{
-                    margin: "0 0 4px",
-                    fontWeight: "600",
-                    color: "#15803d",
-                  }}
-                >
-                  Check your email
-                </p>
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: "13px",
-                    color: "var(--text-secondary)",
-                  }}
-                >
-                  If <strong>{email}</strong> is registered, you'll receive a
-                  reset link shortly. Check your spam folder too.
-                </p>
+          {sent ? (
+            <>
+              <div style={successBox}>
+                <span style={{ fontSize: "20px" }}>✓</span>
+                <div>
+                  <p
+                    style={{
+                      margin: "0 0 4px",
+                      fontWeight: "600",
+                      color: "#15803d",
+                    }}
+                  >
+                    Check your email
+                  </p>
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: "13px",
+                      color: "var(--text-secondary)",
+                    }}
+                  >
+                    If <strong>{email}</strong> is registered, you'll receive a
+                    reset link shortly. Check your spam folder too.
+                  </p>
+                </div>
               </div>
-            </div>
-            <button
-              onClick={() => navigate("/user-login")}
-              style={{ ...primaryButton, marginTop: "8px" }}
-            >
-              Back to Login
-            </button>
-          </>
-        ) : (
-          <>
-            <p style={subtitleStyle}>
-              Enter your email address and we'll send you a link to reset your
-              password.
-            </p>
+              <button
+                onClick={() => navigate("/user-login")}
+                style={{ ...primaryButton, marginTop: "8px" }}
+              >
+                Back to Login
+              </button>
+            </>
+          ) : (
+            <>
+              <p style={subtitleStyle}>
+                Enter your email address and we'll send you a link to reset your
+                password.
+              </p>
 
-            {error && <div style={errorBox}>{error}</div>}
+              {error && <div style={errorBox}>{error}</div>}
 
-            <form onSubmit={handleSubmit}>
-              <label style={labelStyle}>Email address</label>
-              <input
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                style={inputStyle}
-              />
+              <form onSubmit={handleSubmit}>
+                <label style={labelStyle}>Email address</label>
+                <input
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  style={inputStyle}
+                />
+
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  style={{
+                    ...primaryButton,
+                    opacity: isSubmitting ? 0.7 : 1,
+                    cursor: isSubmitting ? "not-allowed" : "pointer",
+                  }}
+                >
+                  {isSubmitting ? "Sending…" : "Send Reset Link"}
+                </button>
+              </form>
 
               <button
-                type="submit"
-                disabled={isSubmitting}
-                style={{
-                  ...primaryButton,
-                  opacity: isSubmitting ? 0.7 : 1,
-                  cursor: isSubmitting ? "not-allowed" : "pointer",
-                }}
+                onClick={() => navigate("/user-login")}
+                style={plainButton}
               >
-                {isSubmitting ? "Sending…" : "Send Reset Link"}
+                ← Back to Login
               </button>
-            </form>
-
-            <button onClick={() => navigate("/user-login")} style={plainButton}>
-              ← Back to Login
-            </button>
-          </>
-        )}
+            </>
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -113,6 +162,8 @@ const pageStyle = {
   justifyContent: "center",
   padding: "24px",
   background: "var(--bg-primary)",
+  position: "relative",
+  overflow: "hidden",
 };
 
 const cardStyle = {
@@ -123,6 +174,8 @@ const cardStyle = {
   borderRadius: "20px",
   padding: "28px",
   boxShadow: "var(--card-shadow)",
+  position: "relative",
+  zIndex: 1,
 };
 
 const labelTop = {
@@ -190,14 +243,14 @@ const plainButton = {
 };
 
 const successBox = {
-  display     : "flex",
-  alignItems  : "flex-start",
-  gap         : "12px",
-  padding     : "16px",
+  display: "flex",
+  alignItems: "flex-start",
+  gap: "12px",
+  padding: "16px",
   borderRadius: "10px",
-  background  : "#f0fdf4",
-  border      : "1px solid #86efac",
-  color       : "#15803d",
+  background: "#f0fdf4",
+  border: "1px solid #86efac",
+  color: "#15803d",
   marginBottom: "20px",
 };
 

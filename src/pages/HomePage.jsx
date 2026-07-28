@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useDarkMode } from "../context/DarkModeContext";
 import PublicFooter from "../components/PublicFooter";
 import ProductPreviewSection from "../components/ProductPreviewSection";
+import PublicNavbar from "../components/PublicNavbar";
 
 function ArrowRight() {
   return (
@@ -128,6 +129,7 @@ function HomePage() {
 
   return (
     <>
+      <PublicNavbar />
       <style>{`
         @keyframes fadeInUp {
           from {
@@ -302,7 +304,7 @@ function HomePage() {
                 lineHeight: "1.6",
               }}
             >
-              A new feature is ready for you! Click the moon icon in the top
+              A new feature is ready for you! Click the moon icon in the bottom
               right corner to toggle dark mode and enjoy a more comfortable
               viewing experience.
             </p>
@@ -417,9 +419,9 @@ function HomePage() {
         <div
           style={{
             position: "fixed",
-            top: "1.5rem",
+            bottom: "1.5rem",
             right: "1.5rem",
-            zIndex: 1000,
+            zIndex: 900,
           }}
         >
           <button
@@ -436,6 +438,7 @@ function HomePage() {
               alignItems: "center",
               justifyContent: "center",
               transition: "all 0.2s",
+              boxShadow: "0 8px 24px rgba(15, 23, 42, 0.16)",
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.background = colors.surfaceAlt;
@@ -448,28 +451,84 @@ function HomePage() {
           </button>
         </div>
 
-        {/* Subtle background accent */}
+        {/* Glossy background blobs */}
         <div
           style={{
             position: "absolute",
-            top: "-10%",
-            right: "-5%",
-            width: "500px",
-            height: "500px",
-            background: isDarkMode
-              ? "radial-gradient(circle, rgba(24, 95, 165, 0.08) 0%, transparent 70%)"
-              : "radial-gradient(circle, rgba(24, 95, 165, 0.04) 0%, transparent 70%)",
-            borderRadius: "50%",
+            inset: 0,
+            zIndex: 0,
+            overflow: "hidden",
             pointerEvents: "none",
-            transition: "background 0.3s ease",
           }}
-        />
+        >
+          <div
+            style={{
+              position: "absolute",
+              top: "-150px",
+              right: "-140px",
+              width: "480px",
+              height: "480px",
+              background: isDarkMode
+                ? "radial-gradient(circle at 27% 24%, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0) 24%), radial-gradient(circle at 62% 70%, #4fc3f7 0%, #1f8fdc 32%, #14609e 58%, #0b3d6e 80%, #062347 100%)"
+                : "radial-gradient(circle at 27% 24%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 24%), radial-gradient(circle at 62% 70%, #7dd8ff 0%, #33b5f0 32%, #1a7fd4 58%, #0f5aa6 80%, #0a3f7a 100%)",
+              borderRadius: "58% 42% 63% 37% / 46% 54% 46% 54%",
+              filter: "blur(1px)",
+              boxShadow: isDarkMode
+                ? "0 60px 110px -25px rgba(0,0,0,0.5)"
+                : "0 60px 110px -25px rgba(15, 90, 166, 0.35)",
+              animation: "driftA 16s ease-in-out infinite",
+              transition: "background 0.3s ease, box-shadow 0.3s ease",
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              top: "60px",
+              right: "40px",
+              width: "110px",
+              height: "110px",
+              background: isDarkMode
+                ? "radial-gradient(circle at 30% 26%, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0) 26%), radial-gradient(circle at 62% 68%, #4fc3f7 0%, #1a6fb8 45%, #0a3d6e 100%)"
+                : "radial-gradient(circle at 30% 26%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 26%), radial-gradient(circle at 62% 68%, #66cdf4 0%, #1f8fdc 45%, #0e5a9e 100%)",
+              borderRadius: "50%",
+              filter: "blur(0.5px)",
+              boxShadow: isDarkMode
+                ? "0 24px 46px -12px rgba(0,0,0,0.5)"
+                : "0 24px 46px -12px rgba(15, 90, 166, 0.4)",
+              animation: "driftB 13s ease-in-out infinite",
+              transition: "background 0.3s ease, box-shadow 0.3s ease",
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              top: "260px",
+              left: "-120px",
+              width: "300px",
+              height: "300px",
+              opacity: isDarkMode ? 0.5 : 0.7,
+              background: isDarkMode
+                ? "radial-gradient(circle at 30% 26%, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 26%), radial-gradient(circle at 62% 68%, #3fa9dc 0%, #145a99 45%, #082a4d 100%)"
+                : "radial-gradient(circle at 30% 26%, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0) 26%), radial-gradient(circle at 62% 68%, #5fd0f0 0%, #1c8ad8 45%, #0c4d8c 100%)",
+              borderRadius: "45% 55% 58% 42% / 55% 45% 55% 45%",
+              filter: "blur(1px)",
+              boxShadow: isDarkMode
+                ? "0 40px 80px -20px rgba(0,0,0,0.45)"
+                : "0 40px 80px -20px rgba(15, 90, 166, 0.3)",
+              animation: "driftB 20s ease-in-out infinite",
+              transition: "background 0.3s ease, box-shadow 0.3s ease",
+            }}
+          />
+        </div>
 
         <div
           style={{
             maxWidth: "1200px",
             margin: "0 auto",
-            padding: "clamp(3rem, 8vw, 5rem) clamp(1.25rem, 5vw, 3rem)",
+            paddingTop: "clamp(1.25rem, 3vw, 2rem)",
+            paddingBottom: "clamp(3rem, 8vw, 5rem)",
+            paddingLeft: "clamp(1.25rem, 5vw, 3rem)",
+            paddingRight: "clamp(1.25rem, 5vw, 3rem)",
             position: "relative",
             zIndex: 1,
           }}
@@ -669,6 +728,15 @@ function HomePage() {
         @keyframes pulse {
           0%, 100% { opacity: 1; }
           50% { opacity: 0.5; }
+        }
+
+        @keyframes driftA {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          50%      { transform: translate(28px, -22px) scale(1.05); }
+        }
+        @keyframes driftB {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          50%      { transform: translate(-20px, 20px) scale(1.04); }
         }
       `}</style>
     </>

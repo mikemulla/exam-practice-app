@@ -1,11 +1,8 @@
-import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import api from "../lib/api";
 import * as FireworksPreset from "react-canvas-confetti/dist/presets/fireworks";
 
-/* ═══════════════════════════════════════════════
-   Preset resolver
-═══════════════════════════════════════════════ */
 const resolvePresetComponent = (presetModule) => {
   const candidates = [
     presetModule?.default?.default,
@@ -16,121 +13,131 @@ const resolvePresetComponent = (presetModule) => {
     presetModule,
   ];
   return candidates.find(
-    (c) => typeof c === "function" || Boolean(c && c.$$typeof),
+    (candidate) =>
+      typeof candidate === "function" ||
+      Boolean(candidate && candidate.$$typeof),
   );
 };
 
 const Fireworks = resolvePresetComponent(FireworksPreset);
 
-/* ═══════════════════════════════════════════════
-   Theme & Global Styles
-═══════════════════════════════════════════════ */
-const THEME_CSS = `
-  :root {
-    --q-bg: #f6f7f9;
-    --q-surface: #ffffff;
-    --q-ink: #0f172a;
-    --q-ink-secondary: #475569;
-    --q-ink-muted: #94a3b8;
-    --q-border: #e2e8f0;
-    --q-border-hover: #cbd5e1;
-    --q-accent: #2563eb;
-    --q-accent-soft: #eff6ff;
-    --q-accent-hover: #1d4ed8;
-    --q-success: #10b981;
-    --q-success-soft: #ecfdf5;
-    --q-danger: #ef4444;
-    --q-danger-soft: #fef2f2;
-    --q-warning: #f59e0b;
-    --q-warning-soft: #fffbeb;
-    --q-flag: #f43f5e;
-    --q-flag-soft: #fff1f2;
-    --q-radius: 16px;
-    --q-radius-sm: 12px;
-    --q-radius-xs: 8px;
-    --q-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.04), 0 1px 2px -1px rgb(0 0 0 / 0.04);
-    --q-shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
-    --q-shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.05), 0 4px 6px -4px rgb(0 0 0 / 0.05);
-    --q-transition: 200ms cubic-bezier(0.4, 0, 0.2, 1);
-    --q-font: "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  }
+/* ─── Design tokens ─── */
+const T = {
+  bg: "var(--bg-primary)",
+  surface: "var(--bg-secondary)",
+  surfaceAlt: "var(--surface-alt)",
+  border: "var(--border-color)",
+  borderStrong: "var(--border-strong)",
+  ink: "var(--text-primary)",
+  inkMid: "var(--text-secondary)",
+  inkFaint: "var(--text-secondary)",
+  accent: "var(--button-primary)",
+  accentLight: "#E6F1FB",
+  accentMid: "#0e3d6e",
+  accentDark: "#042C53",
+  success: "#16A34A",
+  successLight: "#DCFCE7",
+  danger: "#DC2626",
+  dangerLight: "#FEE2E2",
+  dangerBorder: "#FCA5A5",
+  warning: "#F59E0B",
+  warningLight: "#FEF3C7",
+  warningBorder: "#FCD34D",
+  flag: "#EF4444",
+  flagLight: "#FEE2E2",
+  radius: "10px",
+  radiusSm: "6px",
+  radiusLg: "14px",
+  shadow: "0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)",
+  shadowMd: "0 2px 8px rgba(0,0,0,0.08), 0 8px 32px rgba(0,0,0,0.06)",
+  fontSans: "Inter, system-ui, sans-serif",
+};
 
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --q-bg: #0f172a;
-      --q-surface: #1e293b;
-      --q-ink: #f8fafc;
-      --q-ink-secondary: #94a3b8;
-      --q-ink-muted: #64748b;
-      --q-border: #334155;
-      --q-border-hover: #475569;
-      --q-accent: #3b82f6;
-      --q-accent-soft: rgba(59,130,246,0.12);
-      --q-accent-hover: #60a5fa;
-      --q-success: #34d399;
-      --q-success-soft: rgba(52,211,153,0.12);
-      --q-danger: #f87171;
-      --q-danger-soft: rgba(248,113,113,0.12);
-      --q-warning: #fbbf24;
-      --q-warning-soft: rgba(251,191,36,0.12);
-      --q-flag: #fb7185;
-      --q-flag-soft: rgba(251,113,133,0.12);
-      --q-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.2), 0 1px 2px -1px rgb(0 0 0 / 0.2);
-      --q-shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.3);
-      --q-shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.3), 0 4px 6px -4px rgb(0 0 0 / 0.3);
-    }
-  }
-
-  @keyframes q-fade-up {
-    from { opacity: 0; transform: translateY(12px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-  @keyframes q-fade-in {
-    from { opacity: 0; }
-    to   { opacity: 1; }
-  }
-  @keyframes q-slide-right {
-    from { opacity: 0; transform: translateX(-8px); }
-    to   { opacity: 1; transform: translateX(0); }
-  }
-  @keyframes q-scale-in {
-    from { opacity: 0; transform: scale(0.96); }
-    to   { opacity: 1; transform: scale(1); }
-  }
-  @keyframes q-pulse-soft {
-    0%, 100% { opacity: 1; }
-    50% { opacity: .6; }
-  }
-
-  .q-card { animation: q-fade-up 0.35s ease both; }
-  .q-option { transition: all var(--q-transition); cursor: pointer; }
-  .q-option:hover { border-color: var(--q-accent); background: var(--q-accent-soft); }
-  .q-btn { transition: all var(--q-transition); }
-  .q-btn:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.05); }
-  .q-btn:active:not(:disabled) { transform: translateY(0) scale(0.98); }
-  .q-nav-dot { transition: all var(--q-transition); }
-  .q-nav-dot:hover { transform: scale(1.15); }
-`;
-
-const injectGlobalStyles = () => {
-  if (document.getElementById("q-styles")) return;
-  const style = document.createElement("style");
-  style.id = "q-styles";
-  style.textContent = THEME_CSS;
-  document.head.appendChild(style);
-
-  if (document.getElementById("q-fonts")) return;
+const injectFonts = () => {
+  if (document.getElementById("test-fonts")) return;
   const link = document.createElement("link");
-  link.id = "q-fonts";
+  link.id = "test-fonts";
   link.rel = "stylesheet";
   link.href =
-    "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap";
+    "https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap";
   document.head.appendChild(link);
 };
 
-/* ═══════════════════════════════════════════════
-   Utilities
-═══════════════════════════════════════════════ */
+const globalCSS = `
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @keyframes modalScale {
+    from { 
+      opacity: 0; 
+      transform: translate(-50%, -50%) scale(0.95);
+    }
+    to { 
+      opacity: 1; 
+      transform: translate(-50%, -50%) scale(1);
+    }
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+  @keyframes flagPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+  }
+  @keyframes slideInRight {
+    from { opacity: 0; transform: translateX(12px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  .quiz-option {
+    transition: all 0.2s ease;
+  }
+  .quiz-option:hover {
+    border-color: ${T.accent} !important;
+    background: ${T.accentLight} !important;
+  }
+  .quiz-btn:hover { opacity: 0.88; transform: translateY(-1px); }
+  .quiz-btn:active { transform: scale(0.98); }
+  .dot-nav {
+    transition: all 0.25s cubic-bezier(0.4,0,0.2,1);
+  }
+  .dot-nav:hover { transform: scale(1.4); }
+  .flag-btn {
+    position: relative;
+    overflow: hidden;
+  }
+  .flag-btn::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: rgba(255,255,255,0.3);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.3s, height 0.3s;
+  }
+  .flag-btn:active::after {
+    width: 40px;
+    height: 40px;
+  }
+`;
+
+const injectStyles = () => {
+  if (document.getElementById("test-styles")) return;
+  const s = document.createElement("style");
+  s.id = "test-styles";
+  s.textContent = globalCSS;
+  document.head.appendChild(s);
+};
+
+/* ─── Helpers ─── */
 const shuffleArray = (arr) => {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
@@ -143,377 +150,606 @@ const shuffleArray = (arr) => {
 const formatTime = (s) =>
   `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
 
-const clamp = (num, min, max) => Math.min(Math.max(num, min), max);
-
 const questionImageSrc = (question) => {
   if (!question) return "";
+
   if (question.imageData && question.imageContentType) {
-    if (String(question.imageData).startsWith("data:"))
+    if (String(question.imageData).startsWith("data:")) {
       return question.imageData;
+    }
     return `data:${question.imageContentType};base64,${question.imageData}`;
   }
-  const raw =
+
+  const rawImageUrl =
     question.imageUrl ||
     question.image ||
     question.questionImage ||
     question.imagePath ||
     "";
-  if (!raw) return "";
-  if (String(raw).startsWith("http") || String(raw).startsWith("data:"))
-    return raw;
-  const base =
+
+  if (!rawImageUrl) return "";
+
+  if (
+    String(rawImageUrl).startsWith("http") ||
+    String(rawImageUrl).startsWith("data:")
+  ) {
+    return rawImageUrl;
+  }
+
+  const baseUrl =
     import.meta.env.VITE_API_URL ||
     import.meta.env.VITE_API_BASE_URL ||
     "http://localhost:5000";
-  return `${base}${String(raw).startsWith("/") ? "" : "/"}${raw}`;
+
+  return `${baseUrl}${String(rawImageUrl).startsWith("/") ? "" : "/"}${rawImageUrl}`;
 };
 
-/* ═══════════════════════════════════════════════
-   Icons
-═══════════════════════════════════════════════ */
-const Icon = ({ name, size = 16, className = "", style = {} }) => {
-  const s = { width: size, height: size, ...style };
-  const stroke = "currentColor";
-  const sw = 1.5;
-
-  const paths = {
-    left: (
+/* ─── Icons ─── */
+const Icon = {
+  left: () => (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
       <path
         d="M10 12L6 8l4-4"
-        stroke={stroke}
-        strokeWidth={sw}
+        stroke="currentColor"
+        strokeWidth="1.5"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-    ),
-    right: (
+    </svg>
+  ),
+  right: () => (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
       <path
         d="M6 4l4 4-4 4"
-        stroke={stroke}
-        strokeWidth={sw}
+        stroke="currentColor"
+        strokeWidth="1.5"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-    ),
-    clock: (
-      <>
-        <circle cx="8" cy="8" r="6" stroke={stroke} strokeWidth="1.3" />
-        <path
-          d="M8 5.5v2.5l1.5 1"
-          stroke={stroke}
-          strokeWidth="1.3"
-          strokeLinecap="round"
-        />
-      </>
-    ),
-    flag: ({ filled } = {}) => (
+    </svg>
+  ),
+  clock: ({ warn }) => (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+      <circle
+        cx="8"
+        cy="8"
+        r="6"
+        stroke={warn ? T.danger : T.inkMid}
+        strokeWidth="1.3"
+      />
+      <path
+        d="M8 5.5v2.5l1.5 1"
+        stroke={warn ? T.danger : T.inkMid}
+        strokeWidth="1.3"
+        strokeLinecap="round"
+      />
+    </svg>
+  ),
+  flag: ({ filled = false }) => (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
       <path
         d="M3 2v12m0 0h7a2 2 0 002-2V4a2 2 0 00-2-2H3"
-        stroke={stroke}
-        strokeWidth={sw}
+        stroke="currentColor"
+        strokeWidth="1.5"
         strokeLinecap="round"
         strokeLinejoin="round"
         fill={filled ? "currentColor" : "none"}
       />
-    ),
-    check: (
+    </svg>
+  ),
+  check: () => (
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
       <path
         d="M1.5 6l3 3 6-6"
-        stroke={stroke}
+        stroke="currentColor"
         strokeWidth="1.7"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-    ),
-    x: (
-      <>
-        <path
-          d="M2.5 2.5l7 7M9.5 2.5l-7 7"
-          stroke={stroke}
-          strokeWidth="1.7"
-          strokeLinecap="round"
-        />
-      </>
-    ),
-    skip: (
-      <>
-        <path d="M2 4l6 4-6 4V4z" fill="currentColor" />
-        <path
-          d="M10 4v8"
-          stroke={stroke}
-          strokeWidth={sw}
-          strokeLinecap="round"
-        />
-      </>
-    ),
-    chevron: ({ open } = {}) => (
+    </svg>
+  ),
+  x: () => (
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+      <path
+        d="M2.5 2.5l7 7M9.5 2.5l-7 7"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+      />
+    </svg>
+  ),
+  skip: () => (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+      <path d="M2 4l6 4-6 4V4z" fill="currentColor" />
+      <path
+        d="M10 4v8"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+    </svg>
+  ),
+  chevron: ({ open }) => (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 12 12"
+      fill="none"
+      style={{
+        transition: "transform 0.25s",
+        transform: open ? "rotate(90deg)" : "rotate(0deg)",
+      }}
+    >
       <path
         d="M4.5 3l3 3-3 3"
-        stroke={stroke}
-        strokeWidth={sw}
+        stroke="currentColor"
+        strokeWidth="1.5"
         strokeLinecap="round"
         strokeLinejoin="round"
-        style={{
-          transition: "transform 0.25s",
-          transform: open ? "rotate(90deg)" : "rotate(0deg)",
-        }}
       />
-    ),
-    trophy: (
-      <>
-        <path
-          d="M8 21h8M12 17v4M7 4H4a1 1 0 00-1 1v2a4 4 0 004 4h.5M17 4h3a1 1 0 011 1v2a4 4 0 01-4 4h-.5"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-        />
-        <path
-          d="M7 4h10v6a5 5 0 01-10 0V4z"
-          stroke="currentColor"
-          strokeWidth="1.5"
-        />
-      </>
-    ),
-  };
-
-  const content =
-    name === "flag"
-      ? paths.flag({ filled: style.filled })
-      : paths[name] || null;
-  return (
-    <svg viewBox="0 0 16 16" fill="none" style={s} className={className}>
-      {content}
     </svg>
-  );
+  ),
+  trophy: () => (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+      <path
+        d="M8 21h8M12 17v4M7 4H4a1 1 0 00-1 1v2a4 4 0 004 4h.5M17 4h3a1 1 0 011 1v2a4 4 0 01-4 4h-.5"
+        stroke={T.accent}
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+      <path
+        d="M7 4h10v6a5 5 0 01-10 0V4z"
+        stroke={T.accent}
+        strokeWidth="1.5"
+      />
+    </svg>
+  ),
 };
 
-/* ═══════════════════════════════════════════════
-   Sub-components
-═══════════════════════════════════════════════ */
-
-const Badge = ({ variant, children, style = {} }) => {
-  const map = {
-    correct: {
-      bg: "var(--q-success-soft)",
-      color: "var(--q-success)",
-      border: "var(--q-success)",
-    },
-    incorrect: {
-      bg: "var(--q-danger-soft)",
-      color: "var(--q-danger)",
-      border: "var(--q-danger)",
-    },
-    flagged: {
-      bg: "var(--q-flag-soft)",
-      color: "var(--q-flag)",
-      border: "var(--q-flag)",
-    },
-    info: {
-      bg: "var(--q-accent-soft)",
-      color: "var(--q-accent)",
-      border: "var(--q-accent)",
-    },
-    neutral: {
-      bg: "transparent",
-      color: "var(--q-ink-muted)",
-      border: "var(--q-border)",
-    },
+/* ─── Badge ─── */
+function Badge({ variant, children }) {
+  const variants = {
+    correct: { bg: T.successLight, color: T.success, border: "#86efac" },
+    incorrect: { bg: T.dangerLight, color: T.danger, border: T.dangerBorder },
+    flagged: { bg: T.flagLight, color: T.flag, border: "#FCA5A5" },
+    info: { bg: T.accentLight, color: T.accent, border: "#bfdbfe" },
+    neutral: { bg: "var(--surface-alt)", color: T.inkMid, border: T.border },
   };
-  const v = map[variant] || map.neutral;
+  const c = variants[variant] || variants.neutral;
   return (
     <span
       style={{
         display: "inline-flex",
         alignItems: "center",
-        gap: "4px",
-        fontSize: "11px",
-        fontWeight: 600,
+        fontSize: "12px",
+        fontWeight: "600",
         padding: "4px 10px",
-        borderRadius: "999px",
-        background: v.bg,
-        color: v.color,
-        border: `1px solid ${v.border}`,
-        letterSpacing: "0.02em",
-        lineHeight: 1,
-        ...style,
+        borderRadius: "6px",
+        background: c.bg,
+        color: c.color,
+        border: `1px solid ${c.border}`,
+        letterSpacing: "0.01em",
+        flexShrink: 0,
+        gap: "4px",
       }}
     >
       {children}
     </span>
   );
-};
+}
 
-const Button = ({
-  variant = "secondary",
+/* ─── Button ─── */
+function Btn({
+  variant = "ghost",
   children,
   onClick,
   disabled,
   style = {},
-  title,
-}) => {
+  isIconOnly = false,
+}) {
   const base = {
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
     gap: "6px",
-    padding: "10px 18px",
-    borderRadius: "var(--q-radius-xs)",
+    padding: isIconOnly ? "8px" : "10px 16px",
+    borderRadius: T.radiusSm,
     fontSize: "13px",
-    fontWeight: 600,
+    fontWeight: "600",
     cursor: disabled ? "not-allowed" : "pointer",
     border: "none",
-    fontFamily: "inherit",
-    opacity: disabled ? 0.45 : 1,
+    transition: "all 0.2s",
+    opacity: disabled ? 0.5 : 1,
     letterSpacing: "0.01em",
-    whiteSpace: "nowrap",
   };
   const variants = {
-    primary: { background: "var(--q-accent)", color: "#fff" },
-    secondary: {
-      background: "var(--q-surface)",
-      color: "var(--q-ink-secondary)",
-      border: "1px solid var(--q-border)",
+    primary: { background: T.accent, color: "#fff" },
+    ghost: {
+      background: "transparent",
+      color: T.inkMid,
+      border: `1px solid ${T.borderStrong}`,
     },
-    ghost: { background: "transparent", color: "var(--q-ink-secondary)" },
-    danger: { background: "var(--q-danger-soft)", color: "var(--q-danger)" },
+    danger: {
+      background: T.dangerLight,
+      color: T.danger,
+      border: `1px solid ${T.dangerBorder}`,
+    },
     flag: {
       background: "transparent",
-      color: "var(--q-flag)",
-      border: "1.5px solid var(--q-flag)",
+      color: T.flag,
+      border: `1.5px solid ${T.flag}`,
     },
     flagActive: {
-      background: "var(--q-flag)",
+      background: T.flag,
       color: "#fff",
-      border: "1.5px solid var(--q-flag)",
+      border: `1.5px solid ${T.flag}`,
     },
   };
-  const v = variants[variant] || variants.secondary;
   return (
     <button
-      className="q-btn"
+      className="quiz-btn flag-btn"
       onClick={!disabled ? onClick : undefined}
       disabled={disabled}
-      title={title}
-      style={{ ...base, ...v, ...style }}
+      style={{ ...base, ...variants[variant], ...style }}
+      title={variant === "flag" ? "Flag for review" : ""}
     >
       {children}
     </button>
   );
-};
+}
 
-const Stat = ({ value, label }) => (
-  <div
-    style={{
-      background: "var(--q-surface)",
-      borderRadius: "var(--q-radius-sm)",
-      padding: "20px 16px",
-      textAlign: "center",
-      border: "1px solid var(--q-border)",
-      boxShadow: "var(--q-shadow)",
-    }}
-  >
-    <div
-      style={{
-        fontSize: "28px",
-        fontWeight: 700,
-        color: "var(--q-accent)",
-        lineHeight: 1.1,
-      }}
-    >
-      {value}
-    </div>
-    <div
-      style={{
-        fontSize: "11px",
-        color: "var(--q-ink-muted)",
-        marginTop: "6px",
-        fontWeight: 600,
-        textTransform: "uppercase",
-        letterSpacing: "0.08em",
-      }}
-    >
-      {label}
-    </div>
-  </div>
-);
+/* ─── Flagged indicator badge with dropdown ─── */
+function FlaggedBadge({
+  count,
+  questions,
+  selectedAnswers,
+  currentQuestionIndex,
+  onSelectFlagged,
+  flaggedQuestions,
+}) {
+  const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef(null);
 
-const CircularProgress = ({ percentage, size = 120, stroke = 8 }) => {
-  const r = (size - stroke) / 2;
-  const c = 2 * Math.PI * r;
-  const offset = c - (percentage / 100) * c;
-  const color = percentage >= 50 ? "var(--q-success)" : "var(--q-danger)";
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowDropdown(false);
+      }
+    };
+
+    if (showDropdown) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [showDropdown]);
+
+  if (count === 0) return null;
+
+  const flaggedQuestionsList = questions.filter((q) =>
+    flaggedQuestions.has(q._id),
+  );
 
   return (
     <div
-      style={{ position: "relative", width: size, height: size, flexShrink: 0 }}
+      ref={dropdownRef}
+      style={{
+        position: "relative",
+      }}
     >
-      <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={r}
-          stroke="var(--q-border)"
-          strokeWidth={stroke}
-          fill="none"
-        />
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={r}
-          stroke={color}
-          strokeWidth={stroke}
-          fill="none"
-          strokeLinecap="round"
-          style={{
-            strokeDasharray: c,
-            strokeDashoffset: offset,
-            transition: "stroke-dashoffset 1s ease",
-          }}
-        />
-      </svg>
-      <div
+      <button
+        onClick={() => setShowDropdown(!showDropdown)}
         style={{
-          position: "absolute",
-          inset: 0,
+          display: "inline-flex",
+          alignItems: "center",
+          gap: "6px",
+          padding: "6px 12px",
+          borderRadius: "20px",
+          background: T.flagLight,
+          border: `1.5px solid ${T.flag}`,
+          cursor: "pointer",
+          transition: "all 0.2s",
+          fontSize: "12px",
+          fontWeight: "600",
+          color: T.flag,
+          animation: "slideInRight 0.3s ease",
+          fontFamily: T.fontSans,
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background = T.flag;
+          e.currentTarget.style.color = "#fff";
+          e.currentTarget.style.transform = "scale(1.05)";
+        }}
+        onMouseLeave={(e) => {
+          if (!showDropdown) {
+            e.currentTarget.style.background = T.flagLight;
+            e.currentTarget.style.color = T.flag;
+            e.currentTarget.style.transform = "scale(1)";
+          }
+        }}
+      >
+        <Icon.flag filled />
+        <span>{count}</span>
+      </button>
+
+      {showDropdown && (
+        <div
+          style={{
+            position: "fixed",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            width: "calc(100vw - 32px)",
+            maxWidth: "320px",
+            maxHeight: "60vh",
+            background: T.surface,
+            border: `1px solid ${T.border}`,
+            borderRadius: T.radiusLg,
+            boxShadow: T.shadowMd,
+            zIndex: 1000,
+            overflowY: "auto",
+            animation: "modalScale 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
+          }}
+        >
+          <div
+            style={{
+              padding: "12px",
+              borderBottom: `1px solid ${T.border}`,
+              fontSize: "12px",
+              fontWeight: "600",
+              color: T.inkFaint,
+              textTransform: "uppercase",
+              letterSpacing: "0.05em",
+              position: "sticky",
+              top: 0,
+              background: T.surface,
+              zIndex: 10,
+            }}
+          >
+            Flagged Questions ({count})
+          </div>
+
+          {flaggedQuestionsList.map((question, idx) => {
+            const questionIndex = questions.findIndex(
+              (q) => q._id === question._id,
+            );
+            const isAnswered = Boolean(selectedAnswers[question._id]);
+            const isCurrent = questionIndex === currentQuestionIndex;
+
+            return (
+              <button
+                key={question._id}
+                onClick={() => {
+                  onSelectFlagged(questionIndex);
+                  setShowDropdown(false);
+                }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "10px",
+                  padding: "12px",
+                  borderBottom:
+                    idx < flaggedQuestionsList.length - 1
+                      ? `1px solid ${T.border}`
+                      : "none",
+                  background: isCurrent ? T.accentLight : "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                  width: "100%",
+                  textAlign: "left",
+                  transition: "all 0.15s",
+                  fontSize: "13px",
+                  color: T.ink,
+                  fontFamily: T.fontSans,
+                }}
+                onMouseEnter={(e) => {
+                  if (!isCurrent) {
+                    e.currentTarget.style.background = "var(--surface-alt)";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isCurrent) {
+                    e.currentTarget.style.background = "transparent";
+                  }
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: "24px",
+                    height: "24px",
+                    borderRadius: "6px",
+                    background: T.flagLight,
+                    color: T.flag,
+                    fontSize: "12px",
+                    fontWeight: "600",
+                    flexShrink: 0,
+                  }}
+                >
+                  {questionIndex + 1}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: "13px",
+                      fontWeight: "500",
+                      color: T.ink,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    Q{String(questionIndex + 1).padStart(2, "0")}
+                  </p>
+                  <p
+                    style={{
+                      margin: "2px 0 0",
+                      fontSize: "12px",
+                      color: T.inkMid,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {question.questionText}
+                  </p>
+                </div>
+                {isAnswered && (
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      width: "20px",
+                      height: "20px",
+                      borderRadius: "50%",
+                      background: T.accentLight,
+                      color: T.accent,
+                      fontSize: "11px",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <Icon.check />
+                  </div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Review option row ─── */
+function ReviewOption({ option, isCorrect, isUserAnswer }) {
+  if (!isCorrect && !isUserAnswer) return null;
+  const isWrong = isUserAnswer && !isCorrect;
+  const color = isWrong ? T.danger : T.success;
+  const bg = isWrong ? T.dangerLight : T.successLight;
+  const border = isWrong ? T.dangerBorder : "#86efac";
+  const label =
+    isCorrect && isUserAnswer
+      ? "Your answer · correct"
+      : isCorrect
+        ? "Correct answer"
+        : "Your answer · incorrect";
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "10px",
+        padding: "10px 12px",
+        borderRadius: T.radiusSm,
+        marginBottom: "6px",
+        background: bg,
+        border: `1px solid ${border}`,
+        color,
+      }}
+    >
+      <span
+        style={{
+          width: "18px",
+          height: "18px",
+          borderRadius: "50%",
+          flexShrink: 0,
+          background: color,
+          color: "#fff",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          flexDirection: "column",
+          fontSize: "11px",
         }}
       >
-        <span
-          style={{ fontSize: "22px", fontWeight: 700, color: "var(--q-ink)" }}
-        >
-          {percentage}%
-        </span>
-      </div>
+        {isCorrect ? <Icon.check /> : <Icon.x />}
+      </span>
+      <span style={{ fontSize: "13px", flex: 1 }}>{option}</span>
+      <span
+        style={{
+          fontSize: "11px",
+          opacity: 0.75,
+          whiteSpace: "nowrap",
+        }}
+      >
+        {label}
+      </span>
     </div>
   );
-};
+}
 
-const QuestionReviewCard = ({
+/* ─── Explanation toggle ─── */
+function ExplanationToggle({ text }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div style={{ marginTop: "12px" }}>
+      <button
+        onClick={() => setOpen(!open)}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "5px",
+          background: "none",
+          border: "none",
+          cursor: "pointer",
+          padding: 0,
+          fontSize: "13px",
+          color: T.accent,
+          fontWeight: "600",
+          transition: "color 0.15s",
+        }}
+      >
+        <Icon.chevron open={open} />
+        {open ? "Hide" : "Show"} explanation
+      </button>
+      {open && (
+        <p
+          style={{
+            fontSize: "13px",
+            color: T.inkMid,
+            lineHeight: "1.7",
+            marginTop: "10px",
+            padding: "12px 14px",
+            background: T.surfaceAlt,
+            borderRadius: T.radiusSm,
+            borderLeft: `3px solid ${T.accent}`,
+            animation: "fadeIn 0.2s ease",
+            margin: "10px 0 0",
+          }}
+        >
+          {text}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/* ─── Question review card ─── */
+function QuestionReviewCard({
   question,
   index,
   userAnswer,
   imageSrc,
   isFlagged,
-}) => {
+}) {
   const isCorrect = userAnswer === question.correctAnswer;
-  const [showExplanation, setShowExplanation] = useState(false);
-
+  const displayImageSrc = imageSrc || questionImageSrc(question);
   return (
     <div
-      className="q-card"
       style={{
-        background: "var(--q-surface)",
-        border: `1px solid ${isFlagged ? "var(--q-flag)" : "var(--q-border)"}`,
-        borderRadius: "var(--q-radius)",
-        padding: "24px",
-        marginBottom: "16px",
+        background: T.surface,
+        border: `1px solid ${isFlagged ? T.flag : T.border}`,
+        borderRadius: T.radiusLg,
+        padding: "1.5rem",
+        marginBottom: "1rem",
         boxShadow: isFlagged
-          ? "0 0 0 3px var(--q-flag-soft), var(--q-shadow-md)"
-          : "var(--q-shadow-md)",
-        animationDelay: `${Math.min(index * 0.04, 0.3)}s`,
+          ? `0 0 0 2px ${T.flagLight}, ${T.shadow}`
+          : T.shadow,
+        animation: `fadeUp 0.3s ease ${Math.min(index * 0.03, 0.3)}s both`,
       }}
     >
       <div
@@ -522,192 +758,127 @@ const QuestionReviewCard = ({
           justifyContent: "space-between",
           alignItems: "flex-start",
           gap: "12px",
-          marginBottom: "16px",
+          marginBottom: "1rem",
           flexWrap: "wrap",
         }}
       >
-        <p
-          style={{
-            fontSize: "15px",
-            lineHeight: 1.65,
-            color: "var(--q-ink)",
-            margin: 0,
-            flex: 1,
-          }}
-        >
-          <span
+        <div style={{ flex: 1 }}>
+          <p
             style={{
-              color: "var(--q-ink-muted)",
-              fontWeight: 600,
-              marginRight: "8px",
+              fontSize: "14px",
+              lineHeight: "1.65",
+              color: T.ink,
+              margin: 0,
             }}
           >
-            {String(index + 1).padStart(2, "0")}
-          </span>
-          {question.questionText}
-        </p>
-        <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
+            <span
+              style={{
+                fontSize: "12px",
+                color: T.inkFaint,
+                marginRight: "8px",
+                fontWeight: "600",
+              }}
+            >
+              {String(index + 1).padStart(2, "0")}
+            </span>
+            {question.questionText}
+          </p>
+        </div>
+        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
           {isFlagged && (
             <Badge variant="flagged">
-              <Icon name="flag" size={12} style={{ filled: true }} /> Flagged
+              <Icon.flag filled /> Flagged
             </Badge>
           )}
           <Badge variant={isCorrect ? "correct" : "incorrect"}>
-            {isCorrect ? "Correct" : "Incorrect"}
+            {isCorrect ? "✓ Correct" : "✗ Incorrect"}
           </Badge>
         </div>
       </div>
 
-      {imageSrc && (
+      {displayImageSrc && (
         <div
           style={{
-            marginBottom: "16px",
-            padding: "12px",
-            background: "var(--q-bg)",
-            borderRadius: "var(--q-radius-sm)",
-            border: "1px solid var(--q-border)",
+            margin: "0 0 1rem",
+            padding: "10px",
+            background: T.surfaceAlt,
+            border: `1px solid ${T.border}`,
+            borderRadius: T.radius,
           }}
         >
           <img
-            src={imageSrc}
+            src={displayImageSrc}
             alt="Question"
             style={{
               display: "block",
               width: "100%",
-              maxWidth: "520px",
-              maxHeight: "320px",
+              maxWidth: "560px",
+              maxHeight: "360px",
               objectFit: "contain",
-              borderRadius: "var(--q-radius-xs)",
+              borderRadius: T.radiusSm,
               margin: "0 auto",
             }}
-            onError={(e) => (e.currentTarget.style.display = "none")}
           />
         </div>
       )}
 
-      <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-        {question.options.map((opt, i) => {
-          const isUser = opt === userAnswer;
-          const isRight = opt === question.correctAnswer;
-          if (!isUser && !isRight) return null;
-          const wrong = isUser && !isRight;
-          const bg = wrong ? "var(--q-danger-soft)" : "var(--q-success-soft)";
-          const color = wrong ? "var(--q-danger)" : "var(--q-success)";
-          const border = wrong ? "var(--q-danger)" : "var(--q-success)";
-          const label =
-            isRight && isUser
-              ? "Your answer · correct"
-              : isRight
-                ? "Correct answer"
-                : "Your answer · incorrect";
-
-          return (
-            <div
-              key={i}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "10px",
-                padding: "10px 14px",
-                borderRadius: "var(--q-radius-xs)",
-                background: bg,
-                border: `1px solid ${border}`,
-                color,
-                fontSize: "13px",
-              }}
-            >
-              <span
-                style={{
-                  width: "18px",
-                  height: "18px",
-                  borderRadius: "50%",
-                  background: color,
-                  color: "#fff",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                }}
-              >
-                <Icon name={wrong ? "x" : "check"} size={10} />
-              </span>
-              <span style={{ flex: 1 }}>{opt}</span>
-              <span
-                style={{ fontSize: "11px", opacity: 0.8, whiteSpace: "nowrap" }}
-              >
-                {label}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-
-      {question.explanation && (
-        <div style={{ marginTop: "16px" }}>
-          <button
-            onClick={() => setShowExplanation((p) => !p)}
-            style={{
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              padding: 0,
-              fontSize: "13px",
-              color: "var(--q-accent)",
-              fontWeight: 600,
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "4px",
-              fontFamily: "inherit",
-            }}
-          >
-            <Icon name="chevron" size={12} style={{ open: showExplanation }} />
-            {showExplanation ? "Hide explanation" : "Show explanation"}
-          </button>
-          {showExplanation && (
-            <div
-              style={{
-                marginTop: "10px",
-                padding: "14px",
-                background: "var(--q-bg)",
-                borderRadius: "var(--q-radius-xs)",
-                borderLeft: "3px solid var(--q-accent)",
-                fontSize: "13px",
-                color: "var(--q-ink-secondary)",
-                lineHeight: 1.7,
-                animation: "q-fade-in 0.2s ease",
-              }}
-            >
-              {question.explanation}
-            </div>
-          )}
-        </div>
-      )}
+      {question.options.map((opt, i) => (
+        <ReviewOption
+          key={i}
+          option={opt}
+          isCorrect={opt === question.correctAnswer}
+          isUserAnswer={opt === userAnswer}
+        />
+      ))}
+      <ExplanationToggle text={question.explanation} />
     </div>
   );
-};
+}
+
+/* ─── Stat cell ─── */
+function StatCell({ value, label }) {
+  return (
+    <div
+      style={{
+        background: T.surfaceAlt,
+        borderRadius: T.radiusSm,
+        padding: "1rem",
+        textAlign: "center",
+        border: `1px solid ${T.border}`,
+      }}
+    >
+      <p
+        style={{
+          fontSize: "24px",
+          fontWeight: "700",
+          color: T.accent,
+          lineHeight: 1.1,
+          margin: 0,
+        }}
+      >
+        {value}
+      </p>
+      <p
+        style={{
+          fontSize: "12px",
+          color: T.inkFaint,
+          marginTop: "6px",
+          margin: "6px 0 0",
+          fontWeight: "500",
+          textTransform: "uppercase",
+          letterSpacing: "0.05em",
+        }}
+      >
+        {label}
+      </p>
+    </div>
+  );
+}
 
 /* ═══════════════════════════════════════════════
-   Keyboard hook
+   Main component
 ═══════════════════════════════════════════════ */
-const useKeyboard = (handlers, deps) => {
-  useEffect(() => {
-    const onKey = (e) => {
-      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")
-        return;
-      const key = e.key.toLowerCase();
-      if (handlers[key]) handlers[key](e);
-      if (handlers["any"]) handlers["any"](e);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, deps);
-};
-
-/* ═══════════════════════════════════════════════
-   Main Component
-═══════════════════════════════════════════════ */
-export default function SubjectTestPage() {
+function SubjectTestPage() {
   const params = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -733,27 +904,18 @@ export default function SubjectTestPage() {
   const [errorMessage, setErrorMessage] = useState("");
   const [timeLeft, setTimeLeft] = useState(300);
   const [reviewMode, setReviewMode] = useState("all");
+  const [showFlaggedFilter, setShowFlaggedFilter] = useState(false);
   const [stoppedTest, setStoppedTest] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-
   const resultSavedRef = useRef(false);
   const perfectScoreAudioRef = useRef(null);
   const hasPlayedPerfectScoreRef = useRef(false);
-  const optionRefs = useRef([]);
-
-  const defaultDuration = subject?.duration || 300;
 
   useEffect(() => {
-    injectGlobalStyles();
-    perfectScoreAudioRef.current = new Audio("/sounds/perfect-score.mp3");
-    perfectScoreAudioRef.current.volume = 0.8;
-    return () => {
-      if (perfectScoreAudioRef.current) {
-        perfectScoreAudioRef.current.pause();
-        perfectScoreAudioRef.current = null;
-      }
-    };
+    injectFonts();
+    injectStyles();
   }, []);
+
+  const defaultDuration = subject?.duration || 300;
 
   const makeImageSrc = (imageData, imageContentType) => {
     if (!imageData || !imageContentType) return "";
@@ -770,107 +932,139 @@ export default function SubjectTestPage() {
     const response = await api.get(`/api/questions/${questionId}/image`, {
       _tokenType: "user",
     });
+
     return makeImageSrc(
       response.data?.imageData,
       response.data?.imageContentType,
     );
   };
 
-  const preloadImagesInBatches = useCallback(
-    async (questionList, batchSize = 5) => {
-      const imageQuestions = questionList.filter(
-        (q) =>
-          q?._id &&
-          (q.hasImage || q.imageContentType || q.imageSize) &&
-          !q.imageData,
-      );
-      if (imageQuestions.length === 0) return;
-      setIsPreloadingImages(true);
-      try {
-        for (let i = 0; i < imageQuestions.length; i += batchSize) {
-          const batch = imageQuestions.slice(i, i + batchSize);
-          const loaded = await Promise.all(
-            batch.map(async (q) => {
-              try {
-                const src = await fetchQuestionImage(q._id);
-                return [q._id, src];
-              } catch (e) {
-                console.error("Image preload failed", q._id, e);
-                return [q._id, ""];
-              }
-            }),
-          );
-          setQuestionImages((prev) => {
-            const next = { ...prev };
-            loaded.forEach(([id, src]) => {
-              if (src) next[id] = src;
-            });
-            return next;
-          });
-        }
-      } finally {
-        setIsPreloadingImages(false);
-      }
-    },
-    [],
-  );
+  const preloadImagesInBatches = async (questionList, batchSize = 5) => {
+    const imageQuestions = questionList.filter(
+      (question) =>
+        question?._id &&
+        (question.hasImage ||
+          question.imageContentType ||
+          question.imageSize) &&
+        !question.imageData,
+    );
 
-  /* ── Data fetch ── */
+    if (imageQuestions.length === 0) return;
+
+    setIsPreloadingImages(true);
+
+    try {
+      for (let i = 0; i < imageQuestions.length; i += batchSize) {
+        const batch = imageQuestions.slice(i, i + batchSize);
+
+        const loadedImages = await Promise.all(
+          batch.map(async (question) => {
+            try {
+              const imageSrc = await fetchQuestionImage(question._id);
+              return [question._id, imageSrc];
+            } catch (error) {
+              console.error(
+                "Question image preload failed:",
+                question._id,
+                error,
+              );
+              return [question._id, ""];
+            }
+          }),
+        );
+
+        setQuestionImages((previousImages) => {
+          const nextImages = { ...previousImages };
+
+          loadedImages.forEach(([questionId, imageSrc]) => {
+            if (imageSrc) nextImages[questionId] = imageSrc;
+          });
+
+          return nextImages;
+        });
+      }
+    } finally {
+      setIsPreloadingImages(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchPageData = async () => {
       try {
         setIsLoading(true);
         setErrorMessage("");
         const token = localStorage.getItem("userToken");
+
         if (!token) {
           navigate("/user-login");
           return;
         }
-        const req = { _tokenType: "user" };
-        if (!subjectId && !topicId)
+
+        const userRequest = { _tokenType: "user" };
+
+        if (!subjectId && !topicId) {
           throw new Error("Missing subject or topic ID");
+        }
 
         if (isTopicMode) {
-          const [topicRes, qRes] = await Promise.all([
-            api.get(`/api/topics/${topicId}`, req),
-            api.get(`/api/questions/topic/${topicId}`, req),
+          const [topicResponse, questionsResponse] = await Promise.all([
+            api.get(`/api/topics/${topicId}`, userRequest),
+            api.get(`/api/questions/topic/${topicId}`, userRequest),
           ]);
-          const t = topicRes.data;
-          if (!t) throw new Error("Topic not found");
-          const sid =
-            t.subjectId?._id || t.subject?._id || t.subjectId || t.subject;
-          if (!sid) throw new Error("Topic subject not found");
-          const subRes = await api.get(`/api/subjects/${sid}`, req);
-          const unique = Array.from(
-            new Map(qRes.data.map((q) => [q._id, q])).values(),
+          const selectedTopic = topicResponse.data;
+          if (!selectedTopic) throw new Error("Topic not found");
+          const resolvedSubjectId =
+            selectedTopic.subjectId?._id ||
+            selectedTopic.subject?._id ||
+            selectedTopic.subjectId ||
+            selectedTopic.subject;
+
+          if (!resolvedSubjectId) {
+            throw new Error("Topic subject not found");
+          }
+
+          const subjectResponse = await api.get(
+            `/api/subjects/${resolvedSubjectId}`,
+            userRequest,
           );
-          const prepared = shuffleArray(
+          const unique = Array.from(
+            new Map(questionsResponse.data.map((q) => [q._id, q])).values(),
+          );
+
+          const preparedQuestions = shuffleArray(
             unique.map((q) => ({ ...q, options: shuffleArray(q.options) })),
           );
-          setTopic(t);
-          setSubject(subRes.data);
+
+          setTopic(selectedTopic);
+          setSubject(subjectResponse.data);
           setQuestionImages({});
-          setQuestions(prepared);
-          preloadImagesInBatches(prepared);
+          setQuestions(preparedQuestions);
+          preloadImagesInBatches(preparedQuestions);
         } else {
-          const [subRes, qRes] = await Promise.all([
-            api.get(`/api/subjects/${subjectId}`, req),
-            api.get(`/api/questions/subject/${subjectId}`, req),
+          const [subjectResponse, questionsResponse] = await Promise.all([
+            api.get(`/api/subjects/${subjectId}`, userRequest),
+            api.get(`/api/questions/subject/${subjectId}`, userRequest),
           ]);
           const unique = Array.from(
-            new Map(qRes.data.map((q) => [q._id, q])).values(),
+            new Map(questionsResponse.data.map((q) => [q._id, q])).values(),
           );
-          const randomized = shuffleArray(
+
+          const randomizedQuestions = shuffleArray(
             unique.map((q) => ({ ...q, options: shuffleArray(q.options) })),
           );
-          const prepared = isRandomMode
-            ? randomized.slice(0, Math.min(requestedLimit, randomized.length))
-            : randomized;
+
+          const preparedQuestions = isRandomMode
+            ? randomizedQuestions.slice(
+                0,
+                Math.min(requestedLimit, randomizedQuestions.length),
+              )
+            : randomizedQuestions;
+
           setTopic(null);
-          setSubject(subRes.data);
+          setSubject(subjectResponse.data);
           setQuestionImages({});
-          setQuestions(prepared);
-          preloadImagesInBatches(prepared);
+          setQuestions(preparedQuestions);
+          preloadImagesInBatches(preparedQuestions);
         }
         setCurrentQuestionIndex(0);
         setSelectedAnswers({});
@@ -885,16 +1079,8 @@ export default function SubjectTestPage() {
         setIsLoading(false);
       }
     };
-    fetchData();
-  }, [
-    subjectId,
-    topicId,
-    isTopicMode,
-    isRandomMode,
-    requestedLimit,
-    navigate,
-    preloadImagesInBatches,
-  ]);
+    fetchPageData();
+  }, [subjectId, topicId, isTopicMode, isRandomMode, requestedLimit, navigate]);
 
   useEffect(() => {
     if (!subject) return;
@@ -929,11 +1115,25 @@ export default function SubjectTestPage() {
       perfectScoreAudioRef.current
     ) {
       hasPlayedPerfectScoreRef.current = true;
+
       perfectScoreAudioRef.current.currentTime = 0;
+
       perfectScoreAudioRef.current.play().catch(() => {});
     }
   }, [isPerfectScore]);
 
+  useEffect(() => {
+    perfectScoreAudioRef.current = new Audio("/sounds/perfect-score.mp3");
+
+    perfectScoreAudioRef.current.volume = 0.8;
+
+    return () => {
+      if (perfectScoreAudioRef.current) {
+        perfectScoreAudioRef.current.pause();
+        perfectScoreAudioRef.current = null;
+      }
+    };
+  }, []);
   useEffect(() => {
     if (
       !showResults ||
@@ -941,13 +1141,16 @@ export default function SubjectTestPage() {
       !subject ||
       questions.length === 0 ||
       stoppedTest
-    )
+    ) {
       return;
-    const save = async () => {
+    }
+
+    const saveResult = async () => {
       try {
         resultSavedRef.current = true;
         const timeUsed = Math.max(0, (subject.duration || 300) - timeLeft);
-        const res = await api.post(
+
+        const response = await api.post(
           "/api/results",
           {
             subjectId: subject._id,
@@ -959,18 +1162,20 @@ export default function SubjectTestPage() {
           },
           { _tokenType: "user" },
         );
-        if (res.data?.unlockedBadges?.length) {
+
+        if (response.data?.unlockedBadges?.length) {
           sessionStorage.setItem(
             "newBadge",
-            JSON.stringify(res.data.unlockedBadges[0]),
+            JSON.stringify(response.data.unlockedBadges[0]),
           );
         }
-      } catch (e) {
+      } catch (error) {
         resultSavedRef.current = false;
-        console.error("Failed to save result", e);
+        console.error("Failed to save result:", error);
       }
     };
-    save();
+
+    saveResult();
   }, [
     showResults,
     subject,
@@ -984,7 +1189,7 @@ export default function SubjectTestPage() {
   ]);
 
   const currentQuestion = questions[currentQuestionIndex];
-  const currentImageSrc = currentQuestion
+  const currentQuestionImageSrc = currentQuestion
     ? getDisplayImageSrc(currentQuestion)
     : "";
   const answeredCount = Object.keys(selectedAnswers).length;
@@ -997,113 +1202,39 @@ export default function SubjectTestPage() {
       ? `${subject?.name || ""} · Randomized Practice`
       : subject?.name || "";
   const flaggedCount = flaggedQuestions.size;
-  const isFlaggedCurrent = currentQuestion
-    ? flaggedQuestions.has(currentQuestion._id)
-    : false;
+  const isFlaggedCurrentQuestion = flaggedQuestions.has(currentQuestion?._id);
 
-  const goToQuestion = useCallback(
-    (idx) => {
-      setCurrentQuestionIndex(clamp(idx, 0, questions.length - 1));
-      setSidebarOpen(false);
-    },
-    [questions.length],
-  );
-
-  const toggleFlag = useCallback(() => {
-    if (!currentQuestion) return;
+  const toggleFlag = () => {
     setFlaggedQuestions((prev) => {
       const next = new Set(prev);
-      if (next.has(currentQuestion._id)) next.delete(currentQuestion._id);
-      else next.add(currentQuestion._id);
+      if (next.has(currentQuestion._id)) {
+        next.delete(currentQuestion._id);
+      } else {
+        next.add(currentQuestion._id);
+      }
       return next;
     });
-  }, [currentQuestion]);
+  };
 
-  const selectOption = useCallback(
-    (option) => {
-      if (!currentQuestion) return;
-      setSelectedAnswers((prev) => ({
-        ...prev,
-        [currentQuestion._id]: option,
-      }));
-    },
-    [currentQuestion],
-  );
-
-  const handleSkip = useCallback(() => {
-    const next = questions.findIndex(
+  const handleSkipQuestion = () => {
+    // Move to next unanswered question or next question overall
+    const nextIndex = questions.findIndex(
       (q, i) => i > currentQuestionIndex && !selectedAnswers[q._id],
     );
-    if (next !== -1) goToQuestion(next);
-    else if (currentQuestionIndex < questions.length - 1)
-      goToQuestion(currentQuestionIndex + 1);
-  }, [questions, currentQuestionIndex, selectedAnswers, goToQuestion]);
-
-  const handleSubmit = () => {
-    if (answeredCount !== questions.length) {
-      alert("Please answer all questions before submitting.");
-      return;
-    }
-    setShowResults(true);
-  };
-
-  const handleRetake = () => {
-    resultSavedRef.current = false;
-    hasPlayedPerfectScoreRef.current = false;
-    setReviewMode("all");
-    setQuestions((prev) =>
-      shuffleArray(
-        prev.map((q) => ({ ...q, options: shuffleArray(q.options) })),
-      ),
-    );
-    setSelectedAnswers({});
-    setFlaggedQuestions(new Set());
-    setCurrentQuestionIndex(0);
-    setShowResults(false);
-    setStoppedTest(false);
-    setTimeLeft(defaultDuration);
-  };
-
-  const handleStop = () => {
-    if (
-      window.confirm(
-        "Stop test? You'll see corrections for questions you attempted.",
-      )
-    ) {
-      setStoppedTest(true);
-      setShowResults(true);
+    if (nextIndex !== -1) {
+      setCurrentQuestionIndex(nextIndex);
+    } else {
+      // No unanswered questions ahead, go to next question
+      if (currentQuestionIndex < questions.length - 1) {
+        setCurrentQuestionIndex(currentQuestionIndex + 1);
+      }
     }
   };
 
-  /* ── Keyboard shortcuts ── */
-  useKeyboard(
-    {
-      arrowleft: () =>
-        currentQuestionIndex > 0 && goToQuestion(currentQuestionIndex - 1),
-      arrowright: () =>
-        currentQuestionIndex < questions.length - 1 &&
-        goToQuestion(currentQuestionIndex + 1),
-      f: () => toggleFlag(),
-      s: () => handleSkip(),
-      1: () => selectOption(currentQuestion?.options[0]),
-      2: () => selectOption(currentQuestion?.options[1]),
-      3: () => selectOption(currentQuestion?.options[2]),
-      4: () => selectOption(currentQuestion?.options[3]),
-      5: () => selectOption(currentQuestion?.options[4]),
-      6: () => selectOption(currentQuestion?.options[5]),
-    },
-    [
-      currentQuestionIndex,
-      questions,
-      currentQuestion,
-      goToQuestion,
-      toggleFlag,
-      handleSkip,
-      selectOption,
-    ],
-  );
+  const handleGoToFlagged = (questionIndex) => {
+    setCurrentQuestionIndex(questionIndex);
+  };
 
-  /* ── Helpers ── */
   const getPerformanceMessage = () => {
     if (!questions.length) return "";
     const pct = score / questions.length;
@@ -1114,151 +1245,188 @@ export default function SubjectTestPage() {
     return "Keep practicing";
   };
 
+  const handleRetakeTest = () => {
+    resultSavedRef.current = false;
+    hasPlayedPerfectScoreRef.current = false;
+    setReviewMode("all");
+    setQuestions(
+      shuffleArray(
+        questions.map((q) => ({ ...q, options: shuffleArray(q.options) })),
+      ),
+    );
+    setSelectedAnswers({});
+    setFlaggedQuestions(new Set());
+    setCurrentQuestionIndex(0);
+    setShowResults(false);
+    setTimeLeft(defaultDuration);
+  };
+
+  const handleStopTest = () => {
+    if (
+      window.confirm(
+        "Stop test? You'll see corrections for all questions you attempted.",
+      )
+    ) {
+      setStoppedTest(true);
+      setShowResults(true);
+    }
+  };
+
+  const handleSubmit = () => {
+    if (answeredCount !== questions.length) {
+      alert("Please answer all questions before submitting.");
+      return;
+    }
+    setShowResults(true);
+  };
+
+  /* ── shared page shell ── */
   const page = (children) => (
     <div
       style={{
         minHeight: "100vh",
-        background: "var(--q-bg)",
-        fontFamily: "var(--q-font)",
-        color: "var(--q-ink)",
-        paddingBottom: "48px",
+        background: T.bg,
+        fontFamily: "'Inter', sans-serif",
+        color: T.ink,
+        position: "relative",
+        overflow: "hidden",
+        zIndex: 0,
       }}
     >
-      {children}
+      <style>{`
+        @keyframes driftA {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          50%      { transform: translate(20px, -14px) scale(1.04); }
+        }
+        .test-page-blob {
+          position: absolute; top: -100px; right: -130px;
+          width: 320px; height: 320px;
+          z-index: -1;
+          opacity: 0.4;
+          background:
+            radial-gradient(circle at 27% 24%, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0) 24%),
+            radial-gradient(circle at 62% 70%, #7dd8ff 0%, #33b5f0 32%, #1a7fd4 58%, #0f5aa6 80%, #0a3f7a 100%);
+          border-radius: 58% 42% 65% 35% / 45% 55% 45% 55%;
+          filter: blur(2px);
+          animation: driftA 24s ease-in-out infinite;
+          pointer-events: none;
+        }
+      `}</style>
+      <div className="test-page-blob" />
+      <div
+        style={{
+          maxWidth: "800px",
+          margin: "0 auto",
+          padding: "2rem 1.25rem 4rem",
+        }}
+      >
+        {children}
+      </div>
     </div>
   );
 
-  /* ══════════════════════════════════════
-     Loading
-  ══════════════════════════════════════ */
-  if (isLoading) {
+  /* ── Loading ── */
+  if (isLoading)
     return page(
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          minHeight: "60vh",
-          gap: "16px",
-        }}
-      >
+      <div style={{ textAlign: "center", paddingTop: "5rem" }}>
         <div
           style={{
-            width: "36px",
-            height: "36px",
+            width: "40px",
+            height: "40px",
             borderRadius: "50%",
-            border: "3px solid var(--q-border)",
-            borderTopColor: "var(--q-accent)",
-            animation: "q-pulse-soft 1s linear infinite",
+            border: `3px solid ${T.accentLight}`,
+            borderTop: `3px solid ${T.accent}`,
+            animation: "pulse 1s linear infinite",
+            margin: "0 auto 1rem",
           }}
         />
-        <p
-          style={{
-            fontSize: "14px",
-            color: "var(--q-ink-muted)",
-            fontWeight: 500,
-          }}
-        >
+        <p style={{ fontSize: "14px", color: T.inkFaint }}>
           Loading questions…
         </p>
       </div>,
     );
-  }
 
-  if (errorMessage) {
+  /* ── Error ── */
+  if (errorMessage)
     return page(
       <div
-        style={{ maxWidth: "640px", margin: "0 auto", padding: "48px 20px" }}
+        style={{
+          background: T.surface,
+          border: `1px solid ${T.dangerBorder}`,
+          borderRadius: T.radiusLg,
+          padding: "2rem",
+          boxShadow: T.shadow,
+        }}
       >
-        <div
-          className="q-card"
-          style={{
-            background: "var(--q-surface)",
-            borderRadius: "var(--q-radius)",
-            padding: "32px",
-            boxShadow: "var(--q-shadow-md)",
-            textAlign: "center",
-          }}
-        >
-          <p
-            style={{
-              color: "var(--q-ink-secondary)",
-              marginBottom: "20px",
-              fontSize: "15px",
-            }}
-          >
-            {errorMessage}
-          </p>
-          <Button onClick={() => navigate("/user")}>← Back to subjects</Button>
-        </div>
+        <p style={{ marginBottom: "1rem", color: T.inkMid, fontSize: "14px" }}>
+          {errorMessage}
+        </p>
+        <Btn onClick={() => navigate("/user")}>← Back to subjects</Btn>
       </div>,
     );
-  }
 
   if (!subject) return null;
 
-  if (questions.length === 0) {
+  /* ── Empty ── */
+  if (questions.length === 0)
     return page(
       <div
-        style={{ maxWidth: "640px", margin: "0 auto", padding: "48px 20px" }}
+        style={{
+          background: T.surface,
+          border: `1px solid ${T.border}`,
+          borderRadius: T.radiusLg,
+          padding: "2rem",
+          boxShadow: T.shadow,
+        }}
       >
-        <div
-          className="q-card"
-          style={{
-            background: "var(--q-surface)",
-            borderRadius: "var(--q-radius)",
-            padding: "32px",
-            boxShadow: "var(--q-shadow-md)",
-          }}
-        >
-          <p style={{ fontWeight: 600, marginBottom: "6px", fontSize: "15px" }}>
-            {breadcrumb}
-          </p>
-          <p
-            style={{ color: "var(--q-ink-muted)", fontSize: "14px", margin: 0 }}
-          >
-            No questions available for this test yet.
-          </p>
-        </div>
+        <p style={{ fontWeight: "600", marginBottom: "6px" }}>{breadcrumb}</p>
+        <p style={{ color: T.inkFaint, fontSize: "14px", margin: 0 }}>
+          No questions available for this test yet.
+        </p>
       </div>,
     );
-  }
 
   /* ══════════════════════════════════════
      RESULTS VIEW
   ══════════════════════════════════════ */
   if (showResults) {
     const timeUsed = Math.max(0, defaultDuration - timeLeft);
-    const percentage = Math.round((score / questions.length) * 100);
 
+    // Show corrections view when test is stopped (no grading)
     if (stoppedTest) {
       return page(
-        <div
-          style={{ maxWidth: "720px", margin: "0 auto", padding: "32px 20px" }}
-        >
+        <>
+          {/* Corrections header */}
           <div
-            className="q-card"
             style={{
-              background: "var(--q-surface)",
-              borderRadius: "var(--q-radius)",
-              padding: "32px",
-              boxShadow: "var(--q-shadow-lg)",
-              marginBottom: "24px",
+              background: T.surface,
+              border: `1px solid ${T.border}`,
+              borderRadius: T.radiusLg,
+              padding: "2rem",
+              marginBottom: "1.5rem",
+              boxShadow: T.shadowMd,
+              animation: "fadeUp 0.4s ease",
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "14px",
+                marginBottom: "0",
+              }}
+            >
               <div
                 style={{
-                  width: "56px",
-                  height: "56px",
-                  borderRadius: "var(--q-radius-sm)",
-                  background: "var(--q-warning-soft)",
+                  width: "52px",
+                  height: "52px",
+                  borderRadius: T.radius,
+                  background: T.warningLight,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  fontSize: "24px",
                   flexShrink: 0,
+                  fontSize: "24px",
                 }}
               >
                 📋
@@ -1266,9 +1434,9 @@ export default function SubjectTestPage() {
               <div>
                 <p
                   style={{
-                    fontSize: "11px",
-                    color: "var(--q-ink-muted)",
-                    fontWeight: 600,
+                    fontSize: "12px",
+                    color: T.inkFaint,
+                    fontWeight: "600",
                     textTransform: "uppercase",
                     letterSpacing: "0.08em",
                     marginBottom: "4px",
@@ -1276,105 +1444,134 @@ export default function SubjectTestPage() {
                 >
                   {breadcrumb}
                 </p>
-                <h2 style={{ fontSize: "22px", fontWeight: 700, margin: 0 }}>
+                <h2
+                  style={{
+                    fontSize: "22px",
+                    fontWeight: "700",
+                    color: T.ink,
+                    margin: 0,
+                  }}
+                >
                   Review Your Answers
                 </h2>
               </div>
             </div>
           </div>
 
+          {/* Summary stats */}
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
-              gap: "12px",
-              marginBottom: "24px",
+              gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+              gap: "1rem",
+              marginBottom: "1.5rem",
             }}
           >
-            <Stat value={answeredCount} label="Answered" />
-            <Stat
+            <StatCell value={answeredCount} label="Answered" />
+            <StatCell
               value={questions.length - answeredCount}
               label="Not Answered"
             />
-            <Stat value={flaggedCount} label="Flagged" />
+            <StatCell value={flaggedCount} label="Flagged" />
           </div>
 
+          {/* Review filter */}
           <div
             style={{
               display: "flex",
               gap: "8px",
               flexWrap: "wrap",
-              marginBottom: "24px",
+              marginBottom: "1.5rem",
             }}
           >
-            <Button
-              variant={reviewMode === "all" ? "primary" : "secondary"}
+            <Btn
+              variant={reviewMode === "all" ? "primary" : "ghost"}
               onClick={() => setReviewMode("all")}
             >
-              All ({questions.length})
-            </Button>
-            <Button
-              variant={reviewMode === "answered" ? "primary" : "secondary"}
+              All questions ({questions.length})
+            </Btn>
+            <Btn
+              variant={reviewMode === "answered" ? "primary" : "ghost"}
               onClick={() => setReviewMode("answered")}
             >
               Answered ({answeredCount})
-            </Button>
+            </Btn>
             {flaggedCount > 0 && (
-              <Button
-                variant={reviewMode === "flagged" ? "primary" : "secondary"}
+              <Btn
+                variant={reviewMode === "flagged" ? "primary" : "ghost"}
                 onClick={() => setReviewMode("flagged")}
               >
-                <Icon name="flag" size={12} style={{ filled: true }} /> Flagged
-                ({flaggedCount})
-              </Button>
+                <Icon.flag filled /> Flagged ({flaggedCount})
+              </Btn>
             )}
           </div>
 
+          {/* Questions review */}
           {(reviewMode === "all"
             ? questions
             : reviewMode === "answered"
               ? questions.filter((q) => selectedAnswers[q._id])
               : questions.filter((q) => flaggedQuestions.has(q._id))
-          ).map((q) => (
+          ).map((question) => (
             <QuestionReviewCard
-              key={q._id}
-              question={q}
-              index={questions.findIndex((x) => x._id === q._id)}
-              userAnswer={selectedAnswers[q._id]}
-              imageSrc={getDisplayImageSrc(q)}
-              isFlagged={flaggedQuestions.has(q._id)}
+              key={question._id}
+              question={question}
+              index={questions.findIndex((q) => q._id === question._id)}
+              userAnswer={selectedAnswers[question._id]}
+              imageSrc={getDisplayImageSrc(question)}
+              isFlagged={flaggedQuestions.has(question._id)}
             />
           ))}
 
+          {/* Footer actions */}
           <div
             style={{
               display: "flex",
-              gap: "10px",
+              gap: "8px",
               justifyContent: "center",
               flexWrap: "wrap",
-              marginTop: "32px",
+              marginTop: "2rem",
             }}
           >
-            <Button variant="primary" onClick={handleRetake}>
+            <Btn
+              variant="primary"
+              onClick={() => {
+                setStoppedTest(false);
+                setReviewMode("all");
+                setQuestions(
+                  shuffleArray(
+                    questions.map((q) => ({
+                      ...q,
+                      options: shuffleArray(q.options),
+                    })),
+                  ),
+                );
+                setSelectedAnswers({});
+                setFlaggedQuestions(new Set());
+                setCurrentQuestionIndex(0);
+                setShowResults(false);
+                setTimeLeft(defaultDuration);
+              }}
+            >
               Retake Test
-            </Button>
-            <Button onClick={() => navigate(`/subject/${subject._id}/topics`)}>
+            </Btn>
+            <Btn onClick={() => navigate(`/subject/${subject._id}/topics`)}>
               ← Back to topics
-            </Button>
+            </Btn>
           </div>
-        </div>,
+        </>,
       );
     }
 
+    // Show normal graded results view
+    const percentage = Math.round((score / questions.length) * 100);
     const wrongQuestions = questions.filter(
-      (q) => selectedAnswers[q._id] !== q.correctAnswer,
+      (question) => selectedAnswers[question._id] !== question.correctAnswer,
     );
     const reviewQuestions = reviewMode === "wrong" ? wrongQuestions : questions;
 
     return page(
-      <div
-        style={{ maxWidth: "720px", margin: "0 auto", padding: "32px 20px" }}
-      >
+      <>
         {isPerfectScore && Fireworks && (
           <div
             style={{
@@ -1387,132 +1584,152 @@ export default function SubjectTestPage() {
             }}
           >
             <Fireworks
-              key={`fw-${score}-${questions.length}`}
+              key={`perfect-fireworks-${score}-${questions.length}`}
               autorun={{ speed: 3 }}
-              style={{ width: "100%", height: "100%" }}
+              style={{
+                width: "100%",
+                height: "100%",
+              }}
             />
           </div>
         )}
 
-        {/* Score hero */}
+        {/* Score card */}
         <div
-          className="q-card"
           style={{
-            background: "var(--q-surface)",
-            borderRadius: "var(--q-radius)",
-            padding: "32px",
-            boxShadow: "var(--q-shadow-lg)",
-            marginBottom: "24px",
-            display: "flex",
-            flexWrap: "wrap",
-            gap: "28px",
-            alignItems: "center",
+            background: T.surface,
+            border: `1px solid ${T.border}`,
+            borderRadius: T.radiusLg,
+            padding: "2rem",
+            marginBottom: "1.5rem",
+            boxShadow: T.shadowMd,
+            animation: "fadeUp 0.4s ease",
           }}
         >
-          <CircularProgress percentage={percentage} />
-          <div style={{ flex: 1, minWidth: "200px" }}>
-            <p
+          {/* Header */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "14px",
+              marginBottom: "1.5rem",
+            }}
+          >
+            <div
               style={{
-                fontSize: "11px",
-                color: "var(--q-ink-muted)",
-                fontWeight: 600,
-                textTransform: "uppercase",
-                letterSpacing: "0.08em",
-                marginBottom: "6px",
+                width: "52px",
+                height: "52px",
+                borderRadius: T.radius,
+                background: T.accentLight,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
               }}
             >
-              {breadcrumb}
-            </p>
-            <h2
-              style={{ fontSize: "24px", fontWeight: 700, margin: "0 0 8px" }}
+              <Icon.trophy />
+            </div>
+            <div>
+              <p
+                style={{
+                  fontSize: "12px",
+                  color: T.inkFaint,
+                  fontWeight: "600",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.08em",
+                  marginBottom: "4px",
+                }}
+              >
+                {breadcrumb}
+              </p>
+              <h2
+                style={{
+                  fontSize: "22px",
+                  fontWeight: "700",
+                  color: T.ink,
+                  margin: 0,
+                }}
+              >
+                {getPerformanceMessage()}
+              </h2>
+            </div>
+          </div>
+
+          {/* Stats */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(3, 1fr)",
+              gap: "1rem",
+              marginBottom: "1.5rem",
+            }}
+          >
+            <StatCell value={`${percentage}%`} label="Score" />
+            <StatCell value={`${score}/${questions.length}`} label="Correct" />
+            <StatCell value={formatTime(timeUsed)} label="Time used" />
+          </div>
+
+          {/* Progress bar */}
+          <div>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                fontSize: "12px",
+                color: T.inkFaint,
+                marginBottom: "8px",
+                fontWeight: "500",
+              }}
             >
-              {getPerformanceMessage()}
-            </h2>
-            <div style={{ display: "flex", gap: "16px", flexWrap: "wrap" }}>
-              <div>
-                <div
-                  style={{
-                    fontSize: "13px",
-                    color: "var(--q-ink-muted)",
-                    fontWeight: 500,
-                  }}
-                >
-                  Score
-                </div>
-                <div
-                  style={{
-                    fontSize: "18px",
-                    fontWeight: 700,
-                    color: "var(--q-ink)",
-                  }}
-                >
-                  {score}/{questions.length}
-                </div>
-              </div>
-              <div>
-                <div
-                  style={{
-                    fontSize: "13px",
-                    color: "var(--q-ink-muted)",
-                    fontWeight: 500,
-                  }}
-                >
-                  Time used
-                </div>
-                <div
-                  style={{
-                    fontSize: "18px",
-                    fontWeight: 700,
-                    color: "var(--q-ink)",
-                  }}
-                >
-                  {formatTime(timeUsed)}
-                </div>
-              </div>
-              <div>
-                <div
-                  style={{
-                    fontSize: "13px",
-                    color: "var(--q-ink-muted)",
-                    fontWeight: 500,
-                  }}
-                >
-                  Accuracy
-                </div>
-                <div
-                  style={{
-                    fontSize: "18px",
-                    fontWeight: 700,
-                    color:
-                      percentage >= 50 ? "var(--q-success)" : "var(--q-danger)",
-                  }}
-                >
-                  {percentage}%
-                </div>
-              </div>
+              <span>Performance</span>
+              <span style={{ color: percentage >= 50 ? T.success : T.danger }}>
+                {percentage}%
+              </span>
+            </div>
+            <div
+              style={{
+                height: "6px",
+                background: "#e2e8f0",
+                borderRadius: "999px",
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{
+                  width: `${percentage}%`,
+                  height: "100%",
+                  background:
+                    percentage >= 50
+                      ? `linear-gradient(90deg, ${T.success} 0%, ${T.accent} 100%)`
+                      : T.danger,
+                  borderRadius: "999px",
+                  transition: "width 0.6s ease",
+                }}
+              />
             </div>
           </div>
         </div>
 
         {/* Question map */}
         <div
-          className="q-card"
           style={{
-            background: "var(--q-surface)",
-            borderRadius: "var(--q-radius)",
-            padding: "20px",
-            boxShadow: "var(--q-shadow-md)",
-            marginBottom: "24px",
+            background: T.surface,
+            border: `1px solid ${T.border}`,
+            borderRadius: T.radius,
+            padding: "1.25rem",
+            marginBottom: "1.5rem",
+            boxShadow: T.shadow,
           }}
         >
           <p
             style={{
-              fontSize: "11px",
-              color: "var(--q-ink-muted)",
-              fontWeight: 600,
+              fontSize: "12px",
+              color: T.inkFaint,
+              fontWeight: "600",
               textTransform: "uppercase",
               letterSpacing: "0.08em",
-              marginBottom: "12px",
+              marginBottom: "1rem",
+              margin: "0 0 1rem",
             }}
           >
             Question overview
@@ -1527,84 +1744,83 @@ export default function SubjectTestPage() {
                   style={{
                     width: "32px",
                     height: "32px",
-                    borderRadius: "8px",
+                    borderRadius: "6px",
                     background: isFlagged
-                      ? "var(--q-flag-soft)"
+                      ? T.flagLight
                       : correct
-                        ? "var(--q-success-soft)"
-                        : "var(--q-danger-soft)",
-                    color: isFlagged
-                      ? "var(--q-flag)"
-                      : correct
-                        ? "var(--q-success)"
-                        : "var(--q-danger)",
+                        ? T.successLight
+                        : T.dangerLight,
+                    color: isFlagged ? T.flag : correct ? T.success : T.danger,
                     fontSize: "12px",
-                    fontWeight: 600,
+                    fontWeight: "600",
                     display: "inline-flex",
                     alignItems: "center",
                     justifyContent: "center",
                     border: `1px solid ${
-                      isFlagged
-                        ? "var(--q-flag)"
-                        : correct
-                          ? "var(--q-success)"
-                          : "var(--q-danger)"
+                      isFlagged ? T.flag : correct ? "#86efac" : T.dangerBorder
                     }`,
+                    position: "relative",
                   }}
                 >
-                  {isFlagged ? (
-                    <Icon name="flag" size={12} style={{ filled: true }} />
-                  ) : (
-                    i + 1
+                  {isFlagged && (
+                    <Icon.flag
+                      filled
+                      style={{
+                        position: "absolute",
+                        fontSize: "10px",
+                      }}
+                    />
                   )}
+                  {!isFlagged && i + 1}
                 </span>
               );
             })}
           </div>
         </div>
 
-        {/* Filters */}
+        {/* Review filter */}
         <div
           style={{
             display: "flex",
             gap: "8px",
             flexWrap: "wrap",
-            marginBottom: "24px",
+            marginBottom: "1.5rem",
           }}
         >
-          <Button
-            variant={reviewMode === "all" ? "primary" : "secondary"}
+          <Btn
+            variant={reviewMode === "all" ? "primary" : "ghost"}
             onClick={() => setReviewMode("all")}
           >
             All questions
-          </Button>
-          <Button
-            variant={reviewMode === "wrong" ? "primary" : "secondary"}
+          </Btn>
+          <Btn
+            variant={reviewMode === "wrong" ? "primary" : "ghost"}
             onClick={() => setReviewMode("wrong")}
           >
             Incorrect ({wrongQuestions.length})
-          </Button>
+          </Btn>
           {flaggedCount > 0 && (
-            <Button
-              variant={reviewMode === "flagged" ? "primary" : "secondary"}
+            <Btn
+              variant={reviewMode === "flagged" ? "primary" : "ghost"}
               onClick={() => setReviewMode("flagged")}
             >
-              <Icon name="flag" size={12} style={{ filled: true }} /> Flagged (
-              {flaggedCount})
-            </Button>
+              <Icon.flag filled /> Flagged ({flaggedCount})
+            </Btn>
           )}
         </div>
 
+        {/* Perfect score message */}
         {reviewMode === "wrong" && wrongQuestions.length === 0 ? (
           <div
             style={{
-              background: "var(--q-success-soft)",
-              borderRadius: "var(--q-radius)",
-              padding: "20px",
-              color: "var(--q-success)",
-              textAlign: "center",
-              fontWeight: 600,
+              background: T.successLight,
+              border: `1px solid #86efac`,
+              borderRadius: T.radiusLg,
+              padding: "1.25rem",
+              color: T.success,
+              marginBottom: "1rem",
               fontSize: "14px",
+              fontWeight: "500",
             }}
           >
             🎉 Perfect score! No incorrect answers to review.
@@ -1613,35 +1829,36 @@ export default function SubjectTestPage() {
           (reviewMode === "flagged"
             ? questions.filter((q) => flaggedQuestions.has(q._id))
             : reviewQuestions
-          ).map((q) => (
+          ).map((question) => (
             <QuestionReviewCard
-              key={q._id}
-              question={q}
-              index={questions.findIndex((x) => x._id === q._id)}
-              userAnswer={selectedAnswers[q._id]}
-              imageSrc={getDisplayImageSrc(q)}
-              isFlagged={flaggedQuestions.has(q._id)}
+              key={question._id}
+              question={question}
+              index={questions.findIndex((q) => q._id === question._id)}
+              userAnswer={selectedAnswers[question._id]}
+              imageSrc={getDisplayImageSrc(question)}
+              isFlagged={flaggedQuestions.has(question._id)}
             />
           ))
         )}
 
+        {/* Footer actions */}
         <div
           style={{
             display: "flex",
-            gap: "10px",
+            gap: "8px",
             justifyContent: "center",
             flexWrap: "wrap",
-            marginTop: "32px",
+            marginTop: "2rem",
           }}
         >
-          <Button variant="primary" onClick={handleRetake}>
+          <Btn variant="primary" onClick={handleRetakeTest}>
             Retake test
-          </Button>
-          <Button onClick={() => navigate(`/subject/${subject._id}/topics`)}>
+          </Btn>
+          <Btn onClick={() => navigate(`/subject/${subject._id}/topics`)}>
             ← Back to topics
-          </Button>
+          </Btn>
         </div>
-      </div>,
+      </>,
     );
   }
 
@@ -1651,698 +1868,399 @@ export default function SubjectTestPage() {
   const timeWarn = timeLeft <= 60;
 
   return page(
-    <div
-      style={{
-        maxWidth: "960px",
-        margin: "0 auto",
-        padding: "24px 20px",
-        display: "flex",
-        gap: "24px",
-        alignItems: "flex-start",
-      }}
-    >
-      {/* Main content */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        {/* Header */}
-        <div
-          className="q-card"
-          style={{
-            display: "flex",
-            alignItems: "flex-start",
-            justifyContent: "space-between",
-            gap: "16px",
-            flexWrap: "wrap",
-            marginBottom: "20px",
-            padding: "20px 24px",
-            background: "var(--q-surface)",
-            borderRadius: "var(--q-radius)",
-            boxShadow: "var(--q-shadow-md)",
-          }}
-        >
-          <div style={{ minWidth: 0 }}>
-            <p
-              style={{
-                fontSize: "11px",
-                color: "var(--q-ink-muted)",
-                fontWeight: 600,
-                textTransform: "uppercase",
-                letterSpacing: "0.08em",
-                marginBottom: "4px",
-              }}
-            >
-              {breadcrumb}
-            </p>
-            <h1
-              style={{
-                fontSize: "20px",
-                fontWeight: 700,
-                margin: 0,
-                lineHeight: 1.3,
-              }}
-            >
-              Start the test
-            </h1>
-          </div>
-          <div
-            style={{
-              display: "flex",
-              gap: "8px",
-              alignItems: "center",
-              flexShrink: 0,
-            }}
-          >
-            <div
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "8px",
-                padding: "8px 14px",
-                borderRadius: "var(--q-radius-xs)",
-                background: timeWarn ? "var(--q-danger-soft)" : "var(--q-bg)",
-                border: `1px solid ${timeWarn ? "var(--q-danger)" : "var(--q-border)"}`,
-                fontSize: "14px",
-                fontWeight: 600,
-                color: timeWarn ? "var(--q-danger)" : "var(--q-ink)",
-                transition: "all var(--q-transition)",
-              }}
-            >
-              <Icon name="clock" size={14} />
-              {formatTime(timeLeft)}
-            </div>
-            <Button variant="danger" onClick={handleStop} title="Stop test">
-              Stop
-            </Button>
-          </div>
-        </div>
-
-        {/* Progress */}
-        <div style={{ marginBottom: "20px" }}>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              fontSize: "12px",
-              color: "var(--q-ink-muted)",
-              marginBottom: "8px",
-              fontWeight: 500,
-            }}
-          >
-            <span>
-              Question{" "}
-              <strong style={{ color: "var(--q-ink)" }}>
-                {currentQuestionIndex + 1}
-              </strong>{" "}
-              of {questions.length}
-            </span>
-            <span>
-              Answered{" "}
-              <strong style={{ color: "var(--q-ink)" }}>{answeredCount}</strong>
-              /{questions.length}
-            </span>
-          </div>
-          <div
-            style={{
-              height: "4px",
-              background: "var(--q-border)",
-              borderRadius: "999px",
-              overflow: "hidden",
-            }}
-          >
-            <div
-              style={{
-                width: `${progressPercent}%`,
-                height: "100%",
-                background: "var(--q-accent)",
-                borderRadius: "999px",
-                transition: "width 0.5s cubic-bezier(0.4,0,0.2,1)",
-              }}
-            />
-          </div>
-        </div>
-
-        {/* Question Card */}
-        <div
-          key={currentQuestionIndex}
-          className="q-card"
-          style={{
-            background: "var(--q-surface)",
-            borderRadius: "var(--q-radius)",
-            padding: "28px",
-            boxShadow: "var(--q-shadow-lg)",
-            border: `1px solid ${isFlaggedCurrent ? "var(--q-flag)" : "var(--q-border)"}`,
-            transition:
-              "border-color var(--q-transition), box-shadow var(--q-transition)",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: "20px",
-              gap: "12px",
-              flexWrap: "wrap",
-            }}
-          >
-            <Badge variant={isFlaggedCurrent ? "flagged" : "neutral"}>
-              {isFlaggedCurrent && (
-                <Icon name="flag" size={12} style={{ filled: true }} />
-              )}
-              Q{String(currentQuestionIndex + 1).padStart(2, "0")}
-            </Badge>
-            <div style={{ display: "flex", gap: "8px" }}>
-              <Button
-                onClick={handleSkip}
-                title="Skip question (S)"
-                style={{ padding: "8px 12px" }}
-              >
-                <Icon name="skip" size={14} /> Skip
-              </Button>
-              <Button
-                variant={isFlaggedCurrent ? "flagActive" : "flag"}
-                onClick={toggleFlag}
-                title="Flag for review (F)"
-                style={{ padding: "8px 12px" }}
-              >
-                <Icon
-                  name="flag"
-                  size={14}
-                  style={{ filled: isFlaggedCurrent }}
-                />
-                {isFlaggedCurrent ? "Flagged" : "Flag"}
-              </Button>
-            </div>
-          </div>
-
+    <>
+      {/* Top bar */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "space-between",
+          gap: "1rem",
+          flexWrap: "wrap",
+          marginBottom: "1.5rem",
+          animation: "fadeUp 0.3s ease",
+        }}
+      >
+        <div>
           <p
             style={{
-              fontSize: "16px",
-              lineHeight: 1.7,
-              color: "var(--q-ink)",
-              marginBottom: "20px",
-              fontWeight: 500,
+              fontSize: "12px",
+              color: T.inkFaint,
+              fontWeight: "600",
+              textTransform: "uppercase",
+              letterSpacing: "0.08em",
+              marginBottom: "4px",
             }}
           >
-            {currentQuestion.questionText}
+            {breadcrumb}
           </p>
-
-          {currentImageSrc && (
-            <div
-              style={{
-                marginBottom: "24px",
-                padding: "12px",
-                background: "var(--q-bg)",
-                borderRadius: "var(--q-radius-sm)",
-                border: "1px solid var(--q-border)",
-                animation: "q-fade-in 0.3s ease",
-              }}
-            >
-              <img
-                src={currentImageSrc}
-                alt="Question"
-                style={{
-                  display: "block",
-                  width: "100%",
-                  maxWidth: "560px",
-                  maxHeight: "360px",
-                  objectFit: "contain",
-                  borderRadius: "var(--q-radius-xs)",
-                  margin: "0 auto",
-                }}
-                onError={(e) => (e.currentTarget.style.display = "none")}
-              />
-            </div>
-          )}
-
-          {!currentImageSrc &&
-            (Boolean(currentQuestion?.hasImage) ||
-              Boolean(currentQuestion?.imageContentType) ||
-              Boolean(currentQuestion?.imageSize)) && (
-              <div
-                style={{
-                  marginBottom: "24px",
-                  padding: "16px",
-                  background: "var(--q-bg)",
-                  border: "1px dashed var(--q-border-hover)",
-                  borderRadius: "var(--q-radius-sm)",
-                  color: "var(--q-ink-muted)",
-                  fontSize: "13px",
-                  textAlign: "center",
-                  animation: "q-pulse-soft 1.2s ease-in-out infinite",
-                }}
-              >
-                Loading image…
-              </div>
-            )}
-
-          <div
-            role="radiogroup"
-            aria-label="Answer options"
-            style={{ display: "flex", flexDirection: "column", gap: "10px" }}
+          <h2
+            style={{
+              fontSize: "24px",
+              fontWeight: "700",
+              color: T.ink,
+              margin: 0,
+            }}
           >
-            {currentQuestion.options.map((option, i) => {
-              const isSelected =
-                selectedAnswers[currentQuestion._id] === option;
-              return (
-                <label
-                  key={i}
-                  className="q-option"
-                  onClick={() => selectOption(option)}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "12px",
-                    padding: "14px 16px",
-                    borderRadius: "var(--q-radius-sm)",
-                    cursor: "pointer",
-                    fontSize: "14px",
-                    border: `1.5px solid ${isSelected ? "var(--q-accent)" : "var(--q-border)"}`,
-                    background: isSelected
-                      ? "var(--q-accent-soft)"
-                      : "var(--q-surface)",
-                    color: isSelected
-                      ? "var(--q-accent-hover)"
-                      : "var(--q-ink)",
-                    fontWeight: isSelected ? 600 : 400,
-                  }}
-                >
-                  <input
-                    type="radio"
-                    name={`q-${currentQuestion._id}`}
-                    checked={isSelected}
-                    onChange={() => selectOption(option)}
-                    style={{
-                      position: "absolute",
-                      opacity: 0,
-                      width: 0,
-                      height: 0,
-                    }}
-                  />
-                  <div
-                    style={{
-                      width: "20px",
-                      height: "20px",
-                      borderRadius: "50%",
-                      flexShrink: 0,
-                      border: `2px solid ${isSelected ? "var(--q-accent)" : "var(--q-border-hover)"}`,
-                      background: isSelected
-                        ? "var(--q-accent)"
-                        : "transparent",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      transition: "all var(--q-transition)",
-                    }}
-                  >
-                    {isSelected && (
-                      <div
-                        style={{
-                          width: "7px",
-                          height: "7px",
-                          background: "#fff",
-                          borderRadius: "50%",
-                        }}
-                      />
-                    )}
-                  </div>
-                  <span style={{ flex: 1 }}>{option}</span>
-                  {isSelected && (
-                    <span
-                      style={{
-                        fontSize: "11px",
-                        color: "var(--q-accent)",
-                        fontWeight: 700,
-                      }}
-                    >
-                      Selected
-                    </span>
-                  )}
-                </label>
-              );
-            })}
-          </div>
+            Start the test
+          </h2>
         </div>
+        <div
+          style={{
+            display: "flex",
+            gap: "8px",
+            alignItems: "center",
+            flexWrap: "wrap",
+          }}
+        >
+          {flaggedCount > 0 && (
+            <FlaggedBadge
+              count={flaggedCount}
+              questions={questions}
+              selectedAnswers={selectedAnswers}
+              currentQuestionIndex={currentQuestionIndex}
+              onSelectFlagged={handleGoToFlagged}
+              flaggedQuestions={flaggedQuestions}
+            />
+          )}
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "8px",
+              padding: "9px 14px",
+              borderRadius: T.radiusSm,
+              background: timeWarn ? T.dangerLight : T.surface,
+              border: `1px solid ${timeWarn ? T.dangerBorder : T.border}`,
+              fontSize: "14px",
+              fontWeight: "600",
+              color: timeWarn ? T.danger : T.ink,
+              transition: "all 0.3s",
+            }}
+          >
+            <Icon.clock warn={timeWarn} />
+            {formatTime(timeLeft)}
+          </div>
+          <Btn variant="danger" onClick={handleStopTest}>
+            Stop
+          </Btn>
+        </div>
+      </div>
 
-        {/* Bottom nav */}
+      {/* Progress */}
+      <div style={{ marginBottom: "1.5rem", animation: "fadeUp 0.35s ease" }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            fontSize: "13px",
+            color: T.inkFaint,
+            marginBottom: "8px",
+            fontWeight: "500",
+          }}
+        >
+          <span>
+            Question{" "}
+            <span style={{ color: T.ink, fontWeight: "700" }}>
+              {currentQuestionIndex + 1}
+            </span>{" "}
+            of {questions.length}
+          </span>
+          <span>
+            Answered{" "}
+            <span style={{ color: T.ink, fontWeight: "700" }}>
+              {answeredCount}
+            </span>
+            /{questions.length}
+          </span>
+        </div>
+        <div
+          style={{
+            height: "6px",
+            background: "#e2e8f0",
+            borderRadius: "999px",
+            overflow: "hidden",
+          }}
+        >
+          <div
+            style={{
+              width: `${progressPercent}%`,
+              height: "100%",
+              background: T.accent,
+              borderRadius: "999px",
+              transition: "width 0.4s cubic-bezier(0.4,0,0.2,1)",
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Question card */}
+      <div
+        key={currentQuestionIndex}
+        style={{
+          background: T.surface,
+          border: `1px solid ${isFlaggedCurrentQuestion ? T.flag : T.border}`,
+          borderRadius: T.radiusLg,
+          padding: "2rem",
+          boxShadow: isFlaggedCurrentQuestion
+            ? `0 0 0 2px ${T.flagLight}, ${T.shadowMd}`
+            : T.shadowMd,
+          animation: `fadeUp 0.3s ease`,
+          marginBottom: "1.5rem",
+          transition: "all 0.2s",
+        }}
+      >
         <div
           style={{
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            marginTop: "20px",
+            marginBottom: "1rem",
             gap: "12px",
             flexWrap: "wrap",
           }}
         >
-          <Button
-            onClick={() => goToQuestion(currentQuestionIndex - 1)}
-            disabled={currentQuestionIndex === 0}
+          <Badge variant={isFlaggedCurrentQuestion ? "flagged" : "neutral"}>
+            {isFlaggedCurrentQuestion && <Icon.flag filled />}Q
+            {String(currentQuestionIndex + 1).padStart(2, "0")}
+          </Badge>
+          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+            <Btn
+              onClick={handleSkipQuestion}
+              isIconOnly
+              title="Skip this question"
+            >
+              <Icon.skip />
+            </Btn>
+            <Btn
+              variant={isFlaggedCurrentQuestion ? "flagActive" : "flag"}
+              onClick={toggleFlag}
+              isIconOnly
+            >
+              <Icon.flag filled={isFlaggedCurrentQuestion} />
+            </Btn>
+          </div>
+        </div>
+
+        <p
+          style={{
+            fontSize: "16px",
+            lineHeight: "1.75",
+            color: T.ink,
+            marginBottom: "1.5rem",
+          }}
+        >
+          {currentQuestion.questionText}
+        </p>
+
+        {currentQuestionImageSrc && (
+          <div
+            style={{
+              margin: "0 0 1.5rem",
+              padding: "10px",
+              background: T.surfaceAlt,
+              border: `1px solid ${T.border}`,
+              borderRadius: T.radius,
+              animation: "fadeIn 0.25s ease",
+            }}
           >
-            <Icon name="left" size={14} /> Back
-          </Button>
-          {currentQuestionIndex < questions.length - 1 ? (
-            <Button
-              variant="primary"
-              onClick={() => goToQuestion(currentQuestionIndex + 1)}
-              disabled={!selectedAnswers[currentQuestion._id]}
+            <img
+              src={currentQuestionImageSrc}
+              alt="Question"
+              style={{
+                display: "block",
+                width: "100%",
+                maxWidth: "600px",
+                maxHeight: "380px",
+                objectFit: "contain",
+                borderRadius: T.radiusSm,
+                margin: "0 auto",
+              }}
+              onError={(e) => {
+                e.currentTarget.style.display = "none";
+              }}
+            />
+          </div>
+        )}
+
+        {!currentQuestionImageSrc &&
+          (Boolean(currentQuestion?.hasImage) ||
+            Boolean(currentQuestion?.imageContentType) ||
+            Boolean(currentQuestion?.imageSize)) && (
+            <div
+              style={{
+                margin: "-0.5rem 0 1.5rem",
+                padding: "14px",
+                background: T.surfaceAlt,
+                border: `1px dashed ${T.borderStrong}`,
+                borderRadius: T.radius,
+                color: T.inkMid,
+                fontSize: "13px",
+                fontFamily: T.fontSans,
+                textAlign: "center",
+                animation: "pulse 1.2s ease-in-out infinite",
+              }}
             >
-              Next <Icon name="right" size={14} />
-            </Button>
-          ) : (
-            <Button
-              variant="primary"
-              onClick={handleSubmit}
-              disabled={!selectedAnswers[currentQuestion._id]}
-            >
-              Submit
-            </Button>
+              Loading image...
+            </div>
           )}
+
+        <div>
+          {currentQuestion.options.map((option, i) => {
+            const isSelected = selectedAnswers[currentQuestion._id] === option;
+            return (
+              <label
+                key={i}
+                className="quiz-option"
+                onClick={() =>
+                  setSelectedAnswers((prev) => ({
+                    ...prev,
+                    [currentQuestion._id]: option,
+                  }))
+                }
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "12px",
+                  padding: "12px 14px",
+                  borderRadius: T.radius,
+                  cursor: "pointer",
+                  fontSize: "14px",
+                  marginBottom: "8px",
+                  border: `1px solid ${isSelected ? T.accent : T.border}`,
+                  background: isSelected ? T.accentLight : "transparent",
+                  color: isSelected ? T.accentDark : T.ink,
+                  transition: "all 0.2s ease",
+                }}
+              >
+                <div
+                  style={{
+                    width: "18px",
+                    height: "18px",
+                    borderRadius: "50%",
+                    flexShrink: 0,
+                    border: `1.5px solid ${isSelected ? T.accent : T.borderStrong}`,
+                    background: isSelected ? T.accent : "transparent",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    transition: "all 0.15s",
+                  }}
+                >
+                  {isSelected && (
+                    <div
+                      style={{
+                        width: "6px",
+                        height: "6px",
+                        background: "#fff",
+                        borderRadius: "50%",
+                      }}
+                    />
+                  )}
+                </div>
+                <span style={{ flex: 1 }}>{option}</span>
+                {isSelected && (
+                  <span
+                    style={{
+                      fontSize: "11px",
+                      color: T.accent,
+                      fontWeight: "600",
+                    }}
+                  >
+                    Selected
+                  </span>
+                )}
+              </label>
+            );
+          })}
         </div>
       </div>
 
-      {/* Sidebar - Question Grid */}
-      <aside
+      {/* Navigation */}
+      <div
         style={{
-          width: "260px",
-          flexShrink: 0,
-          position: "sticky",
-          top: "24px",
-          display: "none",
-        }}
-        className="q-sidebar"
-      >
-        <div
-          style={{
-            background: "var(--q-surface)",
-            borderRadius: "var(--q-radius)",
-            boxShadow: "var(--q-shadow-md)",
-            padding: "20px",
-            border: "1px solid var(--q-border)",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: "16px",
-            }}
-          >
-            <span
-              style={{
-                fontSize: "12px",
-                fontWeight: 700,
-                color: "var(--q-ink)",
-                letterSpacing: "0.02em",
-              }}
-            >
-              Questions
-            </span>
-            {flaggedCount > 0 && (
-              <Badge variant="flagged">
-                <Icon name="flag" size={10} style={{ filled: true }} />{" "}
-                {flaggedCount}
-              </Badge>
-            )}
-          </div>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(5, 1fr)",
-              gap: "6px",
-            }}
-          >
-            {questions.map((q, i) => {
-              const active = i === currentQuestionIndex;
-              const answered = Boolean(selectedAnswers[q._id]);
-              const flagged = flaggedQuestions.has(q._id);
-              return (
-                <button
-                  key={q._id}
-                  onClick={() => goToQuestion(i)}
-                  className="q-nav-dot"
-                  title={`Q${i + 1}${flagged ? " (flagged)" : ""}${answered ? " (answered)" : ""}`}
-                  style={{
-                    aspectRatio: "1",
-                    borderRadius: "8px",
-                    border: "none",
-                    fontSize: "12px",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    background: active
-                      ? "var(--q-accent)"
-                      : flagged
-                        ? "var(--q-flag-soft)"
-                        : answered
-                          ? "var(--q-accent-soft)"
-                          : "var(--q-bg)",
-                    color: active
-                      ? "#fff"
-                      : flagged
-                        ? "var(--q-flag)"
-                        : answered
-                          ? "var(--q-accent)"
-                          : "var(--q-ink-muted)",
-                    boxShadow: active
-                      ? "0 0 0 2px var(--q-accent-soft)"
-                      : "none",
-                  }}
-                >
-                  {flagged ? (
-                    <Icon name="flag" size={10} style={{ filled: true }} />
-                  ) : (
-                    i + 1
-                  )}
-                </button>
-              );
-            })}
-          </div>
-
-          <div
-            style={{
-              marginTop: "16px",
-              display: "flex",
-              flexDirection: "column",
-              gap: "8px",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                fontSize: "12px",
-                color: "var(--q-ink-muted)",
-              }}
-            >
-              <span
-                style={{
-                  width: "10px",
-                  height: "10px",
-                  borderRadius: "3px",
-                  background: "var(--q-accent)",
-                }}
-              />
-              Current
-            </div>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                fontSize: "12px",
-                color: "var(--q-ink-muted)",
-              }}
-            >
-              <span
-                style={{
-                  width: "10px",
-                  height: "10px",
-                  borderRadius: "3px",
-                  background: "var(--q-accent-soft)",
-                }}
-              />
-              Answered
-            </div>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                fontSize: "12px",
-                color: "var(--q-ink-muted)",
-              }}
-            >
-              <span
-                style={{
-                  width: "10px",
-                  height: "10px",
-                  borderRadius: "3px",
-                  background: "var(--q-flag-soft)",
-                }}
-              />
-              Flagged
-            </div>
-          </div>
-        </div>
-      </aside>
-
-      {/* Mobile sidebar toggle */}
-      <button
-        onClick={() => setSidebarOpen((p) => !p)}
-        style={{
-          position: "fixed",
-          bottom: "20px",
-          right: "20px",
-          width: "52px",
-          height: "52px",
-          borderRadius: "50%",
-          background: "var(--q-accent)",
-          color: "#fff",
-          border: "none",
-          boxShadow: "var(--q-shadow-lg)",
-          cursor: "pointer",
-          display: "flex",
+          display: "grid",
+          gridTemplateColumns: "auto 1fr auto",
+          gridTemplateRows: "auto auto",
           alignItems: "center",
-          justifyContent: "center",
-          zIndex: 50,
+          gap: "1rem",
+          marginTop: "1.5rem",
         }}
-        className="q-mobile-fab"
       >
-        <svg
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
+        {/* Back button - top left */}
+        <Btn
+          onClick={() => setCurrentQuestionIndex((p) => p - 1)}
+          disabled={currentQuestionIndex === 0}
         >
-          <rect x="3" y="3" width="7" height="7" rx="1" />
-          <rect x="14" y="3" width="7" height="7" rx="1" />
-          <rect x="3" y="14" width="7" height="7" rx="1" />
-          <rect x="14" y="14" width="7" height="7" rx="1" />
-        </svg>
-      </button>
+          <Icon.left /> Back
+        </Btn>
 
-      {/* Mobile sidebar overlay */}
-      {sidebarOpen && (
+        {/* Dot nav - spans middle columns */}
         <div
           style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.4)",
-            zIndex: 40,
-            animation: "q-fade-in 0.2s ease",
-          }}
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      {/* Mobile sidebar drawer */}
-      {sidebarOpen && (
-        <div
-          style={{
-            position: "fixed",
-            bottom: 0,
-            left: 0,
-            right: 0,
-            background: "var(--q-surface)",
-            borderRadius: "var(--q-radius) var(--q-radius) 0 0",
-            padding: "24px",
-            zIndex: 45,
-            maxHeight: "60vh",
-            overflowY: "auto",
-            boxShadow: "var(--q-shadow-lg)",
-            animation: "q-slide-up 0.3s ease",
+            display: "flex",
+            gap: "6px",
+            alignItems: "center",
+            justifyContent: "center",
+            flexWrap: "wrap",
+            gridColumn: "2",
+            gridRow: "1",
+            minWidth: 0,
+            overflowX: "auto",
+            paddingBottom: "4px",
           }}
         >
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: "16px",
-            }}
-          >
-            <span style={{ fontSize: "14px", fontWeight: 700 }}>
-              Jump to question
-            </span>
-            <button
-              onClick={() => setSidebarOpen(false)}
-              style={{
-                background: "none",
-                border: "none",
-                fontSize: "20px",
-                cursor: "pointer",
-                color: "var(--q-ink-muted)",
-              }}
-            >
-              ×
-            </button>
-          </div>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(6, 1fr)",
-              gap: "8px",
-            }}
-          >
-            {questions.map((q, i) => {
-              const active = i === currentQuestionIndex;
-              const answered = Boolean(selectedAnswers[q._id]);
-              const flagged = flaggedQuestions.has(q._id);
-              return (
-                <button
-                  key={q._id}
-                  onClick={() => goToQuestion(i)}
-                  style={{
-                    aspectRatio: "1",
-                    borderRadius: "10px",
-                    border: "none",
-                    fontSize: "14px",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    background: active
-                      ? "var(--q-accent)"
-                      : flagged
-                        ? "var(--q-flag-soft)"
-                        : answered
-                          ? "var(--q-accent-soft)"
-                          : "var(--q-bg)",
-                    color: active
-                      ? "#fff"
-                      : flagged
-                        ? "var(--q-flag)"
-                        : answered
-                          ? "var(--q-accent)"
-                          : "var(--q-ink-muted)",
-                  }}
-                >
-                  {flagged ? (
-                    <Icon name="flag" size={12} style={{ filled: true }} />
-                  ) : (
-                    i + 1
-                  )}
-                </button>
-              );
-            })}
-          </div>
+          {questions.slice(0, Math.min(questions.length, 12)).map((q, i) => {
+            const isActive = i === currentQuestionIndex;
+            const isAnswered = Boolean(selectedAnswers[q._id]);
+            const isFlagged = flaggedQuestions.has(q._id);
+            return (
+              <div
+                key={i}
+                className="dot-nav"
+                onClick={() => setCurrentQuestionIndex(i)}
+                style={{
+                  width: isActive ? "22px" : "8px",
+                  height: "8px",
+                  borderRadius: "999px",
+                  background: isFlagged
+                    ? T.flag
+                    : isActive
+                      ? T.accent
+                      : isAnswered
+                        ? `${T.accent}66`
+                        : "var(--border-strong)",
+                  cursor: "pointer",
+                  transition: "all 0.25s cubic-bezier(0.4,0,0.2,1)",
+                  border: isFlagged ? `1px solid ${T.flag}` : "none",
+                  flexShrink: 0,
+                }}
+              />
+            );
+          })}
         </div>
-      )}
 
-      {/* Responsive styles injection */}
-      <style>{`
-        @media (min-width: 900px) {
-          .q-sidebar { display: block !important; }
-          .q-mobile-fab { display: none !important; }
-        }
-        @keyframes q-slide-up {
-          from { transform: translateY(100%); }
-          to { transform: translateY(0); }
-        }
-      `}</style>
-    </div>,
+        {/* Next/Submit button - top right */}
+        {currentQuestionIndex < questions.length - 1 ? (
+          <Btn
+            variant="primary"
+            onClick={() => setCurrentQuestionIndex((p) => p + 1)}
+            disabled={!selectedAnswers[currentQuestion._id]}
+          >
+            Next <Icon.right />
+          </Btn>
+        ) : (
+          <Btn
+            variant="primary"
+            onClick={handleSubmit}
+            disabled={!selectedAnswers[currentQuestion._id]}
+          >
+            Submit
+          </Btn>
+        )}
+      </div>
+    </>,
   );
 }
+
+export default SubjectTestPage;

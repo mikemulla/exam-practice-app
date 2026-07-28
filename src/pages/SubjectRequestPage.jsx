@@ -165,7 +165,7 @@ function SubjectRequestPage() {
     <>
       <style>{`
         @keyframes fadeUp {
-          from { opacity: 0; transform: translateY(12px); }
+           from  { opacity: 0; transform: translateY(12px); }
           to { opacity: 1; transform: translateY(0); }
         }
         @keyframes successPop {
@@ -179,15 +179,58 @@ function SubjectRequestPage() {
         .page-enter { animation: fadeUp 0.35s ease both; }
         .card-enter { animation: fadeUp 0.4s ease 0.05s both; }
         .success-banner { animation: successPop 0.35s ease both; }
-        input:focus { outline: none; }
+        input: focus { outline: none; }
         @media (max-width: 640px) {
           .subject-request-card { padding: 1.25rem !important; }
           .subject-request-actions { flex-direction: column !important; }
           .subject-request-actions button { width: 100% !important; }
         }
+
+        @keyframes driftA {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          50%      { transform: translate(26px, -20px) scale(1.05); }
+        }
+        @keyframes driftB {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          50%      { transform: translate(-18px, 16px) scale(1.04); }
+        }
+        .blob-a {
+          position  : absolute; top: -130px; right: -160px;
+          width     : 380px; height: 380px;
+          background: 
+            radial-gradient(circle at 27% 24%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 24%),
+            radial-gradient(circle at 62% 70%, #7dd8ff 0%, #33b5f0 32%, #1a7fd4 58%, #0f5aa6 80%, #0a3f7a 100%);
+          border-radius: 58% 42% 65% 35% / 45% 55% 45% 55%;
+          filter       : blur(1px);
+          box-shadow   : 0 60px 110px -25px rgba(15, 90, 166, 0.4);
+          animation    : driftA 18s ease-in-out infinite;
+        }
+        .blob-b {
+          position  : absolute; top: 30px; right: 40px;
+          width     : 90px; height : 90px;
+          background: 
+            radial-gradient(circle at 30% 26%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 26%),
+            radial-gradient(circle at 62% 68%, #66cdf4 0%, #1f8fdc 45%, #0e5a9e 100%);
+          border-radius: 50%;
+          filter       : blur(0.5px);
+          box-shadow   : 0 22px 42px -12px rgba(15, 90, 166, 0.4);
+          animation    : driftB 13s ease-in-out infinite;
+        }
       `}</style>
 
       <div style={S.page}>
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            zIndex: 0,
+            overflow: "hidden",
+            pointerEvents: "none",
+          }}
+        >
+          <div className="blob-a" />
+          <div className="blob-b" />
+        </div>
         <div style={S.inner}>
           <div className="page-enter" style={S.topBar}>
             <button onClick={() => navigate("/user")} style={S.backBtn}>
@@ -325,7 +368,12 @@ function SubjectRequestPage() {
                     <div style={{ textAlign: "center" }}>
                       <p style={S.dropLabel}>
                         File is required. Drag and drop or{" "}
-                        <span style={{ color: "var(--button-primary)", fontWeight: "600" }}>
+                        <span
+                          style={{
+                            color: "var(--button-primary)",
+                            fontWeight: "600",
+                          }}
+                        >
                           browse
                         </span>
                       </p>
@@ -389,8 +437,15 @@ const S = {
     minHeight: "100vh",
     background: "var(--bg-primary)",
     padding: "2rem 1.25rem 4rem",
+    position: "relative",
+    overflow: "hidden",
   },
-  inner: { maxWidth: "680px", margin: "0 auto" },
+  inner: {
+    maxWidth: "680px",
+    margin: "0 auto",
+    position: "relative",
+    zIndex: 1,
+  },
   topBar: {
     display: "flex",
     alignItems: "center",
@@ -507,7 +562,11 @@ const S = {
     cursor: "pointer",
     transition: "border-color 0.15s, background 0.15s",
   },
-  dropLabel: { fontSize: "13px", color: "var(--text-secondary)", margin: "0 0 2px" },
+  dropLabel: {
+    fontSize: "13px",
+    color: "var(--text-secondary)",
+    margin: "0 0 2px",
+  },
   fileName: {
     fontSize: "13px",
     fontWeight: "600",

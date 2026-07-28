@@ -246,7 +246,7 @@ function UserPage() {
     <>
       <style>{`
         @keyframes fadeUp {
-           from  { opacity: 0; transform: translateY(14px); }
+            from   { opacity: 0; transform: translateY(14px); }
           to   { opacity: 1; transform: translateY(0); }
         }
         .subject-card-enter {
@@ -254,9 +254,36 @@ function UserPage() {
           transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
         }
         .header-fade { animation: fadeUp 0.4s ease both; }
+
+        @keyframes driftA {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          50%      { transform: translate(24px, -18px) scale(1.05); }
+        }
+        .user-page-blob {
+          position  : absolute; top: -110px; right: -140px;
+          width     : 360px; height: 360px;
+          opacity   : 0.55;
+          background: 
+            radial-gradient(circle at 27% 24%, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0) 24%),
+            radial-gradient(circle at 62% 70%, #7dd8ff 0%, #33b5f0 32%, #1a7fd4 58%, #0f5aa6 80%, #0a3f7a 100%);
+          border-radius: 58% 42% 65% 35% / 45% 55% 45% 55%;
+          filter       : blur(2px);
+          animation    : driftA 20s ease-in-out infinite;
+        }
       `}</style>
 
       <div style={S.page}>
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            zIndex: 0,
+            overflow: "hidden",
+            pointerEvents: "none",
+          }}
+        >
+          <div className="user-page-blob" />
+        </div>
         <div style={S.inner}>
           <div className="header-fade" style={S.pageHeader}>
             <button
@@ -596,8 +623,15 @@ const S = {
     minHeight: "100vh",
     background: "var(--bg-primary)",
     padding: "2.5rem 1.25rem 4rem",
+    position: "relative",
+    overflow: "hidden",
   },
-  inner: { maxWidth: "1080px", margin: "0 auto" },
+  inner: {
+    maxWidth: "1080px",
+    margin: "0 auto",
+    position: "relative",
+    zIndex: 1,
+  },
   pageHeader: { marginBottom: "2rem" },
   eyebrow: {
     fontSize: "11px",

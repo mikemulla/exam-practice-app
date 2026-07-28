@@ -42,125 +42,177 @@ function ResetPasswordPage() {
   };
 
   return (
-    <div style={pageStyle}>
-      <div style={cardStyle}>
-        <p style={labelTop}>Account recovery</p>
-        <h1 style={titleStyle}>Reset Password</h1>
+    <>
+      <style>{`
+        @keyframes driftA {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          50%      { transform: translate(26px, -20px) scale(1.05); }
+        }
+        @keyframes driftB {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          50%      { transform: translate(-18px, 16px) scale(1.04); }
+        }
+        .blob-a {
+          position: absolute; top: -130px; right: -160px;
+          width: 380px; height: 380px;
+          background:
+            radial-gradient(circle at 27% 24%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 24%),
+            radial-gradient(circle at 62% 70%, #7dd8ff 0%, #33b5f0 32%, #1a7fd4 58%, #0f5aa6 80%, #0a3f7a 100%);
+          border-radius: 58% 42% 65% 35% / 45% 55% 45% 55%;
+          filter: blur(1px);
+          box-shadow: 0 60px 110px -25px rgba(15, 90, 166, 0.4);
+          animation: driftA 18s ease-in-out infinite;
+        }
+        .blob-b {
+          position: absolute; bottom: -60px; left: -70px;
+          width: 200px; height: 200px;
+          background:
+            radial-gradient(circle at 30% 26%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 26%),
+            radial-gradient(circle at 62% 68%, #66cdf4 0%, #1f8fdc 45%, #0e5a9e 100%);
+          border-radius: 50%;
+          filter: blur(0.5px);
+          box-shadow: 0 22px 42px -12px rgba(15, 90, 166, 0.4);
+          animation: driftB 13s ease-in-out infinite;
+        }
+      `}</style>
+      <div style={pageStyle}>
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            zIndex: 0,
+            overflow: "hidden",
+            pointerEvents: "none",
+          }}
+        >
+          <div className="blob-a" />
+          <div className="blob-b" />
+        </div>
+        <div style={cardStyle}>
+          <p style={labelTop}>Account recovery</p>
+          <h1 style={titleStyle}>Reset Password</h1>
 
-        {success ? (
-          <>
-            <div style={successBox}>
-              <span style={{ fontSize: "20px" }}>✓</span>
-              <div>
-                <p
-                  style={{
-                    margin: "0 0 4px",
-                    fontWeight: "600",
-                    color: "#15803d",
-                  }}
-                >
-                  Password updated!
-                </p>
-                <p style={{ margin: 0, fontSize: "13px", color: "var(--text-secondary)" }}>
-                  Your password has been reset successfully. You can now log in
-                  with your new password.
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={() => navigate("/user-login")}
-              style={primaryButton}
-            >
-              Go to Login
-            </button>
-          </>
-        ) : (
-          <>
-            <p style={subtitleStyle}>Enter your new password below.</p>
-
-            {error && <div style={errorBox}>{error}</div>}
-
-            <form onSubmit={handleSubmit}>
-              <label style={labelStyle}>New Password</label>
-              <div style={{ position: "relative", marginBottom: "16px" }}>
-                <input
-                  type={showPassword ? "text" : "password"}
-                  placeholder="At least 6 characters"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  style={{
-                    ...inputStyle,
-                    marginBottom: 0,
-                    paddingRight: "48px",
-                  }}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((v) => !v)}
-                  style={eyeBtn}
-                >
-                  {showPassword ? "Hide" : "Show"}
-                </button>
-              </div>
-
-              <label style={labelStyle}>Confirm Password</label>
-              <input
-                type={showPassword ? "text" : "password"}
-                placeholder="Repeat your new password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                style={inputStyle}
-              />
-
-              {/* Strength indicator */}
-              {password.length > 0 && (
-                <div style={{ marginBottom: "16px" }}>
-                  <div style={strengthBarBg}>
-                    <div
-                      style={{
-                        ...strengthBarFill,
-                        width: strengthWidth(password),
-                        background: strengthColor(password),
-                      }}
-                    />
-                  </div>
+          {success ? (
+            <>
+              <div style={successBox}>
+                <span style={{ fontSize: "20px" }}>✓</span>
+                <div>
                   <p
                     style={{
-                      fontSize: "12px",
-                      color: strengthColor(password),
-                      margin: "4px 0 0",
+                      margin: "0 0 4px",
+                      fontWeight: "600",
+                      color: "#15803d",
                     }}
                   >
-                    {strengthLabel(password)}
+                    Password updated!
+                  </p>
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: "13px",
+                      color: "var(--text-secondary)",
+                    }}
+                  >
+                    Your password has been reset successfully. You can now log
+                    in with your new password.
                   </p>
                 </div>
-              )}
+              </div>
+              <button
+                onClick={() => navigate("/user-login")}
+                style={primaryButton}
+              >
+                Go to Login
+              </button>
+            </>
+          ) : (
+            <>
+              <p style={subtitleStyle}>Enter your new password below.</p>
+
+              {error && <div style={errorBox}>{error}</div>}
+
+              <form onSubmit={handleSubmit}>
+                <label style={labelStyle}>New Password</label>
+                <div style={{ position: "relative", marginBottom: "16px" }}>
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="At least 6 characters"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    style={{
+                      ...inputStyle,
+                      marginBottom: 0,
+                      paddingRight: "48px",
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    style={eyeBtn}
+                  >
+                    {showPassword ? "Hide" : "Show"}
+                  </button>
+                </div>
+
+                <label style={labelStyle}>Confirm Password</label>
+                <input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Repeat your new password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  style={inputStyle}
+                />
+
+                {/* Strength indicator */}
+                {password.length > 0 && (
+                  <div style={{ marginBottom: "16px" }}>
+                    <div style={strengthBarBg}>
+                      <div
+                        style={{
+                          ...strengthBarFill,
+                          width: strengthWidth(password),
+                          background: strengthColor(password),
+                        }}
+                      />
+                    </div>
+                    <p
+                      style={{
+                        fontSize: "12px",
+                        color: strengthColor(password),
+                        margin: "4px 0 0",
+                      }}
+                    >
+                      {strengthLabel(password)}
+                    </p>
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  style={{
+                    ...primaryButton,
+                    opacity: isSubmitting ? 0.7 : 1,
+                    cursor: isSubmitting ? "not-allowed" : "pointer",
+                  }}
+                >
+                  {isSubmitting ? "Resetting…" : "Reset Password"}
+                </button>
+              </form>
 
               <button
-                type="submit"
-                disabled={isSubmitting}
-                style={{
-                  ...primaryButton,
-                  opacity: isSubmitting ? 0.7 : 1,
-                  cursor: isSubmitting ? "not-allowed" : "pointer",
-                }}
+                onClick={() => navigate("/forgot-password")}
+                style={plainButton}
               >
-                {isSubmitting ? "Resetting…" : "Reset Password"}
+                ← Request a new link
               </button>
-            </form>
-
-            <button
-              onClick={() => navigate("/forgot-password")}
-              style={plainButton}
-            >
-              ← Request a new link
-            </button>
-          </>
-        )}
+            </>
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -204,6 +256,8 @@ const pageStyle = {
   justifyContent: "center",
   padding: "24px",
   background: "var(--bg-primary)",
+  position: "relative",
+  overflow: "hidden",
 };
 
 const cardStyle = {
@@ -214,6 +268,8 @@ const cardStyle = {
   borderRadius: "20px",
   padding: "28px",
   boxShadow: "0 12px 30px rgba(15,23,42,0.06)",
+  position: "relative",
+  zIndex: 1,
 };
 
 const labelTop = {

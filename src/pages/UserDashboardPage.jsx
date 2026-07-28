@@ -574,6 +574,9 @@ export default function UserDashboardPage() {
       background: t.bg,
       minHeight: "100vh",
       paddingBottom: isMobile ? 88 : 0,
+      position: "relative",
+      overflow: "hidden",
+      zIndex: 0,
     },
     topbar: {
       background: "transparent",
@@ -785,7 +788,25 @@ export default function UserDashboardPage() {
     0% { transform: scale(1); opacity: 0.35; }
     70%, 100% { transform: scale(2.4); opacity: 0; }
   }
+  @keyframes driftA {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    50%      { transform: translate(22px, -16px) scale(1.05); }
+  }
+  .dashboard-blob {
+    position  : absolute; top: -120px; right: -150px;
+    width     : 380px; height: 380px;
+    z-index   : -1;
+    opacity   : 0.55;
+    background: 
+      radial-gradient(circle at 27% 24%, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0) 24%),
+      radial-gradient(circle at 62% 70%, #7dd8ff 0%, #33b5f0 32%, #1a7fd4 58%, #0f5aa6 80%, #0a3f7a 100%);
+    border-radius : 58% 42% 65% 35% / 45% 55% 45% 55%;
+    filter        : blur(3px);
+    animation     : driftA 22s ease-in-out infinite;
+    pointer-events: none;
+  }
 `}</style>
+      <div className="dashboard-blob" />
       <link
         href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600&family=DM+Serif+Display:ital@0;1&display=swap"
         rel="stylesheet"

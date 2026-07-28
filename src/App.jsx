@@ -36,6 +36,10 @@ import AboutPage from "./pages/AboutPage";
 import QuickReviewListPage from "./pages/QuickReviewListPage";
 import QuickReviewDetailPage from "./pages/QuickReviewDetailPage";
 import AdminQuickReviewsPage from "./pages/AdminQuickReviewsPage";
+import PublicLayout from "./components/PublicLayout";
+import PublicQuickReviewsPage from "./pages/PublicQuickReviewsPage";
+import PublicQuickReviewDetailPage from "./pages/PublicQuickReviewDetailPage";
+import SampleQuestionsPage from "./pages/SampleQuestionsPage";
 
 function App() {
   return (
@@ -47,6 +51,13 @@ function App() {
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
         <Route path="/terms" element={<TermsPage />} />
+        <Route path="/" element={<HomePage />} />
+        <Route path="/quick-reviews" element={<PublicQuickReviewsPage />} />
+        <Route
+          path="/quick-reviews/:slug"
+          element={<PublicQuickReviewDetailPage />}
+        />
+        <Route path="/sample-questions" element={<SampleQuestionsPage />} />
         <Route path="/admin-login" element={<AdminLoginPage />} />
         <Route path="/user-login" element={<UserLoginPage />} />
         <Route path="/user-signup" element={<UserSignupPage />} />

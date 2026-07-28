@@ -1,82 +1,39 @@
 import { Link } from "react-router-dom";
-
-function PublicFooter() {
+export default function PublicFooter() {
   return (
-    <footer style={S.footer}>
-      <div style={S.inner}>
-        <div>
-          <h3 style={S.brand}>Bambo Exam Practice</h3>
-          <p style={S.text}>
-            Helping students practise smarter, track progress, and prepare with
-            confidence.
-          </p>
+    <>
+      <style>{`.public-footer{border-top:1px solid var(--border-color);background:var(--bg-secondary)}.footer-inner{max-width:1180px;margin:auto;padding:36px 20px;display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:34px}.footer-inner h2,.footer-inner h3{color:var(--text-primary);margin:0 0 12px}.footer-inner p,.footer-inner a{color:var(--text-secondary);font-size:13px;line-height:1.7;text-decoration:none}.footer-links{display:flex;flex-direction:column;gap:8px}.footer-bottom{max-width:1180px;margin:auto;padding:18px 20px;border-top:1px solid var(--border-color);color:var(--text-secondary);font-size:12px}@media(max-width:700px){.footer-inner{grid-template-columns:1fr}}`}</style>
+      <footer className="public-footer">
+        <div className="footer-inner">
+          <div>
+            <h2>Bambo</h2>
+            <p>
+              Focused exam preparation with structured reviews, sample
+              questions, detailed explanations, and personalized practice.
+            </p>
+          </div>
+          <div>
+            <h3>Learn</h3>
+            <div className="footer-links">
+              <Link to="/quick-reviews">Quick Reviews</Link>
+              <Link to="/sample-questions">Sample Questions</Link>
+              <Link to="/signup">Create account</Link>
+            </div>
+          </div>
+          <div>
+            <h3>Company</h3>
+            <div className="footer-links">
+              <Link to="/about">About</Link>
+              <Link to="/contact">Contact</Link>
+              <Link to="/privacy-policy">Privacy</Link>
+              <Link to="/terms">Terms</Link>
+            </div>
+          </div>
         </div>
-
-        <div style={S.links}>
-          <Link to="/" style={S.link}>
-            Home
-          </Link>
-          <Link to="/about" style={S.link}>
-            About
-          </Link>
-          <Link to="/contact" style={S.link}>
-            Contact
-          </Link>
-          <Link to="/privacy-policy" style={S.link}>
-            Privacy Policy
-          </Link>
-          <Link to="/terms" style={S.link}>
-            Terms
-          </Link>
+        <div className="footer-bottom">
+          © {new Date().getFullYear()} Bambo. All rights reserved.
         </div>
-
-        <p style={S.copy}>© 2026 Bambo Exam Practice. All rights reserved.</p>
-      </div>
-    </footer>
+      </footer>
+    </>
   );
 }
-
-const S = {
-  footer: {
-    background: "var(--bg-secondary)",
-    borderTop: "1px solid var(--border-color)",
-    padding: "32px 18px",
-  },
-  inner: {
-    maxWidth: "1100px",
-    margin: "0 auto",
-    display: "grid",
-    gap: "18px",
-  },
-  brand: {
-    margin: "0 0 8px",
-    color: "var(--text-primary)",
-    fontSize: "18px",
-    fontWeight: 800,
-  },
-  text: {
-    margin: 0,
-    color: "var(--text-secondary)",
-    fontSize: "14px",
-    lineHeight: 1.7,
-    maxWidth: "560px",
-  },
-  links: {
-    display: "flex",
-    flexWrap: "wrap",
-    gap: "12px 18px",
-  },
-  link: {
-    color: "var(--text-secondary)",
-    textDecoration: "none",
-    fontSize: "14px",
-    fontWeight: 700,
-  },
-  copy: {
-    margin: 0,
-    color: "var(--text-secondary)",
-    fontSize: "13px",
-  },
-};
-
-export default PublicFooter;

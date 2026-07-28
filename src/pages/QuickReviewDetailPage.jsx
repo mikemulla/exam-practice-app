@@ -116,11 +116,15 @@ function QuickReviewDetailPage() {
       background: "var(--bg-primary)",
       padding: "2.5rem 1.25rem 4rem",
       color: "var(--text-primary)",
+      position: "relative",
+      overflow: "hidden",
     },
     container: {
       maxWidth: "1120px",
       margin: "0 auto",
       width: "100%",
+      position: "relative",
+      zIndex: 1,
     },
     loadingContainer: {
       display: "grid",
@@ -404,7 +408,7 @@ function QuickReviewDetailPage() {
     <>
       <style>{`
         @keyframes fadeUp {
-          from { opacity: 0; transform: translateY(14px); }
+           from  { opacity: 0; transform: translateY(14px); }
           to { opacity: 1; transform: translateY(0); }
         }
 
@@ -442,17 +446,60 @@ function QuickReviewDetailPage() {
 
           .review-section-card {
             min-height: auto !important;
-            padding: 14px !important;
+            padding   : 14px !important;
           }
 
           .detail-actions button {
-            width: 100% !important;
+            width          : 100% !important;
             justify-content: center !important;
           }
+        }
+
+        @keyframes driftA {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          50%      { transform: translate(26px, -20px) scale(1.05); }
+        }
+        @keyframes driftB {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          50%      { transform: translate(-18px, 16px) scale(1.04); }
+        }
+        .blob-a {
+          position  : absolute; top: -130px; right: -160px;
+          width     : 440px; height: 440px;
+          background: 
+            radial-gradient(circle at 27% 24%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 24%),
+            radial-gradient(circle at 62% 70%, #7dd8ff 0%, #33b5f0 32%, #1a7fd4 58%, #0f5aa6 80%, #0a3f7a 100%);
+          border-radius: 58% 42% 65% 35% / 45% 55% 45% 55%;
+          filter       : blur(1px);
+          box-shadow   : 0 60px 110px -25px rgba(15, 90, 166, 0.4);
+          animation    : driftA 18s ease-in-out infinite;
+        }
+        .blob-b {
+          position  : absolute; top: 40px; right: 60px;
+          width     : 100px; height: 100px;
+          background: 
+            radial-gradient(circle at 30% 26%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 26%),
+            radial-gradient(circle at 62% 68%, #66cdf4 0%, #1f8fdc 45%, #0e5a9e 100%);
+          border-radius: 50%;
+          filter       : blur(0.5px);
+          box-shadow   : 0 22px 42px -12px rgba(15, 90, 166, 0.4);
+          animation    : driftB 13s ease-in-out infinite;
         }
       `}</style>
 
       <div className="detail-page" style={S.page}>
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            zIndex: 0,
+            overflow: "hidden",
+            pointerEvents: "none",
+          }}
+        >
+          <div className="blob-a" />
+          <div className="blob-b" />
+        </div>
         <div style={S.container}>
           <div className="detail-page-header" style={S.header}>
             <button
