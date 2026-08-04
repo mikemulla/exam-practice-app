@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import api from "../lib/api";
 import * as FireworksPreset from "react-canvas-confetti/dist/presets/fireworks";
+import BlobBackground from "../components/BlobBackground";
 
 const resolvePresetComponent = (presetModule) => {
   const candidates = [
@@ -1286,38 +1287,19 @@ function SubjectTestPage() {
       style={{
         minHeight: "100vh",
         background: T.bg,
-        fontFamily: "'Inter', sans-serif",
-        color: T.ink,
+        fontFamily: T.fontSans,
         position: "relative",
         overflow: "hidden",
-        zIndex: 0,
       }}
     >
-      <style>{`
-        @keyframes driftA {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          50%      { transform: translate(20px, -14px) scale(1.04); }
-        }
-        .test-page-blob {
-          position: absolute; top: -100px; right: -130px;
-          width: 320px; height: 320px;
-          z-index: -1;
-          opacity: 0.4;
-          background:
-            radial-gradient(circle at 27% 24%, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0) 24%),
-            radial-gradient(circle at 62% 70%, #7dd8ff 0%, #33b5f0 32%, #1a7fd4 58%, #0f5aa6 80%, #0a3f7a 100%);
-          border-radius: 58% 42% 65% 35% / 45% 55% 45% 55%;
-          filter: blur(2px);
-          animation: driftA 24s ease-in-out infinite;
-          pointer-events: none;
-        }
-      `}</style>
-      <div className="test-page-blob" />
+      <BlobBackground amount="compact" orientation="compact" />
       <div
         style={{
           maxWidth: "800px",
           margin: "0 auto",
           padding: "2rem 1.25rem 4rem",
+          position: "relative",
+          zIndex: 1,
         }}
       >
         {children}

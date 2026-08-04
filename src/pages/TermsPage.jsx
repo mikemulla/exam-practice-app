@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import PublicFooter from "../components/PublicFooter";
+import BlobBackground from "../components/BlobBackground";
 
 function Section({ title, children }) {
   return (
@@ -17,13 +18,7 @@ const S = {
     position: "relative",
     overflow: "hidden",
   },
-  blobField: {
-    position: "absolute",
-    inset: 0,
-    zIndex: 0,
-    overflow: "hidden",
-    pointerEvents: "none",
-  },
+
   inner: {
     position: "relative",
     zIndex: 1,
@@ -106,28 +101,10 @@ function TermsPage() {
            from  { opacity: 0; transform: translateY(14px); }
           to   { opacity: 1; transform: translateY(0); }
         }
-        @keyframes driftA {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          50%      { transform: translate(-22px, 18px) scale(1.04); }
-        }
-        .terms-enter { animation: fadeUp 0.4s ease both; }
-        .blob-a {
-          position  : absolute; top: -130px; right: -150px;
-          width     : 380px; height: 380px;
-          background: 
-            radial-gradient(circle at 27% 24%, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0) 24%),
-            radial-gradient(circle at 62% 70%, #7dd8ff 0%, #33b5f0 32%, #1a7fd4 58%, #0f5aa6 80%, #0a3f7a 100%);
-          border-radius: 55% 45% 60% 40% / 45% 55% 45% 55%;
-          filter: blur(1px);
-          box-shadow: 0 50px 90px -25px rgba(15, 90, 166, 0.35);
-          animation: driftA 18s ease-in-out infinite;
-        }
       `}</style>
 
       <main style={S.page}>
-        <div style={S.blobField}>
-          <div className="blob-a" />
-        </div>
+        <BlobBackground amount="compact" orientation="long" />
 
         <div style={S.inner}>
           <button

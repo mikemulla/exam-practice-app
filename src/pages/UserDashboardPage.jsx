@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../lib/api";
+import BlobBackground from "../components/BlobBackground";
 
 const pct = (score, total) =>
   total ? Math.round((Number(score || 0) / Number(total || 0)) * 100) : 0;
@@ -582,12 +583,15 @@ export default function UserDashboardPage() {
       background: "transparent",
       borderBottom: "none",
       padding: isMobile ? "14px 16px 4px" : "18px 28px 4px",
-      display: "flex",
-      justifyContent: "space-between",
+      display: isMobile ? "grid" : "flex",
+      gridTemplateColumns: isMobile ? "38px minmax(0, 1fr)" : undefined,
+      justifyContent: isMobile ? undefined : "space-between",
       alignItems: "center",
+      gap: isMobile ? 10 : 12,
       position: "sticky",
       top: 0,
       zIndex: 100,
+      boxSizing: "border-box",
     },
     avatar: {
       width: 40,
@@ -616,15 +620,21 @@ export default function UserDashboardPage() {
     ctaPill: {
       display: "inline-flex",
       alignItems: "center",
+      justifyContent: "center",
       gap: 8,
-      fontSize: 12,
+      width: isMobile ? "100%" : "auto",
+      minWidth: 0,
+      minHeight: isMobile ? 38 : "auto",
+      boxSizing: "border-box",
+      fontSize: isMobile ? 13 : 12,
       fontWeight: 500,
-      padding: "7px 16px 7px 12px",
+      padding: isMobile ? "9px 14px" : "7px 16px 7px 12px",
       borderRadius: 999,
       border: `0.5px solid ${t.blue}`,
-      background: `${t.blue}1a`, // soft tinted background instead of solid fill
+      background: `${t.blue}1a`,
       color: t.blue,
       cursor: "pointer",
+      whiteSpace: "nowrap",
     },
     dotPing: {
       position: "relative",
@@ -697,24 +707,26 @@ export default function UserDashboardPage() {
     ctaRow: {
       display: "grid",
       gridTemplateColumns: isMobile ? "1fr" : "2fr 1fr 1fr",
-      gap: 12,
+      gap: isMobile ? 10 : 12,
     },
     ctaMain: {
       background: t.navy,
       borderRadius: 12,
-      padding: 20,
+      padding: isMobile ? 16 : 20,
       cursor: "pointer",
       position: "relative",
       overflow: "hidden",
+      minWidth: 0,
     },
     ctaSec: {
       background: t.surface,
       border: `0.5px solid ${t.border}`,
       borderRadius: 12,
-      padding: 18,
+      padding: isMobile ? 16 : 18,
       cursor: "pointer",
       display: "flex",
       flexDirection: "column",
+      minWidth: 0,
     },
     insightCard: {
       background: t.surface2,
@@ -783,30 +795,13 @@ export default function UserDashboardPage() {
 
   return (
     <div style={s.page}>
+      <BlobBackground amount="full" orientation="wide" />
       <style>{`
   @keyframes ctaPing {
     0% { transform: scale(1); opacity: 0.35; }
     70%, 100% { transform: scale(2.4); opacity: 0; }
   }
-  @keyframes driftA {
-    0%, 100% { transform: translate(0, 0) scale(1); }
-    50%      { transform: translate(22px, -16px) scale(1.05); }
-  }
-  .dashboard-blob {
-    position  : absolute; top: -120px; right: -150px;
-    width     : 380px; height: 380px;
-    z-index   : -1;
-    opacity   : 0.55;
-    background: 
-      radial-gradient(circle at 27% 24%, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0) 24%),
-      radial-gradient(circle at 62% 70%, #7dd8ff 0%, #33b5f0 32%, #1a7fd4 58%, #0f5aa6 80%, #0a3f7a 100%);
-    border-radius : 58% 42% 65% 35% / 45% 55% 45% 55%;
-    filter        : blur(3px);
-    animation     : driftA 22s ease-in-out infinite;
-    pointer-events: none;
-  }
 `}</style>
-      <div className="dashboard-blob" />
       <link
         href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600&family=DM+Serif+Display:ital@0;1&display=swap"
         rel="stylesheet"

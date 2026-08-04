@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { sampleQuestions } from "../data/publicReviews";
+import BlobBackground from "../components/BlobBackground";
 
 function ChevronRight() {
   return (
@@ -44,13 +45,7 @@ const S = {
     position: "relative",
     overflow: "hidden",
   },
-  blobField: {
-    position: "absolute",
-    inset: 0,
-    zIndex: 0,
-    overflow: "hidden",
-    pointerEvents: "none",
-  },
+
   inner: {
     position: "relative",
     zIndex: 1,
@@ -367,58 +362,10 @@ export default function SampleQuestionsPage() {
           from { opacity: 0; transform: translateY(14px); }
           to   { opacity: 1; transform: translateY(0); }
         }
-        @keyframes driftA {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          50%      { transform: translate(-26px, 22px) scale(1.05); }
-        }
-        @keyframes driftB {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          50%      { transform: translate(24px, -18px) scale(1.04); }
-        }
-        .sample-header { animation: fadeUp 0.4s ease both; }
-        .question-card-enter { animation: fadeUp 0.35s ease both; }
-        .blob-a {
-          position: absolute; top: -180px; left: 50%;
-          margin-left: -240px;
-          width: 480px; height: 480px;
-          background:
-            radial-gradient(circle at 27% 24%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 24%),
-            radial-gradient(circle at 62% 70%, #7dd8ff 0%, #33b5f0 32%, #1a7fd4 58%, #0f5aa6 80%, #0a3f7a 100%);
-          border-radius: 55% 45% 60% 40% / 45% 55% 45% 55%;
-          filter: blur(1px);
-          box-shadow: 0 60px 110px -25px rgba(15, 90, 166, 0.4);
-          animation: driftA 17s ease-in-out infinite;
-        }
-        .blob-b {
-          position: absolute; bottom: -150px; right: -130px;
-          width: 340px; height: 340px;
-          background:
-            radial-gradient(circle at 30% 26%, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0) 26%),
-            radial-gradient(circle at 62% 68%, #5fd0f0 0%, #1c8ad8 45%, #0c4d8c 100%);
-          border-radius: 45% 55% 40% 60% / 55% 45% 55% 45%;
-          filter: blur(1px);
-          box-shadow: 0 40px 80px -20px rgba(15, 90, 166, 0.35);
-          animation: driftB 21s ease-in-out infinite;
-        }
-        .blob-c {
-          position: absolute; bottom: -30px; right: 90px;
-          width: 100px; height: 100px;
-          background:
-            radial-gradient(circle at 30% 26%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 26%),
-            radial-gradient(circle at 62% 68%, #66cdf4 0%, #1f8fdc 45%, #0e5a9e 100%);
-          border-radius: 50%;
-          filter: blur(0.5px);
-          box-shadow: 0 22px 42px -12px rgba(15, 90, 166, 0.4);
-          animation: driftA 12s ease-in-out infinite;
-        }
       `}</style>
 
       <div style={S.page}>
-        <div style={S.blobField}>
-          <div className="blob-a" />
-          <div className="blob-b" />
-          <div className="blob-c" />
-        </div>
+        <BlobBackground amount="full" orientation="wide" />
 
         <div style={S.inner}>
           <div className="sample-header" style={S.header}>

@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { publicReviews } from "../data/publicReviews";
+import BlobBackground from "../components/BlobBackground";
 
 function ChevronRight() {
   return (
@@ -63,13 +64,7 @@ const S = {
     position: "relative",
     overflow: "hidden",
   },
-  blobField: {
-    position: "absolute",
-    inset: 0,
-    zIndex: 0,
-    overflow: "hidden",
-    pointerEvents: "none",
-  },
+
   inner: {
     position: "relative",
     zIndex: 1,
@@ -349,65 +344,10 @@ export default function PublicQuickReviewsPage() {
           from { opacity: 0; transform: translateY(14px); }
           to   { opacity: 1; transform: translateY(0); }
         }
-        @keyframes driftA {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          50%      { transform: translate(30px, -24px) scale(1.06); }
-        }
-        @keyframes driftB {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          50%      { transform: translate(-24px, 26px) scale(1.05); }
-        }
-        .library-header { animation: fadeUp 0.4s ease both; }
-        .review-card-enter { animation: fadeUp 0.35s ease both; }
-        .library-search-input:focus {
-          border-color: rgba(24, 95, 165, 0.45) !important;
-          box-shadow: 0 0 0 3px rgba(24, 95, 165, 0.08);
-        }
-        .blob-a {
-          position: absolute; top: -140px; right: -140px;
-          width: 480px; height: 480px;
-          background:
-            radial-gradient(circle at 27% 24%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 24%),
-            radial-gradient(circle at 62% 70%, #7dd8ff 0%, #33b5f0 32%, #1a7fd4 58%, #0f5aa6 80%, #0a3f7a 100%);
-          border-radius: 58% 42% 63% 37% / 46% 54% 46% 54%;
-          filter: blur(1px);
-          box-shadow: 0 60px 110px -25px rgba(15, 90, 166, 0.45);
-          animation: driftA 16s ease-in-out infinite;
-        }
-        .blob-b {
-          position: absolute; top: 60px; right: 20px;
-          width: 110px; height: 110px;
-          background:
-            radial-gradient(circle at 30% 26%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 26%),
-            radial-gradient(circle at 62% 68%, #66cdf4 0%, #1f8fdc 45%, #0e5a9e 100%);
-          border-radius: 50%;
-          filter: blur(0.5px);
-          box-shadow: 0 24px 46px -12px rgba(15, 90, 166, 0.45);
-          animation: driftB 13s ease-in-out infinite;
-        }
-        .blob-c {
-          position: absolute; top: 220px; left: -110px;
-          width: 300px; height: 300px;
-          background:
-            radial-gradient(circle at 30% 26%, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0) 26%),
-            radial-gradient(circle at 62% 68%, #5fd0f0 0%, #1c8ad8 45%, #0c4d8c 100%);
-          border-radius: 45% 55% 58% 42% / 55% 45% 55% 45%;
-          filter: blur(1px);
-          box-shadow: 0 40px 80px -20px rgba(15, 90, 166, 0.35);
-          animation: driftB 20s ease-in-out infinite;
-          opacity: 0.85;
-        }
-        @media (max-width: 640px) {
-          .library-search-wrapper { max-width: 100% !important; }
-        }
       `}</style>
 
       <div style={S.page}>
-        <div style={S.blobField}>
-          <div className="blob-a" />
-          <div className="blob-b" />
-          <div className="blob-c" />
-        </div>
+        <BlobBackground amount="full" orientation="wide" />
 
         <div style={S.inner}>
           <div className="library-header" style={S.header}>

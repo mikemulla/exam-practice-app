@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../lib/api";
+import BlobBackground from "../components/BlobBackground";
 
 function UserLoginPage() {
   const navigate = useNavigate();
@@ -46,52 +47,10 @@ function UserLoginPage() {
   color  : var(--text-secondary) !important;
   opacity: 0.8;
 }
-
-@keyframes driftA {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  50%      { transform: translate(26px, -20px) scale(1.05); }
-}
-@keyframes driftB {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  50%      { transform: translate(-18px, 16px) scale(1.04); }
-}
-.blob-a {
-  position  : absolute; top: -130px; right: -160px;
-  width     : 380px; height: 380px;
-  background: 
-    radial-gradient(circle at 27% 24%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 24%),
-    radial-gradient(circle at 62% 70%, #7dd8ff 0%, #33b5f0 32%, #1a7fd4 58%, #0f5aa6 80%, #0a3f7a 100%);
-  border-radius: 58% 42% 65% 35% / 45% 55% 45% 55%;
-  filter       : blur(1px);
-  box-shadow   : 0 60px 110px -25px rgba(15, 90, 166, 0.4);
-  animation    : driftA 18s ease-in-out infinite;
-}
-.blob-b {
-  position  : absolute; bottom: -60px; left: -70px;
-  width     : 200px; height   : 200px;
-  background: 
-    radial-gradient(circle at 30% 26%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 26%),
-    radial-gradient(circle at 62% 68%, #66cdf4 0%, #1f8fdc 45%, #0e5a9e 100%);
-  border-radius: 50%;
-  filter       : blur(0.5px);
-  box-shadow   : 0 22px 42px -12px rgba(15, 90, 166, 0.4);
-  animation    : driftB 13s ease-in-out infinite;
-}
       `}</style>
 
       <div style={pageStyle}>
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            zIndex: 0,
-            overflow: "hidden",
-            pointerEvents: "none",
-          }}
-        >
-          <div className="blob-a" />
-          <div className="blob-b" />
-        </div>
+          <BlobBackground amount="compact" orientation="compact" />
         <div style={cardStyle}>
           <p style={labelTop}>Student access</p>
           <h1 style={titleStyle}>Login</h1>
