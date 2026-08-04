@@ -5,6 +5,7 @@ import PublicFooter from "../components/PublicFooter";
 import ProductPreviewSection from "../components/ProductPreviewSection";
 import PublicNavbar from "../components/PublicNavbar";
 import BlobBackground from "../components/BlobBackground";
+import usePageMetadata from "../hooks/usePageMetadata";
 
 function ArrowRight() {
   return (
@@ -116,6 +117,10 @@ function HomePage() {
   const userToken = localStorage.getItem("userToken");
   const { isDarkMode, toggleDarkMode } = useDarkMode();
   const [showAlert, setShowAlert] = useState(true);
+  usePageMetadata(
+    "Bambo Exam Practice | Free Medical Study Questions",
+    "Practise medical exam questions, read free quick reviews, and track study progress with Bambo Exam Practice.",
+  );
 
   const colors = {
     bg: isDarkMode ? "#0f172a" : "#f8f9fb",

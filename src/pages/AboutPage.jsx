@@ -1,6 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import PublicFooter from "../components/PublicFooter";
 import BlobBackground from "../components/BlobBackground";
+import usePageMetadata from "../hooks/usePageMetadata";
 
 function ChevronRight() {
   return (
@@ -231,6 +232,10 @@ function FeatureCard({ item, index }) {
 
 function AboutPage() {
   const navigate = useNavigate();
+  usePageMetadata(
+    "About Bambo Exam Practice | Bambo",
+    "Learn how Bambo Exam Practice helps students prepare with topic-based tests, quick reviews, explanations, and progress tracking.",
+  );
 
   return (
     <>

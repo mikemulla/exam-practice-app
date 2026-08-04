@@ -1,6 +1,7 @@
 import { useNavigate, useParams } from "react-router-dom";
 import { publicReviews } from "../data/publicReviews";
 import BlobBackground from "../components/BlobBackground";
+import usePageMetadata from "../hooks/usePageMetadata";
 
 function ChevronRight() {
   return (
@@ -100,6 +101,23 @@ const S = {
     letterSpacing: "-0.02em",
     lineHeight: 1.15,
   },
+  metaRow: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "8px",
+    margin: "-0.8rem 0 1.5rem",
+  },
+  metaPill: {
+    display: "inline-flex",
+    alignItems: "center",
+    padding: "6px 10px",
+    borderRadius: "999px",
+    background: "var(--bg-secondary)",
+    border: "0.5px solid var(--border-color)",
+    color: "var(--text-secondary)",
+    fontSize: "12px",
+    fontWeight: "600",
+  },
   summary: {
     padding: "1.25rem 1.5rem",
     borderLeft: "3px solid var(--button-primary)",
@@ -168,6 +186,27 @@ const S = {
     fontSize: "14px",
     lineHeight: "1.9",
   },
+  relatedCard: {
+    background: "var(--bg-secondary)",
+    border: "0.5px solid var(--border-color)",
+    borderRadius: "14px",
+    padding: "1.5rem",
+    marginTop: "1rem",
+  },
+  relatedList: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "8px",
+    marginTop: "1rem",
+  },
+  relatedPill: {
+    padding: "7px 10px",
+    borderRadius: "999px",
+    background: "var(--surface-alt)",
+    color: "var(--button-primary)",
+    fontSize: "12px",
+    fontWeight: "600",
+  },
   cta: {
     marginTop: "2rem",
     padding: "2rem",
@@ -204,6 +243,14 @@ export default function PublicQuickReviewDetailPage() {
   const { slug } = useParams();
   const navigate = useNavigate();
   const r = publicReviews.find((x) => x.slug === slug);
+  usePageMetadata(
+    r
+      ? `${r.title} | ${r.subject} Quick Review | Bambo`
+      : "Medical Quick Review | Bambo",
+    r
+      ? `${r.summary} Read this free ${r.subject.toLowerCase()} quick review with exam tips and related topics.`
+      : "Read free medical quick reviews with concise explanations, exam tips, and related topics on Bambo.",
+  );
 
   if (!r) {
     navigate("/quick-reviews", { replace: true });
@@ -242,6 +289,12 @@ export default function PublicQuickReviewDetailPage() {
               <span style={S.eyebrow}>{r.subject}</span>
             </div>
             <h1 style={S.heading}>{r.title}</h1>
+            <div style={S.metaRow}>
+              {r.readingTime && <span style={S.metaPill}>{r.readingTime}</span>}
+              {r.updated && (
+                <span style={S.metaPill}>Updated {r.updated}</span>
+              )}
+            </div>
           </div>
 
           <div className="article-body">
@@ -280,6 +333,19 @@ export default function PublicQuickReviewDetailPage() {
                 ))}
               </ul>
             </div>
+
+            {r.relatedTopics?.length > 0 && (
+              <div style={S.relatedCard}>
+                <h2 style={S.tipsTitle}>Related topics</h2>
+                <div style={S.relatedList}>
+                  {r.relatedTopics.map((topic) => (
+                    <span style={S.relatedPill} key={topic}>
+                      {topic}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div style={S.cta}>
               <h2 style={S.ctaTitle}>Ready to practise?</h2>

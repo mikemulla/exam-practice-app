@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { publicReviews } from "../data/publicReviews";
 import BlobBackground from "../components/BlobBackground";
+import usePageMetadata from "../hooks/usePageMetadata";
 
 function ChevronRight() {
   return (
@@ -322,6 +323,10 @@ function ReviewCard({ review, index, onOpen }) {
 export default function PublicQuickReviewsPage() {
   const navigate = useNavigate();
   const [q, setQ] = useState("");
+  usePageMetadata(
+    "Free Medical Quick Reviews | Bambo",
+    "Read free medical study reviews covering cardiology, paediatrics, renal medicine, respiratory medicine, and other exam topics.",
+  );
 
   const reviews = useMemo(() => {
     const n = q.trim().toLowerCase();

@@ -25,7 +25,7 @@ export default function PublicFooter() {
             <div className="footer-links">
               <Link to="/about">About</Link>
               <Link to="/contact">Contact</Link>
-              <Link to="/privacy-policy">Privacy</Link>
+              <Link to="/privacy">Privacy</Link>
               <Link to="/terms">Terms</Link>
             </div>
           </div>

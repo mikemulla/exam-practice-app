@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { sampleQuestions } from "../data/publicReviews";
 import BlobBackground from "../components/BlobBackground";
+import usePageMetadata from "../hooks/usePageMetadata";
 
 function ChevronRight() {
   return (
@@ -354,6 +355,10 @@ function QuestionCard({ q, n }) {
 
 export default function SampleQuestionsPage() {
   const navigate = useNavigate();
+  usePageMetadata(
+    "Free Medical Sample Questions | Bambo",
+    "Try free medical sample questions with instant answer checks and explanations before creating a Bambo account.",
+  );
 
   return (
     <>

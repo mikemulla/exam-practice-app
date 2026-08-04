@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import PublicFooter from "../components/PublicFooter";
 import BlobBackground from "../components/BlobBackground";
+import usePageMetadata from "../hooks/usePageMetadata";
 
 function Section({ title, children }) {
   return (
@@ -93,6 +94,10 @@ const S = {
 
 function PrivacyPolicyPage() {
   const navigate = useNavigate();
+  usePageMetadata(
+    "Privacy Policy | Bambo Exam Practice",
+    "Read the Bambo Exam Practice privacy policy, including how account, contact, progress, analytics, and storage data may be used.",
+  );
 
   return (
     <>

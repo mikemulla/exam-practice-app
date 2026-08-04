@@ -3,9 +3,14 @@ import { useNavigate } from "react-router-dom";
 import PublicFooter from "../components/PublicFooter";
 import api from "../lib/api";
 import BlobBackground from "../components/BlobBackground";
+import usePageMetadata from "../hooks/usePageMetadata";
 
 function ContactPage() {
   const navigate = useNavigate();
+  usePageMetadata(
+    "Contact Bambo | Bambo Exam Practice",
+    "Contact Bambo Exam Practice for support, feedback, subject requests, partnerships, or general questions.",
+  );
   const [formData, setFormData] = useState({
     name: "",
     email: "",
