@@ -29,7 +29,7 @@ function PublicNavbar() {
         .menu-icon.open span:nth-child(2){opacity:0}
         .menu-icon.open span:nth-child(3){transform:translateY(-6px) rotate(-45deg)}
         .mobile-menu{display:none}
-        @media(max-width:820px){.public-links,.public-actions{display:none}.menu-button{display:flex}.public-nav-inner{min-height:64px}.mobile-menu{display:grid;grid-template-rows:0fr;transition:.25s;border-top:0 solid var(--border-color)}.mobile-menu.open{grid-template-rows:1fr;border-top-width:1px}.mobile-menu>div{overflow:hidden}.mobile-links{padding:14px 20px 20px;display:flex;flex-direction:column;gap:5px}.mobile-links .public-nav-link{padding:12px}.mobile-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}.mobile-actions a{text-align:center}}
+        @media(max-width:1050px){.public-links,.public-actions{display:none}.menu-button{display:flex}.public-nav-inner{min-height:64px}.mobile-menu{display:grid;grid-template-rows:0fr;transition:.25s;border-top:0 solid var(--border-color)}.mobile-menu.open{grid-template-rows:1fr;border-top-width:1px}.mobile-menu>div{overflow:hidden}.mobile-links{padding:14px 20px 20px;display:flex;flex-direction:column;gap:5px}.mobile-links .public-nav-link{padding:12px}.mobile-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}.mobile-actions a{text-align:center}}
         @media(max-width:420px){.mobile-actions{grid-template-columns:1fr}}
       `}</style>
       <header className="public-nav">
@@ -54,6 +54,15 @@ function PublicNavbar() {
               Contact
             </NavLink>
           </nav>
+
+          <div className="public-actions">
+            <Link className="public-nav-button secondary" to="/user-login">
+              Log in
+            </Link>
+            <Link className="public-nav-button primary" to="/user-signup">
+              Create account
+            </Link>
+          </div>
 
           <button
             className="menu-button"
@@ -89,6 +98,14 @@ function PublicNavbar() {
               <NavLink to="/contact" className={linkClass}>
                 Contact
               </NavLink>
+              <div className="mobile-actions">
+                <Link className="public-nav-button secondary" to="/user-login">
+                  Log in
+                </Link>
+                <Link className="public-nav-button primary" to="/user-signup">
+                  Create account
+                </Link>
+              </div>
             </nav>
           </div>
         </div>

@@ -20,33 +20,52 @@ function ChevronRight() {
 const FEATURES = [
   {
     icon: "🎯",
-    title: "Focused Practice",
-    text: "Practise by subject or topic so your revision stays organised and targeted.",
+    title: "Built for LASUCOM",
+    text: "Designed around the way LASUCOM students revise, practise, and prepare for school assessments.",
   },
   {
     icon: "🔀",
-    title: "Randomized Tests",
-    text: "Mix questions across topics and choose how many questions you want to answer.",
+    title: "Curriculum Aligned",
+    text: "Questions and reviews are organised with the school curriculum in mind.",
   },
   {
     icon: "📈",
-    title: "Progress Tracking",
-    text: "Use your dashboard to monitor performance, completed tests, and improvement over time.",
+    title: "Checked Content",
+    text: "Study content may be AI-assisted, but it is checked before publication for relevance and clarity.",
   },
   {
     icon: "🏆",
-    title: "Achievements",
-    text: "Earn badges and celebrate progress as you build better study habits.",
+    title: "Practice With Feedback",
+    text: "Answer questions, review explanations, and use quick reviews to strengthen weak areas.",
   },
   {
     icon: "📩",
-    title: "Content Requests",
-    text: "Request subjects or topics that are not yet available on the platform.",
+    title: "Student Requests",
+    text: "Use the contact form to request subjects, topics, corrections, or improvements.",
   },
   {
     icon: "🌙",
-    title: "Mobile Friendly",
-    text: "Study comfortably on desktop or mobile with a clean interface and dark mode support.",
+    title: "Exam Support",
+    text: "Bambo is intended for educational revision and exam preparation, not clinical decision-making.",
+  },
+];
+
+const TRUST_POINTS = [
+  {
+    title: "Who operates Bambo",
+    text: "Bambo is personally operated by a LASUCOM medical student as an independent study-support project for fellow students.",
+  },
+  {
+    title: "Who it is for",
+    text: "The platform is built mainly for Lagos State University College of Medicine students who want structured practice, quick reviews, and clearer revision feedback.",
+  },
+  {
+    title: "How content is produced",
+    text: "Content is AI-assisted where useful, then checked against the school curriculum before being published. The aim is to make explanations original, concise, and relevant to the way students are examined.",
+  },
+  {
+    title: "How to contact Bambo",
+    text: "Students can use the contact form to send feedback, report issues, request topics, or suggest corrections.",
   },
 ];
 
@@ -207,6 +226,18 @@ const S = {
     fontSize: "14.5px",
     maxWidth: "760px",
   },
+  infoGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 260px), 1fr))",
+    gap: "16px",
+    marginTop: "2rem",
+  },
+  infoCard: {
+    background: "var(--bg-secondary)",
+    border: "0.5px solid var(--border-color)",
+    borderRadius: "14px",
+    padding: "1.5rem",
+  },
 };
 
 function FeatureCard({ item, index }) {
@@ -234,7 +265,7 @@ function AboutPage() {
   const navigate = useNavigate();
   usePageMetadata(
     "About Bambo Exam Practice | Bambo",
-    "Learn how Bambo Exam Practice helps students prepare with topic-based tests, quick reviews, explanations, and progress tracking.",
+    "Learn how Bambo Exam Practice supports LASUCOM students with curriculum-aligned questions, quick reviews, and checked study content.",
   );
 
   return (
@@ -265,11 +296,12 @@ function AboutPage() {
 
           <section className="about-hero" style={S.hero}>
             <span style={S.eyebrow}>About Bambo Exam Practice</span>
-            <h1 style={S.title}>A smarter way to practise for exams.</h1>
+            <h1 style={S.title}>Exam preparation built for LASUCOM students.</h1>
             <p style={S.subtitle}>
-              Bambo Exam Practice helps students prepare through structured
-              topic-based tests, randomized practice, detailed explanations, and
-              progress tracking.
+              Bambo Exam Practice is a study-support platform for LASUCOM
+              students. It provides topic-based questions, quick reviews,
+              explanations, and progress tracking to make exam preparation more
+              organised and measurable.
             </p>
 
             <div style={S.actions}>
@@ -296,12 +328,19 @@ function AboutPage() {
           <section style={S.statement}>
             <h2 style={S.sectionTitle}>Our mission</h2>
             <p style={S.sectionText}>
-              Our mission is to make exam preparation more accessible,
-              measurable, and engaging. Whether students are preparing for
-              school assessments, CBTs, professional exams, or continuous
-              learning, Bambo Exam Practice provides a focused environment for
-              building confidence.
+              Bambo exists to make LASUCOM exam preparation more accessible,
+              focused, and easier to track. The goal is to help students revise
+              actively, identify weak areas, and build confidence before exams.
             </p>
+          </section>
+
+          <section style={S.infoGrid}>
+            {TRUST_POINTS.map((item) => (
+              <article style={S.infoCard} key={item.title}>
+                <h2 style={S.cardTitle}>{item.title}</h2>
+                <p style={S.cardText}>{item.text}</p>
+              </article>
+            ))}
           </section>
         </div>
       </main>
