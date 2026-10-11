@@ -9,6 +9,8 @@ for (const path of publicPaths) {
   const file = path === "/" ? "index.html" : `${path.slice(1)}.html`;
   const html = await readFile(`dist/${file}`, "utf8");
   pageHtml.set(path, html);
+  assert(html.includes('name="google-adsense-account" content="ca-pub-4637994459722699"'), `${path}: ownership verification missing`);
+  assert(!html.includes('adsbygoogle.js'), `${path}: ad serving must remain disabled during review preparation`);
   assert.match(html, /<h1[\s>]/, `${path}: missing heading`);
   assert(html.includes(`href="${getPageMetadata(path).canonical}"`), `${path}: canonical missing`);
   assert(html.includes('content="index,follow"'), `${path}: not indexable`);
@@ -34,6 +36,7 @@ for (const question of sampleQuestions) {
 }
 for (const filename of ["app-shell.html", "404.html"]) {
   const html = await readFile(`dist/${filename}`, "utf8");
+  assert(!html.includes('adsbygoogle.js'), `${filename}: unexpected ad loader`);
   assert(html.includes("noindex,follow"), `${filename}: missing noindex`);
   assert(!html.includes('rel="canonical"'), `${filename}: should not inherit a public canonical`);
 }
@@ -43,6 +46,10 @@ const verification = "google80a2cebe0904e732.html";
 assert.equal(await readFile(`dist/${verification}`, "utf8"), await readFile(`public/${verification}`, "utf8"));
 assert.equal(await readFile("dist/ads.txt", "utf8"), await readFile("public/ads.txt", "utf8"));
 const app = await readFile("src/App.jsx", "utf8");
+for (const review of publicReviews) {
+  assert(/^\d{4}-\d{2}-\d{2}$/.test(review.updatedAt), `${review.slug}: explicit editorial date required`);
+  assert(pageHtml.get(`/quick-reviews/${review.slug}`).includes(`dateTime="${review.updatedAt}"`), `${review.slug}: editorial date missing from markup`);
+}
 for (const match of app.matchAll(/path="([^"]+)"/g)) {
   const path = match[1];
   if (publicPaths.includes(path) || ["/privacy-policy", "/quick-reviews/:slug", "*"].includes(path)) continue;

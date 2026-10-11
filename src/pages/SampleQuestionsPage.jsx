@@ -409,14 +409,13 @@ export default function SampleQuestionsPage() {
             <div style={S.cta}>
               <h2 style={S.ctaTitle}>Continue your practice</h2>
               <p style={S.ctaBody}>
-                Sign up for full topic tests, randomized practice, and progress
-                tracking.
+                Revisit the concepts behind your answers with the free study reviews.
               </p>
               <button
                 style={S.ctaButton}
-                onClick={() => navigate("/user-signup")}
+                onClick={() => navigate("/quick-reviews")}
               >
-                <span>Create free account</span>
+                <span>Explore study reviews</span>
                 <ChevronRight />
               </button>
             </div>

@@ -10,7 +10,8 @@ export default function PublicQuickReviewDetailPage() {
   return <main className="study-page"><article className="study-article">
     <nav aria-label="Breadcrumb" className="study-breadcrumb"><Link to="/">Home</Link><span aria-hidden="true"> / </span><Link to="/quick-reviews">Quick Reviews</Link><span aria-hidden="true"> / </span><span>{review.subject}</span></nav>
     <header><p className="study-eyebrow">{review.subject}</p><h1>{review.title}</h1>
-      <p className="study-meta">By <Link to="/about">{review.author}</Link> · Updated <time dateTime="2026-10-11">{review.updated}</time> · {review.readingTime}</p>
+      <p className="study-meta">By <Link to="/about#editorial">{review.author}</Link> · Content updated <time dateTime={review.updatedAt}>{review.updated}</time> · {review.readingTime}</p>
+      <p className="study-note">AI-assisted study notes. Not independently medically reviewed. The date records an editorial change, not a clinical review.</p>
       <p className="study-lead">{review.summary}</p>
       <p className="study-note">A student revision resource, not a clinical protocol. The examples are fictional. Use current local guidance and supervised teaching for patient care. <Link to="/about#editorial">How these notes are produced</Link>.</p>
     </header>
@@ -25,6 +26,6 @@ export default function PublicQuickReviewDetailPage() {
     <section><h2>Check your understanding</h2><p>{review.recall.question}</p><details><summary>Read the explanation</summary><p>{review.recall.answer}</p></details><p><Link to={sampleQuestions.some(q => q.reviewSlug === review.slug) ? `/sample-questions#${review.slug}` : "/sample-questions"}>Practise with worked sample questions</Link></p></section>
     <section id="references"><h2>References and further reading</h2><p>Use these sources to explore the concepts and check the applicable guidance. External organisations do not endorse or clinically review Bambo's notes.</p><ul>{review.sources.map(source => <li key={source.url}><a href={source.url}>{source.title}</a></li>)}</ul><p>Found an unclear or incorrect statement? <Link to="/contact">Send a correction</Link> with the article title, the passage and a supporting reference.</p></section>
     <aside><h2>Continue studying</h2><ul>{related.map(item => <li key={item.slug}><Link to={`/quick-reviews/${item.slug}`}>{item.title}</Link></li>)}</ul><Link to="/quick-reviews">Browse all reviews</Link></aside>
-    <section className="study-panel"><h2>Put the explanation into practice</h2><p>Read the <Link to="/sample-questions">public worked questions</Link> or <Link to="/user-signup">create an account</Link> for topic tests and progress tracking.</p></section>
+    <section className="study-panel"><h2>Put the explanation into practice</h2><p>Try the <Link to="/sample-questions">public worked questions</Link>, explain your choice before opening the answer, then return to the concept you found difficult. No account is required.</p></section>
   </article></main>;
 }

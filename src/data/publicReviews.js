@@ -18,6 +18,6 @@ const baseReviews=[
 export const publicReviews = baseReviews.map(review => {
   const enrichment = reviewEnrichment[review.slug];
   const body = [review.summary, ...review.sections.flatMap(s => [s.heading, ...s.paragraphs, ...s.points]), ...review.examTips, enrichment.explanation, ...enrichment.table.rows.flat(), enrichment.case.prompt, enrichment.case.reasoning, enrichment.pitfall, enrichment.recall.question, enrichment.recall.answer].join(" ");
-  return { ...review, ...enrichment, author: "Bambo", updated: "11 October 2026", readingTime: Math.max(1, Math.ceil(body.split(/\s+/).length / 200)) + " min read" };
+  return { ...review, ...enrichment, author: "Bambo", updated: new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(enrichment.updatedAt)), readingTime: Math.max(1, Math.ceil(body.split(/\s+/).length / 200)) + " min read" };
 });
 export { sampleQuestions } from "./sampleQuestions.js";

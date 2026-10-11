@@ -17,7 +17,7 @@ export default function PublicFooter() {
             <div className="footer-links">
               <Link to="/quick-reviews">Quick Reviews</Link>
               <Link to="/sample-questions">Sample Questions</Link>
-              <Link to="/user-signup">Create account</Link>
+              <Link to="/user-login">Account access</Link>
             </div>
           </div>
           <div>

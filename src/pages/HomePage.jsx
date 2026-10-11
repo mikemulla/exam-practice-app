@@ -100,7 +100,6 @@ const features = [
 
 function HomePage() {
   const navigate = useNavigate();
-  const userToken = typeof window !== "undefined" ? localStorage.getItem("userToken") : null;
   const { isDarkMode, toggleDarkMode } = useDarkMode();
   const [showAlert, setShowAlert] = useState(false);
   usePageMetadata(
@@ -493,7 +492,7 @@ function HomePage() {
                     animation: "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
                   }}
                 />
-                Smart exam prep platform
+                Free medical study resources
               </div>
 
               {/* Main Headline */}
@@ -508,9 +507,9 @@ function HomePage() {
                   transition: "color 0.3s ease",
                 }}
               >
-                Master exams with{" "}
+                Understand medicine through{" "}
                 <span style={{ color: "#185FA5", fontWeight: "700" }}>
-                  focused practice
+                  worked examples
                 </span>
               </h1>
 
@@ -525,15 +524,15 @@ function HomePage() {
                   transition: "color 0.3s ease",
                 }}
               >
-                Create customized subjects, take timed tests with real exam
-                pressure, and get instant detailed review. Built for serious
-                learners.
+                Explore medical study notes, compare key concepts, and practise
+                questions with explanations for every option. Start learning
+                without creating an account.
               </p>
 
               {/* CTA Button */}
               <button
                 onClick={() =>
-                  navigate(userToken ? "/user-dashboard" : "/user-login")
+                  navigate("/quick-reviews")
                 }
                 style={{
                   padding: "13px 28px",
@@ -564,7 +563,7 @@ function HomePage() {
                   e.currentTarget.style.transform = "translateY(0)";
                 }}
               >
-                Start practicing now
+                Explore free study reviews
                 <ArrowRight />
               </button>
 

@@ -24,8 +24,8 @@ const FEATURES = [
   },
   {
     icon: "🔀",
-    title: "Curriculum Aligned",
-    text: "Questions and reviews are organised with the school curriculum in mind.",
+    title: "Organised by Topic",
+    text: "Questions and reviews cover selected medical topics. Use your current course syllabus to check the coverage you need.",
   },
   {
     icon: "📈",
@@ -333,7 +333,7 @@ function AboutPage() {
             </p>
           </section>
 
-          <section id="editorial" style={S.statement}><h2 style={S.sectionTitle}>Sources, scope and corrections</h2><p style={S.sectionText}>Bambo is an independent student-led resource, not an official LASUCOM publication or an examination board. Articles explain selected concepts rather than covering an entire syllabus. References identify external reading; they do not imply endorsement of Bambo.</p><p style={S.sectionText}>The public notes are AI-assisted and are not independently medically reviewed. Use them alongside supervised teaching and current local guidance. Update dates identify revisions to the notes, not certification of clinical accuracy.</p><p style={S.sectionText}>To report a correction, send the article title, the statement you question and a supporting source through the <Link to="/contact">contact form</Link> or email <a href="mailto:AdebamboMichael29@gmail.com">AdebamboMichael29@gmail.com</a>. Bambo can then investigate and revise the affected explanation.</p></section>
+          <section id="editorial" style={S.statement}><h2 style={S.sectionTitle}>Sources, scope and corrections</h2><p style={S.sectionText}>Bambo is an independent student-led resource, not an official LASUCOM publication or an examination board. Articles explain selected concepts rather than covering an entire syllabus. References identify external reading; they do not imply endorsement of Bambo.</p><p style={S.sectionText}>The public notes are AI-assisted and are not independently medically reviewed. Use them alongside supervised teaching and current local guidance. Each article stores its own editorial update date; dates do not refresh automatically. An update is not certification of clinical accuracy. We do not display an original publication date or a clinical review date where these have not been documented. Bambo is the public author and operator name. No professional qualification or institutional endorsement is implied.</p><p style={S.sectionText}>To report a correction, send the article title, the statement you question and a supporting source through the <Link to="/contact">contact form</Link> or email <a href="mailto:AdebamboMichael29@gmail.com">AdebamboMichael29@gmail.com</a>. Bambo can then investigate and revise the affected explanation.</p></section>
           <section style={S.infoGrid}>
             {TRUST_POINTS.map((item) => (
               <article style={S.infoCard} key={item.title}>

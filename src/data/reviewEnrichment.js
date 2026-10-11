@@ -2,26 +2,29 @@
 // they do not imply endorsement or clinical review of Bambo by those organisations.
 export const reviewEnrichment = {
   "approach-to-heart-murmurs": {
+    updatedAt: "2026-10-11",
     objectives: ["Describe a murmur before choosing a diagnosis", "Compare common systolic patterns", "Explain why examination alone cannot grade valve disease"],
     explanation: "Think of auscultation as a sequence of observations rather than a hunt for one memorable sound. Timing narrows the mechanism, the area of greatest intensity suggests the valve, and radiation provides another clue. Then check whether the pulse, symptoms and other examination findings support the same explanation. A murmur is a finding, not a complete diagnosis: echocardiography evaluates structure and haemodynamic consequences when indicated.",
     table: { headings: ["Pattern", "Useful distinction"], rows: [["Aortic stenosis", "Ejection systolic; often radiates toward the carotids"], ["Mitral regurgitation", "Holosystolic at the apex; may radiate toward the axilla"], ["Tricuspid regurgitation", "Holosystolic near the lower left sternal border; often louder with inspiration"], ["Aortic regurgitation", "Early diastolic; assess alongside pulse and blood pressure findings"]] },
     case: { prompt: "An exam stem describes exertional breathlessness and a systolic sound radiating to the neck. A student answers 'mitral regurgitation' because it is a common valve lesion. How should the answer be reconsidered?", reasoning: "Start with the stem's discriminating observation: neck radiation supports an aortic ejection murmur. Mitral regurgitation is more typically apical with axillary radiation. Aortic stenosis is therefore the better pattern match, although a real patient still needs a full assessment. Explain which observation changed your ranking rather than simply replacing one diagnosis with another." },
     pitfall: "Loudness is not a dependable stand-alone measure of severity. Avoid writing 'mild disease' solely because a murmur is quiet. Similarly, a remembered manoeuvre should support the whole pattern rather than override contradictory findings.",
     recall: { question: "What four observations would you report before naming the valve lesion?", answer: "Timing, location of greatest intensity, radiation and character/intensity. Add manoeuvre responses and associated findings when available." },
-    sources: [{ title: "MSD Manual: Cardiac auscultation", url: "https://www.msdmanuals.com/professional/cardiovascular-disorders/approach-to-the-cardiac-patient/cardiac-auscultation" }],
+    sources: [{ title: "NICE NG208: Heart valve disease — investigation and referral", url: "https://www.nice.org.uk/guidance/ng208" }, { title: "MSD Manual: Cardiac auscultation", url: "https://www.msdmanuals.com/professional/cardiovascular-disorders/approach-to-the-cardiac-patient/cardiac-auscultation" }],
     relatedSlugs: ["cardiac-output-physiology", "acute-coronary-syndrome-first-hour"]
   },
   "childhood-pneumonia": {
+    updatedAt: "2026-10-11",
     objectives: ["Separate recognition from severity assessment", "Explain why age and feeding matter", "Avoid using one sign to identify an organism"],
     explanation: "A respiratory rate must be interpreted for the child's age and measured as reliably as possible; crying and fever can complicate a single observation. In young children, cough or difficult breathing with fast breathing or lower chest indrawing supports the clinical assessment of pneumonia. The more urgent question is whether breathing and circulation are adequate. Feeding, alertness and hydration help show how the illness is affecting the whole child.",
     table: { headings: ["Question", "What it adds"], rows: [["How hard is the child breathing?", "Recession, grunting and exhaustion help assess severity"], ["Can the child feed or drink?", "Poor intake changes hydration and safety assessment"], ["Could another illness explain the presentation?", "Consider bronchiolitis, asthma and other causes of respiratory distress"], ["Which organism?", "Viruses and bacteria can overlap clinically; one symptom is insufficient"]] },
     case: { prompt: "Two children have a cough and fever. One is playing between coughs and drinking normally. The other is unusually sleepy, has marked chest recession and cannot drink. Why should the second child not wait for an X-ray before escalation?", reasoning: "The second stem describes impaired function and danger signs, not merely a different cough. In an exam answer, state the need for urgent assessment and stabilisation before discussing confirmatory investigations. Imaging can help answer a diagnostic question, but does not replace clinical prioritisation. The first child still requires an age-appropriate assessment; the comparison is about urgency, not a diagnosis made from these details alone." },
     pitfall: "Do not equate wheeze with 'no pneumonia', or assume that a low fever means a mild illness. Pneumococcus is an important bacterial cause and respiratory viruses are also common; organism choices depend on age, setting and host factors.",
     recall: { question: "Which comes first in a severe pneumonia vignette: naming the pathogen or assessing stability?", answer: "Assess stability. Explain respiratory effort, oxygenation, mental state and ability to drink before narrowing the cause." },
-    sources: [{ title: "WHO: Pneumonia in children", url: "https://www.who.int/news-room/fact-sheets/detail/pneumonia" }],
+    sources: [{ title: "WHO: Guideline on pneumonia and diarrhoea in children up to 10 years (2024)", url: "https://www.who.int/publications/i/item/9789240103412" }, { title: "WHO: Pneumonia in children", url: "https://www.who.int/news-room/fact-sheets/detail/pneumonia" }],
     relatedSlugs: ["asthma-exacerbation-severity", "antibiotic-stewardship-basics"]
   },
   "acute-kidney-injury": {
+    updatedAt: "2026-10-11",
     objectives: ["Use change from baseline rather than one creatinine result", "Compare the three mechanisms of AKI", "Link investigations to the suspected cause"],
     explanation: "AKI is defined by a change in kidney function, so the timeline is part of the diagnosis. NICE includes a creatinine rise of at least 26 micromol/L within 48 hours, a rise of at least 50% within seven days, or urine output below 0.5 mL/kg/hour for more than six hours in adults. Use the appropriate age-specific criteria. A creatinine value within a laboratory's reference interval can still represent a significant change from an individual's baseline.",
     table: { headings: ["Mechanism", "Clue to investigate"], rows: [["Pre-renal", "Recent fluid loss, bleeding or impaired circulation"], ["Intrinsic renal", "Blood and protein on urinalysis, systemic illness or relevant drug exposure"], ["Post-renal", "Retention, obstructive symptoms or a blocked catheter"]] },
@@ -32,6 +35,7 @@ export const reviewEnrichment = {
     relatedSlugs: ["cardiac-output-physiology", "anaemia-structured-approach"]
   },
   "acute-coronary-syndrome-first-hour": {
+    updatedAt: "2026-10-11",
     objectives: ["Explain why testing and stabilisation happen together", "Distinguish ECG evidence from troponin evidence", "Recognise that raised troponin is not a diagnosis by itself"],
     explanation: "An acute chest-pain answer should describe both the immediate threat and the diagnostic pathway. ECG findings can demand urgent action before laboratory confirmation. Troponin indicates myocardial injury; the mechanism still needs interpretation in the clinical setting. Serial measurements and symptom timing matter, particularly when an early result is non-diagnostic. Other life-threatening causes of chest pain, including aortic dissection and pulmonary embolism, remain part of the differential.",
     table: { headings: ["Finding", "Reasoning consequence"], rows: [["Persistent symptoms with an initially non-diagnostic ECG", "Reassess and repeat evaluation; do not declare ACS excluded"], ["A convincing STEMI pattern", "Activate the urgent reperfusion pathway rather than waiting for troponin"], ["Raised troponin", "Interpret alongside symptoms, ECG and change over time"], ["Shock or pulmonary oedema", "Address instability alongside the coronary assessment"]] },
@@ -42,6 +46,7 @@ export const reviewEnrichment = {
     relatedSlugs: ["cardiac-output-physiology", "approach-to-heart-murmurs"]
   },
   "asthma-exacerbation-severity": {
+    updatedAt: "2026-10-11",
     objectives: ["Use the most concerning feature to assess severity", "Calculate peak flow as a percentage of best", "Recognise fatigue despite reduced wheeze"],
     explanation: "Acute assessment differs from confirming a long-term asthma diagnosis. During an attack, ask how much air is moving and whether the person is tiring. Adult BTS/SIGN-based assessment uses speech, respiratory rate, pulse and peak flow alongside life-threatening features. A peak flow of 33–50% of best or predicted is an acute-severe feature in adults; below 33% is a life-threatening feature. These adult thresholds must not be transferred uncritically to children.",
     table: { headings: ["Observation", "Interpretation"], rows: [["Cannot finish a sentence in one breath", "Significant respiratory limitation"], ["Silent chest or poor respiratory effort", "Potentially very limited airflow; urgent concern"], ["Confusion or exhaustion", "Danger signs, even if wheeze seems quieter"], ["Improved peak flow after treatment", "One part of reassessment, not proof of sustained recovery"]] },
@@ -52,6 +57,7 @@ export const reviewEnrichment = {
     relatedSlugs: ["copd-exacerbation-assessment", "childhood-pneumonia"]
   },
   "copd-exacerbation-assessment": {
+    updatedAt: "2026-10-11",
     objectives: ["Distinguish oxygenation from ventilation", "Explain controlled oxygen", "Keep alternative causes of breathlessness in the differential"],
     explanation: "Pulse oximetry measures oxygen saturation, not carbon dioxide or blood pH. A satisfactory saturation therefore does not rule out ventilatory failure. During an acute COPD exacerbation, controlled oxygen commonly targets 88–92% pending blood-gas assessment and an individual plan. The principle is to treat hypoxaemia while checking the response, not to withhold needed oxygen. Blood gases help identify hypercapnia and acidosis that an oximeter cannot show.",
     table: { headings: ["Tool", "What it can tell you"], rows: [["Pulse oximetry", "Oxygen saturation; not PaCO2 or pH"], ["Blood gas", "Oxygenation, carbon dioxide and acid–base status"], ["Chest radiograph", "Evidence of alternative or additional pathology"], ["Repeated clinical assessment", "Trajectory of work of breathing, alertness and fatigue"]] },
@@ -62,6 +68,7 @@ export const reviewEnrichment = {
     relatedSlugs: ["asthma-exacerbation-severity", "antibiotic-stewardship-basics"]
   },
   "normal-labour-stages": {
+    updatedAt: "2026-10-11",
     objectives: ["Identify the stage from the event described", "Separate progress from wellbeing", "Structure causes of slow progress"],
     explanation: "Labour progress is a changing pattern, not a single cervical measurement. Compare examinations over time and include contraction quality, descent and maternal and fetal condition. Guidelines use specific definitions of established or active labour, and these definitions are not identical across organisations. State the framework expected by your course rather than combining thresholds from different systems. Consent, communication, pain relief and the mother's preferences belong in the assessment as well.",
     table: { headings: ["Stage", "Defining transition"], rows: [["First", "Cervical change leading to full dilatation"], ["Second", "Full dilatation to birth; distinguish passive and active phases when relevant"], ["Third", "Birth to delivery of placenta and membranes"], ["After birth", "Continue assessment of bleeding, uterine tone and maternal condition"]] },
@@ -72,6 +79,7 @@ export const reviewEnrichment = {
     relatedSlugs: ["ectopic-pregnancy-red-flags", "anaemia-structured-approach"]
   },
   "ectopic-pregnancy-red-flags": {
+    updatedAt: "2026-10-11",
     objectives: ["Prioritise haemodynamic stability", "Explain pregnancy of unknown location", "Avoid overinterpreting a single hCG result"],
     explanation: "A pregnancy of unknown location describes a positive pregnancy test when the pregnancy has not yet been located on ultrasound; it is not a final diagnosis. Possibilities include an early intrauterine pregnancy, a failing pregnancy and an ectopic pregnancy. Serum hCG trends support follow-up but cannot determine location on their own. NICE emphasises changes in symptoms when assessing an uncertain early pregnancy, regardless of previous results.",
     table: { headings: ["Finding", "What it does not prove"], rows: [["No intrauterine pregnancy seen very early", "Does not alone establish an ectopic pregnancy"], ["Low hCG", "Does not exclude an ectopic pregnancy"], ["No known tubal risk factors", "Does not remove the diagnosis from consideration"], ["A previous reassuring assessment", "Does not make new pain, collapse or deterioration safe to ignore"]] },
@@ -82,6 +90,7 @@ export const reviewEnrichment = {
     relatedSlugs: ["normal-labour-stages", "cardiac-output-physiology"]
   },
   "brachial-plexus-anatomy": {
+    updatedAt: "2026-10-11",
     objectives: ["Reconstruct the major plexus connections", "Connect movement loss to a nerve", "Distinguish a broad plexus pattern from one terminal nerve lesion"],
     explanation: "Draw the architecture before adding minor branches. C5 and C6 form the upper trunk, C7 the middle trunk, and C8 with T1 the lower trunk. Each trunk splits into anterior and posterior divisions. All posterior divisions form the posterior cord; anterior divisions of the upper and middle trunks form the lateral cord, while the lower trunk's anterior division continues as the medial cord. Cord names refer to their relationship to the axillary artery.",
     table: { headings: ["Cord", "Major terminal branches"], rows: [["Lateral", "Musculocutaneous and lateral contribution to median"], ["Posterior", "Axillary and radial"], ["Medial", "Ulnar and medial contribution to median"]] },
@@ -92,6 +101,7 @@ export const reviewEnrichment = {
     relatedSlugs: ["cardiac-output-physiology", "inflammation-acute-vs-chronic"]
   },
   "cardiac-output-physiology": {
+    updatedAt: "2026-10-11",
     objectives: ["Calculate cardiac output with units", "Distinguish preload, afterload and contractility", "Explain why increasing heart rate may not increase output"],
     explanation: "Use units to check the equation: beats per minute multiplied by millilitres per beat gives millilitres per minute. Stroke volume can also be calculated as end-diastolic volume minus end-systolic volume. Preload describes filling-related stretch, afterload the load opposed during ejection, and contractility the myocardium's intrinsic force at given loading conditions. These variables interact, so changing one does not guarantee the same response in a healthy and a failing heart.",
     table: { headings: ["Change", "First mechanism to consider"], rows: [["Acute blood loss", "Reduced venous return and preload"], ["Increased arterial resistance", "Increased afterload"], ["Myocardial damage", "Reduced contractile performance"], ["Very rapid heart rate", "Shortened filling time may lower stroke volume"]] },
@@ -102,6 +112,7 @@ export const reviewEnrichment = {
     relatedSlugs: ["approach-to-heart-murmurs", "acute-kidney-injury"]
   },
   "inflammation-acute-vs-chronic": {
+    updatedAt: "2026-10-11",
     objectives: ["Connect visible signs to mechanisms", "Compare predominant cellular patterns", "Distinguish inflammation from infection"],
     explanation: "Inflammation can follow sterile injury as well as infection. Increased local blood flow helps explain redness and warmth, while increased vascular permeability contributes to swelling. Chemical mediators and pressure contribute to pain. Recruitment of leukocytes then links vascular changes to clearance and repair. The same response that protects tissue can also damage it if the stimulus persists or regulation fails.",
     table: { headings: ["Feature", "Acute pattern", "Chronic pattern"], rows: [["Typical emphasis", "Rapid vascular response and exudation", "Persistent injury alongside repair"], ["Common cells", "Neutrophils", "Macrophages, lymphocytes and plasma cells"], ["Possible outcome", "Resolution, abscess, scarring or persistence", "Fibrosis and loss of function"], ["Interpretation", "Cell type supports a pattern", "Duration alone is not the whole diagnosis"]] },
@@ -112,6 +123,7 @@ export const reviewEnrichment = {
     relatedSlugs: ["antibiotic-stewardship-basics", "anaemia-structured-approach"]
   },
   "antibiotic-stewardship-basics": {
+    updatedAt: "2026-10-11",
     objectives: ["Explain why the narrowest suitable option is contextual", "Describe a review plan", "Distinguish colonisation from a clinical infection"],
     explanation: "Stewardship is a cycle: decide whether treatment is indicated, choose an appropriate initial regimen, then review new evidence. The first decision considers syndrome and severity. Later information may support narrowing, changing route, stopping, or continuing treatment. Local susceptibility data and guidelines matter because the same diagnosis can require a different empirical choice in different settings. A drug name without a reason is an incomplete exam answer.",
     table: { headings: ["Decision", "Question to ask"], rows: [["Indication", "Is there a clinical bacterial infection to treat?"], ["Selection", "Does the option cover likely organisms and reach the relevant site?"], ["Patient factors", "What do allergy, renal function, pregnancy and interactions change?"], ["Review", "What will cultures and clinical response change about this plan?"]] },
@@ -122,6 +134,7 @@ export const reviewEnrichment = {
     relatedSlugs: ["childhood-pneumonia", "acute-kidney-injury"]
   },
   "anaemia-structured-approach": {
+    updatedAt: "2026-10-11",
     objectives: ["Use MCV and reticulocytes as complementary clues", "Interpret blood-film descriptions", "Explain why a pattern is not the final cause"],
     explanation: "MCV describes average red-cell size; the reticulocyte response addresses production. Combine them instead of treating either as a complete diagnosis. Reticulocytes should be interpreted in relation to the severity of anaemia, because an apparently normal percentage may be inadequate. The blood film provides morphological clues, while history helps select confirmatory investigations. Mixed deficiencies can make the average cell size less revealing than expected.",
     table: { headings: ["Film or laboratory clue", "Direction for further reasoning"], rows: [["Small pale cells", "Consider impaired haemoglobin production; investigate iron status and alternatives"], ["Macro-ovalocytes and hypersegmented neutrophils", "Consider a megaloblastic process"], ["Schistocytes", "Consider red-cell fragmentation in the clinical context"], ["Reticulocytosis", "Consider blood loss or haemolysis, including timing and marrow capacity"]] },

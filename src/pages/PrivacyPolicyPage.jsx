@@ -150,7 +150,7 @@ function PrivacyPolicyPage() {
             </Section>
 
             <Section title="Google advertising">
-              Third-party vendors, including Google, may use cookies to serve
+              Ad serving is currently disabled on this site while it is prepared for review. The ownership-verification meta tag does not load advertising software. If advertising is enabled in future, third-party vendors, including Google, may use cookies to serve
               ads and measure ad performance. Google and its partners may use
               advertising cookies based on visits to this and other websites. You can manage or opt out of personalised Google advertising through <a href="https://myadcenter.google.com/">Google My Ad Center</a>. Read <a href="https://policies.google.com/technologies/partner-sites">how Google uses information from sites that use its services</a>. Other participating advertising providers offer choices through <a href="https://optout.aboutads.info/">YourAdChoices</a>.
             </Section>
