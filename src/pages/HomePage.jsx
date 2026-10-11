@@ -1,9 +1,8 @@
+import PublicStudyIntroduction from "../components/PublicStudyIntroduction";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDarkMode } from "../context/DarkModeContext";
-import PublicFooter from "../components/PublicFooter";
 import ProductPreviewSection from "../components/ProductPreviewSection";
-import PublicNavbar from "../components/PublicNavbar";
 import BlobBackground from "../components/BlobBackground";
 import usePageMetadata from "../hooks/usePageMetadata";
 
@@ -99,24 +98,11 @@ const features = [
   },
 ];
 
-const statsData = [
-  {
-    label: "Questions",
-    val: "120+",
-    accent: "#185FA5",
-  },
-  {
-    label: "Subjects",
-    val: "8",
-    accent: "#16A34A",
-  },
-];
-
 function HomePage() {
   const navigate = useNavigate();
-  const userToken = localStorage.getItem("userToken");
+  const userToken = typeof window !== "undefined" ? localStorage.getItem("userToken") : null;
   const { isDarkMode, toggleDarkMode } = useDarkMode();
-  const [showAlert, setShowAlert] = useState(true);
+  const [showAlert, setShowAlert] = useState(false);
   usePageMetadata(
     "Bambo Exam Practice | Free Medical Study Questions",
     "Practise medical exam questions, read free quick reviews, and track study progress with Bambo Exam Practice.",
@@ -135,7 +121,6 @@ function HomePage() {
 
   return (
     <>
-      <PublicNavbar />
       <style>{`
         @keyframes fadeInUp {
           from {
@@ -658,8 +643,7 @@ function HomePage() {
         </div>
       </div>
 
-      <PublicFooter />
-
+      <PublicStudyIntroduction />
       {/* Add pulse animation */}
       <style>{`
         @keyframes pulse {

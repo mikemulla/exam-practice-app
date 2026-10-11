@@ -1,4 +1,3 @@
-import { StrictMode } from "react";
 import React from "react";
 import ReactDOM from "react-dom/client";
 import "./index.css";
@@ -7,10 +6,10 @@ import { DarkModeProvider } from "./context/DarkModeContext";
 import ErrorBoundary from "./pages/ErrorBoundary";
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <DarkModeProvider>
-      <ErrorBoundary>
+    <ErrorBoundary>
+      <DarkModeProvider>
         <App />
-      </ErrorBoundary>
-    </DarkModeProvider>
+      </DarkModeProvider>
+    </ErrorBoundary>
   </React.StrictMode>,
 );

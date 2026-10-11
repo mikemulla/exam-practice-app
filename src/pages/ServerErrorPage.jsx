@@ -1,55 +1,21 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 import S from "./errorStyles";
-import { animationCss } from "./errorAnimations";
-
-function ServerErrorPage() {
-  const navigate = useNavigate();
-  const [checking, setChecking] = useState(false);
-  const [message, setMessage] = useState("");
-
-  const retry = () => {
-    setChecking(true);
-    setMessage("");
-
-    setTimeout(() => {
-      setChecking(false);
-      setMessage("If this keeps happening, wait a few minutes and try again.");
-    }, 900);
-  };
-
-  return (
-    <>
-      <style>{animationCss}</style>
-      <div style={S.page}>
-        <div style={S.card}>
-          <div style={{ ...S.icon, animation: "spinSoft 4s linear infinite" }}>⚙️</div>
-          <p style={S.eyebrow}>Server error</p>
-          <h1 style={S.code}>500</h1>
-          <h2 style={S.title}>Something went wrong on our side.</h2>
-          <p style={S.body}>
-            The request could not be completed right now. You can retry or return
-            to the dashboard.
-          </p>
-
-          {message && (
-            <p style={{ color: "var(--text-secondary)", fontWeight: 700, fontSize: 13 }}>
-              {message}
-            </p>
-          )}
-
-          <div style={S.actions}>
-            <button style={S.primaryButton} onClick={retry} disabled={checking}>
-              {checking ? "Checking..." : "Try Again"}
-            </button>
-            <button style={S.secondaryButton} onClick={() => navigate("/user-dashboard")}>
-              Go to Dashboard
-            </button>
-          </div>
-        </div>
-      </div>
-    </>
-  );
+// Also used outside the router by the outer error boundary.
+export default function ServerErrorPage() {
+  useEffect(() => {
+    document.title = "Something went wrong | Bambo";
+    const meta = document.querySelector('meta[name="robots"]') || document.createElement("meta");
+    meta.name = "robots"; meta.content = "noindex,follow";
+    if (!meta.parentNode) document.head.appendChild(meta);
+    document.querySelector('link[rel="canonical"]')?.remove();
+  }, []);
+  return <main style={S.page}><div style={S.card}>
+    <h1>Something went wrong</h1>
+    <p style={S.body}>We could not display this page. Reload to try again, or return to the public study library.</p>
+    <div style={S.actions}>
+      <button style={S.primaryButton} onClick={() => window.location.reload()}>Reload page</button>
+      <a style={S.secondaryButton} href="/quick-reviews">Read Quick Reviews</a>
+      <a style={S.secondaryButton} href="/">Home</a>
+    </div>
+  </div></main>;
 }
-
-export default ServerErrorPage;

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { sampleQuestions } from "../data/publicReviews";
 import BlobBackground from "../components/BlobBackground";
 import usePageMetadata from "../hooks/usePageMetadata";
@@ -259,10 +259,11 @@ function QuestionCard({ q, n }) {
   const [selected, setSelected] = useState("");
   const [done, setDone] = useState(false);
   const isCorrect = done && selected === q.answer;
-  const isWrong = done && selected && selected !== q.answer;
+
 
   return (
     <article
+      id={q.reviewSlug}
       className="question-card-enter"
       style={{ ...S.card, animationDelay: `${n * 40}ms` }}
     >
@@ -335,20 +336,15 @@ function QuestionCard({ q, n }) {
         Check answer
       </button>
 
-      {done && (
-        <div
-          style={{
-            ...S.feedback,
-            ...(isCorrect ? S.feedbackCorrect : {}),
-            ...(isWrong ? S.feedbackWrong : {}),
-          }}
-        >
-          <div style={S.feedbackTitle}>
-            {isCorrect ? "Correct" : "Not quite"}
-          </div>
-          <p style={S.feedbackBody}>{q.explanation}</p>
-        </div>
-      )}
+      <details className="study-answer" open={done || undefined}>
+        <summary>{done ? (isCorrect ? "Correct — read the reasoning" : "Review the answer and reasoning") : "Read the worked answer without submitting"}</summary>
+        <p><strong>Answer: {q.answer}</strong></p>
+        <p>{q.explanation}</p>
+        <h3>Why each option fits or does not fit</h3>
+        <ul>{q.optionExplanations.map(reason => <li key={reason}>{reason}</li>)}</ul>
+        <p><strong>Takeaway:</strong> {q.takeaway}</p>
+        <Link to={`/quick-reviews/${q.reviewSlug}`}>Study this topic and its references</Link>
+      </details>
     </article>
   );
 }
@@ -404,6 +400,7 @@ export default function SampleQuestionsPage() {
             </div>
           </div>
 
+          <section className="study-panel"><h2>How to use these questions</h2><p>Choose an answer, then explain your reasoning before checking it. You can also open any worked answer directly; no submission or account is required. The explanations compare every option and link to a review with supporting references.</p><p>These fictional teaching scenarios are for revision. They are not patient-specific advice, clinical protocols or official examination questions.</p></section>
           <div style={S.list}>
             {sampleQuestions.map((q, i) => (
               <QuestionCard key={q.id} q={q} n={i + 1} />

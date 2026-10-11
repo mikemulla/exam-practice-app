@@ -1,5 +1,4 @@
-import { useNavigate } from "react-router-dom";
-import PublicFooter from "../components/PublicFooter";
+import { Link, useNavigate } from "react-router-dom";
 import BlobBackground from "../components/BlobBackground";
 import usePageMetadata from "../hooks/usePageMetadata";
 
@@ -128,7 +127,7 @@ function TermsPage() {
           <article className="terms-enter" style={S.card}>
             <span style={S.eyebrow}>Legal</span>
             <h1 style={S.title}>Terms of Service</h1>
-            <p style={S.updated}>Last updated: June 2026</p>
+            <p style={S.updated}>Last updated: 11 October 2026</p>
 
             <Section title="Acceptance of Terms">
               By accessing or using Bambo Exam Practice, you agree to these
@@ -139,7 +138,7 @@ function TermsPage() {
             <Section title="Educational Purpose">
               The platform provides educational practice questions,
               explanations, progress tracking, and study support. It is intended
-              for revision and learning support only.
+              for revision and learning support only. Bambo is an independent student-led resource; it is not an official examination provider. Content is not medical advice and must not replace professional judgement, supervised training or current clinical guidance.
             </Section>
 
             <Section title="User Accounts">
@@ -168,13 +167,11 @@ function TermsPage() {
             </Section>
 
             <Section title="Contact">
-              For questions about these terms, please use the Contact Us page.
+              For questions about these terms, please use the <Link to="/contact">Contact Us page</Link> or email <a href="mailto:AdebamboMichael29@gmail.com">AdebamboMichael29@gmail.com</a>.
             </Section>
           </article>
         </div>
       </main>
-
-      <PublicFooter />
     </>
   );
 }

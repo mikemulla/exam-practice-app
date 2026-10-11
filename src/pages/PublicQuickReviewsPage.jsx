@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { publicReviews } from "../data/publicReviews";
 import BlobBackground from "../components/BlobBackground";
 import usePageMetadata from "../hooks/usePageMetadata";
@@ -280,7 +280,7 @@ const S = {
   },
 };
 
-function ReviewCard({ review, index, onOpen }) {
+function ReviewCard({ review, index }) {
   const [hovered, setHovered] = useState(false);
   return (
     <div
@@ -303,8 +303,8 @@ function ReviewCard({ review, index, onOpen }) {
         <span>{review.subject}</span>
       </div>
       <div style={S.divider} />
-      <button
-        onClick={onOpen}
+      <Link
+        to={`/quick-reviews/${review.slug}`}
         style={S.button}
         onMouseEnter={(e) => {
           if (hovered) e.currentTarget.style.backgroundColor = "#0e3d6e";
@@ -313,9 +313,9 @@ function ReviewCard({ review, index, onOpen }) {
           e.currentTarget.style.backgroundColor = "var(--button-primary)";
         }}
       >
-        <span>Read review</span>
+        <span>Read {review.title}</span>
         <ChevronRight />
-      </button>
+      </Link>
     </div>
   );
 }
@@ -379,6 +379,7 @@ export default function PublicQuickReviewsPage() {
               account is required.
             </p>
 
+            <div className="study-library-intro"><p>Each review includes a worked example, a comparison table and references for further reading. Read for understanding, then test recall by explaining the case before checking its reasoning.</p><p>Start with <Link to="/quick-reviews/cardiac-output-physiology">cardiac output</Link> for core physiology, <Link to="/quick-reviews/acute-kidney-injury">acute kidney injury</Link> for diagnostic frameworks, or <Link to="/sample-questions">worked questions</Link> to find a topic to revisit.</p></div>
             <div style={S.statsRow}>
               <div style={S.statItem}>
                 <span style={S.statValue}>{publicReviews.length}</span>
@@ -396,6 +397,7 @@ export default function PublicQuickReviewsPage() {
               </div>
               <input
                 className="library-search-input"
+                aria-label="Search reviews by topic or subject"
                 type="search"
                 placeholder="Search reviews by topic or subject"
                 value={q}
@@ -430,7 +432,6 @@ export default function PublicQuickReviewsPage() {
                   key={r.slug}
                   review={r}
                   index={i}
-                  onOpen={() => navigate(`/quick-reviews/${r.slug}`)}
                 />
               ))}
             </div>

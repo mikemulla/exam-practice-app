@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import PublicFooter from "../components/PublicFooter";
 import api from "../lib/api";
 import BlobBackground from "../components/BlobBackground";
 import usePageMetadata from "../hooks/usePageMetadata";
@@ -127,7 +126,7 @@ function ContactPage() {
             style={S.layout}
           >
             <div className="contact-info-card" style={S.infoCard}>
-              <h2 style={S.infoTitle}>How we can help</h2>
+              <h2 style={S.infoTitle}>How we can help</h2><p className="study-contact">Email: <a href="mailto:AdebamboMichael29@gmail.com">AdebamboMichael29@gmail.com</a></p>
 
               <div style={S.infoList}>
                 {[
@@ -146,7 +145,7 @@ function ContactPage() {
 
               <div style={S.responseBox}>
                 <strong>Typical response time</strong>
-                <span>24 to 48 hours</span>
+                <span>We aim to respond within 24 to 48 hours.</span>
               </div>
             </div>
 
@@ -158,7 +157,7 @@ function ContactPage() {
                   <h2 style={S.successTitle}>Message received</h2>
 
                   <p style={S.successText}>
-                    Thank you for contacting us. Your message has been received
+                    Thank you for contacting us. Your message has been submitted to our email service
                     and will be reviewed as soon as possible.
                   </p>
 
@@ -279,8 +278,6 @@ function ContactPage() {
           </section>
         </div>
       </main>
-
-      <PublicFooter />
     </>
   );
 }

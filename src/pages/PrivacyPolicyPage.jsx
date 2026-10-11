@@ -1,5 +1,4 @@
-import { useNavigate } from "react-router-dom";
-import PublicFooter from "../components/PublicFooter";
+import { Link, useNavigate } from "react-router-dom";
 import BlobBackground from "../components/BlobBackground";
 import usePageMetadata from "../hooks/usePageMetadata";
 
@@ -128,7 +127,7 @@ function PrivacyPolicyPage() {
           <article className="privacy-enter" style={S.card}>
             <span style={S.eyebrow}>Legal</span>
             <h1 style={S.title}>Privacy Policy</h1>
-            <p style={S.updated}>Last updated: June 2026</p>
+            <p style={S.updated}>Last updated: 11 October 2026</p>
 
             <Section title="Information We Collect">
               We may collect information you provide when creating an account or
@@ -147,15 +146,16 @@ function PrivacyPolicyPage() {
             <Section title="Cookies and Local Storage">
               The platform may use cookies, browser storage, and similar
               technologies to keep users logged in, remember preferences such as
-              dark mode, support analytics, and improve user experience.
+              dark mode, and improve user experience.
             </Section>
 
-            <Section title="Google AdSense and Analytics">
+            <Section title="Google advertising">
               Third-party vendors, including Google, may use cookies to serve
-              ads, measure ad performance, and provide analytics. Google may use
-              advertising cookies based on visits to this and other websites.
+              ads and measure ad performance. Google and its partners may use
+              advertising cookies based on visits to this and other websites. You can manage or opt out of personalised Google advertising through <a href="https://myadcenter.google.com/">Google My Ad Center</a>. Read <a href="https://policies.google.com/technologies/partner-sites">how Google uses information from sites that use its services</a>. Other participating advertising providers offer choices through <a href="https://optout.aboutads.info/">YourAdChoices</a>.
             </Section>
 
+            <Section title="Contact messages and service providers">Messages sent through the contact form include the details you enter. They are passed to our email delivery provider and support inbox so Bambo can respond. Do not include patient records, passwords or other sensitive medical information. Hosting, database and email providers process information needed to operate the service.</Section>
             <Section title="Data Security">
               We take reasonable steps to protect user information from
               unauthorised access, loss, misuse, or disclosure. No online
@@ -169,13 +169,11 @@ function PrivacyPolicyPage() {
 
             <Section title="Contact">
               For questions about this Privacy Policy or the platform, please
-              use the Contact Us page.
+              use the <Link to="/contact">Contact Us page</Link> or email <a href="mailto:AdebamboMichael29@gmail.com">AdebamboMichael29@gmail.com</a>.
             </Section>
           </article>
         </div>
       </main>
-
-      <PublicFooter />
     </>
   );
 }

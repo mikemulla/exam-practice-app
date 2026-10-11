@@ -1,4 +1,5 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import RouteMetadata from "./components/RouteMetadata";
 import HomePage from "./pages/HomePage";
 import AdminPage from "./pages/AdminPage";
 import UserPage from "./pages/UserPage";
@@ -41,24 +42,26 @@ import PublicQuickReviewsPage from "./pages/PublicQuickReviewsPage";
 import PublicQuickReviewDetailPage from "./pages/PublicQuickReviewDetailPage";
 import SampleQuestionsPage from "./pages/SampleQuestionsPage";
 
-function App() {
+export function AppRoutes() {
   return (
-    <BrowserRouter>
+    <>
+      <RouteMetadata />
       <Routes>
         {/* Public routes */}
+        <Route element={<PublicLayout />}>
         <Route path="/" element={<HomePage />} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/privacy" element={<PrivacyPolicyPage />} />
-        <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+        <Route path="/privacy-policy" element={<Navigate to="/privacy" replace />} />
         <Route path="/terms" element={<TermsPage />} />
-        <Route path="/" element={<HomePage />} />
         <Route path="/quick-reviews" element={<PublicQuickReviewsPage />} />
         <Route
           path="/quick-reviews/:slug"
           element={<PublicQuickReviewDetailPage />}
         />
         <Route path="/sample-questions" element={<SampleQuestionsPage />} />
+        </Route>
         <Route path="/admin-login" element={<AdminLoginPage />} />
         <Route path="/user-login" element={<UserLoginPage />} />
         <Route path="/user-signup" element={<UserSignupPage />} />
@@ -257,8 +260,12 @@ function App() {
         <Route path="/network-error" element={<NetworkErrorPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
-    </BrowserRouter>
+    </>
   );
+}
+
+function App() {
+  return <BrowserRouter><AppRoutes /></BrowserRouter>;
 }
 
 export default App;

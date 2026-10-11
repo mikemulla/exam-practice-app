@@ -1,9 +1,595 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "redirects": [
+    {
+      "source": "/privacy-policy",
+      "destination": "/privacy",
+      "permanent": true
+    },
+    {
+      "source": "/index.html",
+      "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/quick-reviews.html",
+      "destination": "/quick-reviews",
+      "permanent": true
+    },
+    {
+      "source": "/sample-questions.html",
+      "destination": "/sample-questions",
+      "permanent": true
+    },
+    {
+      "source": "/about.html",
+      "destination": "/about",
+      "permanent": true
+    },
+    {
+      "source": "/contact.html",
+      "destination": "/contact",
+      "permanent": true
+    },
+    {
+      "source": "/privacy.html",
+      "destination": "/privacy",
+      "permanent": true
+    },
+    {
+      "source": "/terms.html",
+      "destination": "/terms",
+      "permanent": true
+    },
+    {
+      "source": "/quick-reviews/approach-to-heart-murmurs.html",
+      "destination": "/quick-reviews/approach-to-heart-murmurs",
+      "permanent": true
+    },
+    {
+      "source": "/quick-reviews/childhood-pneumonia.html",
+      "destination": "/quick-reviews/childhood-pneumonia",
+      "permanent": true
+    },
+    {
+      "source": "/quick-reviews/acute-kidney-injury.html",
+      "destination": "/quick-reviews/acute-kidney-injury",
+      "permanent": true
+    },
+    {
+      "source": "/quick-reviews/acute-coronary-syndrome-first-hour.html",
+      "destination": "/quick-reviews/acute-coronary-syndrome-first-hour",
+      "permanent": true
+    },
+    {
+      "source": "/quick-reviews/asthma-exacerbation-severity.html",
+      "destination": "/quick-reviews/asthma-exacerbation-severity",
+      "permanent": true
+    },
+    {
+      "source": "/quick-reviews/copd-exacerbation-assessment.html",
+      "destination": "/quick-reviews/copd-exacerbation-assessment",
+      "permanent": true
+    },
+    {
+      "source": "/quick-reviews/normal-labour-stages.html",
+      "destination": "/quick-reviews/normal-labour-stages",
+      "permanent": true
+    },
+    {
+      "source": "/quick-reviews/ectopic-pregnancy-red-flags.html",
+      "destination": "/quick-reviews/ectopic-pregnancy-red-flags",
+      "permanent": true
+    },
+    {
+      "source": "/quick-reviews/brachial-plexus-anatomy.html",
+      "destination": "/quick-reviews/brachial-plexus-anatomy",
+      "permanent": true
+    },
+    {
+      "source": "/quick-reviews/cardiac-output-physiology.html",
+      "destination": "/quick-reviews/cardiac-output-physiology",
+      "permanent": true
+    },
+    {
+      "source": "/quick-reviews/inflammation-acute-vs-chronic.html",
+      "destination": "/quick-reviews/inflammation-acute-vs-chronic",
+      "permanent": true
+    },
+    {
+      "source": "/quick-reviews/antibiotic-stewardship-basics.html",
+      "destination": "/quick-reviews/antibiotic-stewardship-basics",
+      "permanent": true
+    },
+    {
+      "source": "/quick-reviews/anaemia-structured-approach.html",
+      "destination": "/quick-reviews/anaemia-structured-approach",
+      "permanent": true
+    }
+  ],
   "rewrites": [
     {
-      "source": "/(.*)",
-      "destination": "/index.html"
+      "source": "/quick-reviews",
+      "destination": "/quick-reviews.html"
+    },
+    {
+      "source": "/sample-questions",
+      "destination": "/sample-questions.html"
+    },
+    {
+      "source": "/about",
+      "destination": "/about.html"
+    },
+    {
+      "source": "/contact",
+      "destination": "/contact.html"
+    },
+    {
+      "source": "/privacy",
+      "destination": "/privacy.html"
+    },
+    {
+      "source": "/terms",
+      "destination": "/terms.html"
+    },
+    {
+      "source": "/quick-reviews/approach-to-heart-murmurs",
+      "destination": "/quick-reviews/approach-to-heart-murmurs.html"
+    },
+    {
+      "source": "/quick-reviews/childhood-pneumonia",
+      "destination": "/quick-reviews/childhood-pneumonia.html"
+    },
+    {
+      "source": "/quick-reviews/acute-kidney-injury",
+      "destination": "/quick-reviews/acute-kidney-injury.html"
+    },
+    {
+      "source": "/quick-reviews/acute-coronary-syndrome-first-hour",
+      "destination": "/quick-reviews/acute-coronary-syndrome-first-hour.html"
+    },
+    {
+      "source": "/quick-reviews/asthma-exacerbation-severity",
+      "destination": "/quick-reviews/asthma-exacerbation-severity.html"
+    },
+    {
+      "source": "/quick-reviews/copd-exacerbation-assessment",
+      "destination": "/quick-reviews/copd-exacerbation-assessment.html"
+    },
+    {
+      "source": "/quick-reviews/normal-labour-stages",
+      "destination": "/quick-reviews/normal-labour-stages.html"
+    },
+    {
+      "source": "/quick-reviews/ectopic-pregnancy-red-flags",
+      "destination": "/quick-reviews/ectopic-pregnancy-red-flags.html"
+    },
+    {
+      "source": "/quick-reviews/brachial-plexus-anatomy",
+      "destination": "/quick-reviews/brachial-plexus-anatomy.html"
+    },
+    {
+      "source": "/quick-reviews/cardiac-output-physiology",
+      "destination": "/quick-reviews/cardiac-output-physiology.html"
+    },
+    {
+      "source": "/quick-reviews/inflammation-acute-vs-chronic",
+      "destination": "/quick-reviews/inflammation-acute-vs-chronic.html"
+    },
+    {
+      "source": "/quick-reviews/antibiotic-stewardship-basics",
+      "destination": "/quick-reviews/antibiotic-stewardship-basics.html"
+    },
+    {
+      "source": "/quick-reviews/anaemia-structured-approach",
+      "destination": "/quick-reviews/anaemia-structured-approach.html"
+    },
+    {
+      "source": "/admin-login",
+      "destination": "/app-shell.html"
+    },
+    {
+      "source": "/user-login",
+      "destination": "/app-shell.html"
+    },
+    {
+      "source": "/user-signup",
+      "destination": "/app-shell.html"
+    },
+    {
+      "source": "/forgot-password",
+      "destination": "/app-shell.html"
+    },
+    {
+      "source": "/reset-password/:token",
+      "destination": "/app-shell.html"
+    },
+    {
+      "source": "/user-dashboard",
+      "destination": "/app-shell.html"
+    },
+    {
+      "source": "/user",
+      "destination": "/app-shell.html"
+    },
+    {
+      "source": "/request-subject",
+      "destination": "/app-shell.html"
+    },
+    {
+      "source": "/subject/:subjectId/topics",
+      "destination": "/app-shell.html"
+    },
+    {
+      "source": "/test/subject/:subjectId",
+      "destination": "/app-shell.html"
+    },
+    {
+      "source": "/subject/:subjectId/quick-review",
+      "destination": "/app-shell.html"
+    },
+    {
+      "source": "/quick-review/topic/:topicId",
+      "destination": "/app-shell.html"
+    },
+    {
+      "source": "/test/topic/:topicId",
+      "destination": "/app-shell.html"
+    },
+    {
+      "source": "/test/:subjectId",
+      "destination": "/app-shell.html"
+    },
+    {
+      "source": "/admin",
+      "destination": "/app-shell.html"
+    },
+    {
+      "source": "/add-subject",
+      "destination": "/app-shell.html"
+    },
+    {
+      "source": "/admin-quick-reviews",
+      "destination": "/app-shell.html"
+    },
+    {
+      "source": "/add-topic",
+      "destination": "/app-shell.html"
+    },
+    {
+      "source": "/add-question",
+      "destination": "/app-shell.html"
+    },
+    {
+      "source": "/bulk-import",
+      "destination": "/app-shell.html"
+    },
+    {
+      "source": "/manage-subjects",
+      "destination": "/app-shell.html"
+    },
+    {
+      "source": "/manage-topics",
+      "destination": "/app-shell.html"
+    },
+    {
+      "source": "/admin-requests",
+      "destination": "/app-shell.html"
+    },
+    {
+      "source": "/manage-questions",
+      "destination": "/app-shell.html"
+    },
+    {
+      "source": "/admin-user-management",
+      "destination": "/app-shell.html"
+    },
+    {
+      "source": "/admin-notifications",
+      "destination": "/app-shell.html"
+    },
+    {
+      "source": "/admin-courses",
+      "destination": "/app-shell.html"
+    },
+    {
+      "source": "/admin-users",
+      "destination": "/app-shell.html"
+    },
+    {
+      "source": "/403",
+      "destination": "/app-shell.html"
+    },
+    {
+      "source": "/500",
+      "destination": "/app-shell.html"
+    },
+    {
+      "source": "/network-error",
+      "destination": "/app-shell.html"
     }
-  ]
+  ],
+  "headers": [
+    {
+      "source": "/admin-login",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, follow"
+        }
+      ]
+    },
+    {
+      "source": "/user-login",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, follow"
+        }
+      ]
+    },
+    {
+      "source": "/user-signup",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, follow"
+        }
+      ]
+    },
+    {
+      "source": "/forgot-password",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, follow"
+        }
+      ]
+    },
+    {
+      "source": "/reset-password/:token",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, follow"
+        }
+      ]
+    },
+    {
+      "source": "/user-dashboard",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, follow"
+        }
+      ]
+    },
+    {
+      "source": "/user",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, follow"
+        }
+      ]
+    },
+    {
+      "source": "/request-subject",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, follow"
+        }
+      ]
+    },
+    {
+      "source": "/subject/:subjectId/topics",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, follow"
+        }
+      ]
+    },
+    {
+      "source": "/test/subject/:subjectId",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, follow"
+        }
+      ]
+    },
+    {
+      "source": "/subject/:subjectId/quick-review",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, follow"
+        }
+      ]
+    },
+    {
+      "source": "/quick-review/topic/:topicId",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, follow"
+        }
+      ]
+    },
+    {
+      "source": "/test/topic/:topicId",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, follow"
+        }
+      ]
+    },
+    {
+      "source": "/test/:subjectId",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, follow"
+        }
+      ]
+    },
+    {
+      "source": "/admin",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, follow"
+        }
+      ]
+    },
+    {
+      "source": "/add-subject",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, follow"
+        }
+      ]
+    },
+    {
+      "source": "/admin-quick-reviews",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, follow"
+        }
+      ]
+    },
+    {
+      "source": "/add-topic",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, follow"
+        }
+      ]
+    },
+    {
+      "source": "/add-question",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, follow"
+        }
+      ]
+    },
+    {
+      "source": "/bulk-import",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, follow"
+        }
+      ]
+    },
+    {
+      "source": "/manage-subjects",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, follow"
+        }
+      ]
+    },
+    {
+      "source": "/manage-topics",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, follow"
+        }
+      ]
+    },
+    {
+      "source": "/admin-requests",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, follow"
+        }
+      ]
+    },
+    {
+      "source": "/manage-questions",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, follow"
+        }
+      ]
+    },
+    {
+      "source": "/admin-user-management",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, follow"
+        }
+      ]
+    },
+    {
+      "source": "/admin-notifications",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, follow"
+        }
+      ]
+    },
+    {
+      "source": "/admin-courses",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, follow"
+        }
+      ]
+    },
+    {
+      "source": "/admin-users",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, follow"
+        }
+      ]
+    },
+    {
+      "source": "/403",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, follow"
+        }
+      ]
+    },
+    {
+      "source": "/500",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, follow"
+        }
+      ]
+    },
+    {
+      "source": "/network-error",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, follow"
+        }
+      ]
+    }
+  ],
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist"
 }
