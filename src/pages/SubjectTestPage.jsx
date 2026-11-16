@@ -3,6 +3,7 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import api from "../lib/api";
 import * as FireworksPreset from "react-canvas-confetti/dist/presets/fireworks";
 import BlobBackground from "../components/BlobBackground";
+import MistakeTutor from "../components/MistakeTutor";
 
 const resolvePresetComponent = (presetModule) => {
   const candidates = [
@@ -736,6 +737,7 @@ function QuestionReviewCard({
   userAnswer,
   imageSrc,
   isFlagged,
+  resultId,
 }) {
   const isCorrect = userAnswer === question.correctAnswer;
   const displayImageSrc = imageSrc || questionImageSrc(question);
@@ -832,6 +834,9 @@ function QuestionReviewCard({
         />
       ))}
       <ExplanationToggle text={question.explanation} />
+      {resultId && !isCorrect && (
+        <MistakeTutor resultId={resultId} questionId={question._id} />
+      )}
     </div>
   );
 }
@@ -908,6 +913,11 @@ function SubjectTestPage() {
   const [showFlaggedFilter, setShowFlaggedFilter] = useState(false);
   const [stoppedTest, setStoppedTest] = useState(false);
   const resultSavedRef = useRef(false);
+  const submissionIdRef = useRef(crypto.randomUUID());
+  const [savedResultId, setSavedResultId] = useState(null);
+  const [tutorUnavailable, setTutorUnavailable] = useState(false);
+  const [resultSaveError, setResultSaveError] = useState("");
+  const [saveRetry, setSaveRetry] = useState(0);
   const perfectScoreAudioRef = useRef(null);
   const hasPlayedPerfectScoreRef = useRef(false);
 
@@ -1073,6 +1083,11 @@ function SubjectTestPage() {
         setShowResults(false);
         setReviewMode("all");
         resultSavedRef.current = false;
+        submissionIdRef.current = crypto.randomUUID();
+        setSavedResultId(null);
+        setTutorUnavailable(false);
+        setResultSaveError("");
+        setStoppedTest(false);
       } catch (err) {
         console.error(err);
         setErrorMessage("Unable to load this test right now.");
@@ -1147,8 +1162,10 @@ function SubjectTestPage() {
     }
 
     const saveResult = async () => {
+      const submissionId = submissionIdRef.current;
       try {
         resultSavedRef.current = true;
+        setResultSaveError("");
         const timeUsed = Math.max(0, (subject.duration || 300) - timeLeft);
 
         const response = await api.post(
@@ -1160,10 +1177,21 @@ function SubjectTestPage() {
             total: questions.length,
             timeTaken: timeUsed,
             mode: isTopicMode ? "topic" : isRandomMode ? "random" : "subject",
+            submissionId,
+            answers: questions.map((q) => ({
+              questionId: q._id,
+              selectedAnswer: selectedAnswers[q._id] ?? null,
+            })),
           },
           { _tokenType: "user" },
         );
 
+        if (submissionIdRef.current !== submissionId) return;
+        if (response.data?.submittedAt) {
+          setSavedResultId(response.data._id);
+        } else {
+          setTutorUnavailable(true);
+        }
         if (response.data?.unlockedBadges?.length) {
           sessionStorage.setItem(
             "newBadge",
@@ -1171,7 +1199,9 @@ function SubjectTestPage() {
           );
         }
       } catch (error) {
+        if (submissionIdRef.current !== submissionId) return;
         resultSavedRef.current = false;
+        setResultSaveError("Your result could not be saved. Retry saving to open your mistake tutor.");
         console.error("Failed to save result:", error);
       }
     };
@@ -1180,7 +1210,9 @@ function SubjectTestPage() {
   }, [
     showResults,
     subject,
-    questions.length,
+    questions,
+    selectedAnswers,
+    saveRetry,
     score,
     timeLeft,
     isTopicMode,
@@ -1248,6 +1280,11 @@ function SubjectTestPage() {
 
   const handleRetakeTest = () => {
     resultSavedRef.current = false;
+    submissionIdRef.current = crypto.randomUUID();
+    setSavedResultId(null);
+    setTutorUnavailable(false);
+    setResultSaveError("");
+    setStoppedTest(false);
     hasPlayedPerfectScoreRef.current = false;
     setReviewMode("all");
     setQuestions(
@@ -1792,6 +1829,16 @@ function SubjectTestPage() {
         </div>
 
         {/* Perfect score message */}
+        {!savedResultId && (
+          <div role={resultSaveError ? "alert" : "status"} style={{ marginBottom: "1rem", color: T.inkMid }}>
+            {resultSaveError || (tutorUnavailable
+              ? "Your result is saved. Guided mistake review is not available for this test yet."
+              : "Saving your result to prepare your mistake tutor…")}
+            {resultSaveError && (
+              <Btn onClick={() => setSaveRetry((value) => value + 1)}>Retry saving</Btn>
+            )}
+          </div>
+        )}
         {reviewMode === "wrong" && wrongQuestions.length === 0 ? (
           <div
             style={{
@@ -1819,6 +1866,7 @@ function SubjectTestPage() {
               userAnswer={selectedAnswers[question._id]}
               imageSrc={getDisplayImageSrc(question)}
               isFlagged={flaggedQuestions.has(question._id)}
+              resultId={savedResultId}
             />
           ))
         )}

@@ -1,0 +1,34 @@
+.mistake-tutor { margin-top: 18px; border: 1px solid var(--border-strong, #b7c9db); border-radius: 12px; overflow: hidden; color: var(--text-primary, #182d42); }
+.mistake-tutor button, .mistake-tutor textarea { font: inherit; }
+.mistake-tutor button { cursor: pointer; }
+.mistake-tutor button:disabled { cursor: not-allowed; opacity: .55; }
+.mistake-tutor button:focus-visible, .mistake-tutor textarea:focus-visible, .mistake-tutor input:focus-visible { outline: 3px solid #438dd1; outline-offset: 3px; }
+.mistake-tutor__toggle { display: flex; width: 100%; align-items: center; gap: 12px; padding: 16px; border: 0; background: var(--surface-alt, #edf3f9); color: inherit; text-align: left; }
+.mistake-tutor__toggle > span:nth-child(2) { flex: 1; min-width: 0; }
+.mistake-tutor__toggle strong { display: block; font-size: 14px; }
+.mistake-tutor__toggle small { display: block; margin-top: 4px; line-height: 1.5; color: var(--text-secondary, #526375); }
+.mistake-tutor__icon { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 8px; background: var(--button-primary, #17436d); color: white; flex-shrink: 0; }
+.mistake-tutor__body { padding: 18px; background: var(--bg-secondary, white); }
+.mistake-tutor__steps { display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: 11px; font-weight: 600; color: var(--text-secondary, #526375); }
+.mistake-tutor__source { font-size: 11px; color: var(--text-secondary, #526375); margin: 12px 0 20px; }
+.mistake-tutor__turn { padding: 14px; margin: 12px 0; border-radius: 10px; background: var(--surface-alt, #f0f4f8); }
+.mistake-tutor__turn--user { margin-left: 24px; border-left: 3px solid var(--button-primary, #17436d); background: var(--bg-primary, #f8fafc); }
+.mistake-tutor__speaker { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--text-secondary, #526375); }
+.mistake-tutor__turn p { font-size: 14px; line-height: 1.7; margin: 6px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.mistake-tutor form > label { display: block; font-size: 13px; font-weight: 600; margin: 18px 0 8px; }
+.mistake-tutor textarea { display: block; box-sizing: border-box; resize: vertical; width: 100%; padding: 12px; border: 1px solid var(--border-strong, #b7c9db); border-radius: 8px; background: var(--bg-primary, white); color: inherit; font-size: 14px; line-height: 1.5; }
+.mistake-tutor__actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.mistake-tutor__actions button, .mistake-tutor__body > button { font-size: 12px; padding: 8px 10px; border: 1px solid var(--border-color, #d1dce5); border-radius: 7px; background: transparent; color: inherit; }
+.mistake-tutor__compose-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; }
+.mistake-tutor__compose-footer small { font-size: 11px; color: var(--text-secondary, #526375); }
+.mistake-tutor__primary { padding: 10px 14px; background: var(--button-primary, #17436d); color: white; border: none; border-radius: 7px; font-size: 13px !important; font-weight: 600 !important; }
+.mistake-tutor__status { font-size: 13px; color: var(--text-secondary, #526375); line-height: 1.6; }
+.mistake-tutor__error { padding: 12px; border: 1px solid #e8aaa4; border-radius: 8px; font-size: 13px; margin-top: 12px; }
+.mistake-tutor__error p { margin: 0; }
+.mistake-tutor__practice { min-width: 0; border: 1px solid var(--border-strong, #b7c9db); border-radius: 9px; margin: 18px 0 0; padding: 12px; }
+.mistake-tutor__practice legend { font-size: 12px; font-weight: 700; padding: 0 6px; }
+.mistake-tutor__option { display: flex; gap: 10px; align-items: flex-start; margin: 8px 0; padding: 10px; border: 1px solid var(--border-color, #d1dce5); border-radius: 7px; font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
+.mistake-tutor__option input { margin-top: 5px; flex-shrink: 0; }
+.mistake-tutor__option--correct { border-color: #319a67; }
+.mistake-tutor__practice .mistake-tutor__primary { margin-top: 8px; }
+@media (max-width: 480px) { .mistake-tutor__body { padding: 12px; } .mistake-tutor__toggle { padding: 12px; } .mistake-tutor__turn--user { margin-left: 12px; } .mistake-tutor__compose-footer { flex-wrap: wrap; } }
