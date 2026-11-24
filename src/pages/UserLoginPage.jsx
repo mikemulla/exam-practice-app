@@ -1,10 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../lib/api";
+import { hasStudentSession } from "../lib/session";
 import BlobBackground from "../components/BlobBackground";
 
 function UserLoginPage() {
   const navigate = useNavigate();
+  // Already logged in on this device: go straight to the dashboard.
+  useEffect(() => {
+    if (hasStudentSession()) navigate("/user-dashboard", { replace: true });
+  }, [navigate]);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

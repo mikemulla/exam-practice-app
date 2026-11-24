@@ -326,6 +326,12 @@ function AdminPage() {
 
   const otherMenuItems = [
     {
+      title: "Question Reports & Insights",
+      description: "Fix questions students report, and spot ones the data says are wrong.",
+      icon: "🚩",
+      path: "/admin-reports",
+    },
+    {
       title: "Subject Requests",
       description: "View requests submitted by users.",
       icon: "📋",
@@ -342,6 +348,12 @@ function AdminPage() {
       description: "Bulk update user course and level assignments.",
       icon: "👥",
       path: "/admin-user-management",
+    },
+    {
+      title: "Weekly Progress Email",
+      description: "Preview, test and send the Sunday progress email.",
+      icon: "📬",
+      path: "/admin-digest",
     },
     {
       title: "Notify Users",

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../lib/api";
+import { hasStudentSession } from "../lib/session";
 import BlobBackground from "../components/BlobBackground";
 
 const apiArray = (payload, key) => {
@@ -14,6 +15,10 @@ const COURSE_CACHE_KEY = "signupCoursesCache";
 
 function UserSignupPage() {
   const navigate = useNavigate();
+  // Already logged in on this device: go straight to the dashboard.
+  useEffect(() => {
+    if (hasStudentSession()) navigate("/user-dashboard", { replace: true });
+  }, [navigate]);
 
   const [courses, setCourses] = useState(() => {
     try {

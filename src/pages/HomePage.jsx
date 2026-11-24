@@ -1,656 +1,232 @@
-import PublicStudyIntroduction from "../components/PublicStudyIntroduction";
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useDarkMode } from "../context/DarkModeContext";
-import ProductPreviewSection from "../components/ProductPreviewSection";
-import BlobBackground from "../components/BlobBackground";
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { hasStudentSession } from "../lib/session";
 import usePageMetadata from "../hooks/usePageMetadata";
+import { publicReviews } from "../data/publicReviews";
+import "../styles/home.css";
 
-function ArrowRight() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 16 16"
-      fill="none"
-      style={{ verticalAlign: "-2px", marginLeft: "6px" }}
-    >
-      <path
-        d="M3 8h10M9 4l4 4-4 4"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
+const FEATURED_SLUGS = [
+  "normal-labour-stages",
+  "ectopic-pregnancy-red-flags",
+  "childhood-pneumonia",
+];
 
-function CheckIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <path
-        d="M2 8l4 4 8-8"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function ClockIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.2" />
-      <path
-        d="M8 5v3.5l2.5 1.5"
-        stroke="currentColor"
-        strokeWidth="1.2"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function SparkIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <path
-        d="M8 2l2 4.5h4.5L10.5 10l2 4.5L8 12.5l-4.5 2 2-4.5L1.5 6.5H6L8 2Z"
-        stroke="currentColor"
-        strokeWidth="1.2"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function MoonIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <path
-        d="M13 8a5 5 0 0 1-5 5 5 5 0 1 1 5-5Z"
-        stroke="currentColor"
-        strokeWidth="1.2"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-const features = [
+const STEPS = [
   {
-    label: "Timed tests",
-    desc: "Real exam pressure",
-    icon: <ClockIcon />,
+    title: "Read a quick review",
+    text: "Short summaries of each topic, built from your lecture material, so you know what matters before you practise.",
+    icon: (
+      <>
+        <path d="M4 5a2 2 0 0 1 2-2h12v18H6a2 2 0 0 1-2-2z" />
+        <path d="M8 7h6" />
+        <path d="M8 11h8" />
+      </>
+    ),
   },
   {
-    label: "Instant review",
-    desc: "Detailed explanations",
-    icon: <CheckIcon />,
+    title: "Practise by topic",
+    text: "Timed, exam-style tests for every topic, or a random mix from a whole subject when you want a challenge.",
+    icon: (
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <path d="m8 12 3 3 5-6" />
+      </>
+    ),
   },
   {
-    label: "Smart tracking",
-    desc: "Progress at a glance",
-    icon: <SparkIcon />,
+    title: "Fix your mistakes",
+    text: "Every option is explained, and a tutor helps you see where your reasoning slipped so it sticks next time.",
+    icon: <path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z" />,
   },
 ];
 
 function HomePage() {
-  const navigate = useNavigate();
-  const { isDarkMode, toggleDarkMode } = useDarkMode();
-  const [showAlert, setShowAlert] = useState(false);
   usePageMetadata(
     "Bambo Exam Practice | Free Medical Study Questions",
     "Practise medical exam questions, read free quick reviews, and track study progress with Bambo Exam Practice.",
   );
 
-  const colors = {
-    bg: isDarkMode ? "#0f172a" : "#f8f9fb",
-    surface: isDarkMode ? "#1e293b" : "#ffffff",
-    surfaceAlt: isDarkMode ? "#334155" : "#f8fafc",
-    text: isDarkMode ? "#f1f5f9" : "#0f172a",
-    textSecondary: isDarkMode ? "#cbd5e1" : "#64748b",
-    textTertiary: isDarkMode ? "#94a3b8" : "#94a3b8",
-    border: isDarkMode ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)",
-    accentLight: isDarkMode ? "rgba(24, 95, 165, 0.15)" : "#E6F1FB",
-  };
+  const [loggedIn, setLoggedIn] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setLoggedIn(hasStudentSession()), 0);
+    return () => clearTimeout(t);
+  }, []);
+
+  const featured = FEATURED_SLUGS.map((slug) =>
+    publicReviews.find((review) => review.slug === slug),
+  ).filter(Boolean);
 
   return (
-    <>
-      <style>{`
-        @keyframes fadeInUp {
-          from {
-            opacity  : 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity  : 1;
-            transform: translateY(0);
-          }
-        }
+    <div className="hm">
+      <section className="hm-hero" aria-labelledby="hm-title">
+        <span className="hm-blob hm-blob-hero" aria-hidden="true" />
+        <span className="hm-blob hm-blob-left" aria-hidden="true" />
+        <span className="hm-blob hm-blob-low" aria-hidden="true" />
 
-        @keyframes fadeIn {
-              from     { opacity: 0; }
-          to { opacity: 1; }
-        }
-
-        @keyframes slideInRight {
-          from {
-            opacity  : 0;
-            transform: translateX(40px);
-          }
-          to {
-            opacity  : 1;
-            transform: translateX(0);
-          }
-        }
-
-        @keyframes popIn {
-          0% { opacity: 0; transform: scale(0.85); }
-          100% { opacity: 1; transform: scale(1); }
-        }
-
-        @keyframes shimmer {
-          0% { background-position: -1000px 0; }
-          100% { background-position: 1000px 0; }
-        }
-
-        .hero-section {
-          animation: fadeInUp 0.6s ease-out;
-        }
-
-        .feature-item {
-          animation: fadeInUp 0.5s ease-out both;
-        }
-
-        .feature-item: nth-child(1) { animation-delay: 0.2s; }
-        .feature-item: nth-child(2) { animation-delay: 0.3s; }
-        .feature-item: nth-child(3) { animation-delay: 0.4s; }
-
-        .dashboard-card {
-          animation: slideInRight 0.7s ease-out;
-        }
-
-        .stat-item {
-          animation: fadeInUp 0.5s ease-out both;
-        }
-
-        .stat-item: nth-child(1) { animation-delay: 0.5s; }
-        .stat-item: nth-child(2) { animation-delay: 0.6s; }
-        .stat-item: nth-child(3) { animation-delay: 0.7s; }
-        .stat-item: nth-child(4) { animation-delay: 0.8s; }
-
-        .dark-mode-alert {
-          animation: popIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-        }
-
-        .alert-close-btn:hover {
-          transform: rotate(90deg);
-        }
-`}</style>
-
-      {/* Dark Mode Feature Alert */}
-      {showAlert && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: "rgba(0, 0, 0, 0.5)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 2000,
-            backdropFilter: "blur(4px)",
-            animation: "fadeIn 0.3s ease-out",
-          }}
-          onClick={() => setShowAlert(false)}
-        >
-          <div
-            className="dark-mode-alert"
-            style={{
-              background: colors.surface,
-              borderRadius: "16px",
-              padding: "2rem",
-              maxWidth: "420px",
-              width: "calc(100% - 2rem)",
-              border: `1px solid ${colors.border}`,
-              boxShadow: "0 20px 60px rgba(0, 0, 0, 0.3)",
-              position: "relative",
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Close button */}
-            <button
-              onClick={() => setShowAlert(false)}
-              className="alert-close-btn"
-              style={{
-                position: "absolute",
-                top: "1rem",
-                right: "1rem",
-                width: "32px",
-                height: "32px",
-                borderRadius: "8px",
-                border: "none",
-                background: colors.surfaceAlt,
-                color: colors.text,
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                transition: "all 0.2s",
-                padding: 0,
-              }}
-              title="Close"
-            >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <path
-                  d="M3 3l10 10M13 3L3 13"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                />
-              </svg>
-            </button>
-
-            {/* Icon */}
-            <div
-              style={{
-                width: "48px",
-                height: "48px",
-                borderRadius: "12px",
-                background: "linear-gradient(135deg, #185FA5 0%, #0e3d6e 100%)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                marginBottom: "1rem",
-              }}
-            >
-              <MoonIcon />
-            </div>
-
-            {/* Content */}
-            <h3
-              style={{
-                fontSize: "20px",
-                fontWeight: "700",
-                color: colors.text,
-                margin: "0 0 0.5rem",
-                letterSpacing: "-0.01em",
-              }}
-            >
-              ✨ Dark Mode is Here!
-            </h3>
-            <p
-              style={{
-                fontSize: "14px",
-                color: colors.textSecondary,
-                margin: "0 0 1.5rem",
-                lineHeight: "1.6",
-              }}
-            >
-              A new feature is ready for you! Click the moon icon in the bottom
-              right corner to toggle dark mode and enjoy a more comfortable
-              viewing experience.
+        <div className="hm-hero-inner">
+          <div className="hm-hero-copy">
+            <p className="hm-pill">For medical students · free to start</p>
+            <h1 id="hm-title" className="hm-h1">
+              Understand medicine through <span>worked examples</span>
+            </h1>
+            <p className="hm-lead">
+              Practise exam-style questions by topic, see why every option is
+              right or wrong, and talk through your mistakes until they stick.
             </p>
-
-            {/* Feature highlights */}
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "10px",
-                marginBottom: "1.5rem",
-              }}
-            >
-              {[
-                "🌙 Smooth light/dark transitions",
-                "👁️ Easier on the eyes at night",
-                "💾 Your preference is saved",
-              ].map((feature, idx) => (
-                <div
-                  key={idx}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "10px",
-                    fontSize: "13px",
-                    color: colors.textSecondary,
-                  }}
-                >
-                  <div
-                    style={{
-                      width: "4px",
-                      height: "4px",
-                      borderRadius: "50%",
-                      background: "#185FA5",
-                      flexShrink: 0,
-                    }}
-                  />
-                  <span>{feature}</span>
-                </div>
-              ))}
+            <div className="hm-actions">
+              {/* Logged in: straight to the dashboard. Not logged in: the login page (it links to sign-up). */}
+              <Link className="hm-btn hm-btn-primary" to={loggedIn ? "/user-dashboard" : "/user-login"}>
+                Check it out →
+              </Link>
+              <Link className="hm-btn hm-btn-secondary" to="/sample-questions">
+                Try 10 sample questions
+              </Link>
             </div>
-
-            {/* Buttons */}
-            <div style={{ display: "flex", gap: "10px" }}>
-              <button
-                onClick={() => {
-                  toggleDarkMode();
-                  setShowAlert(false);
-                }}
-                style={{
-                  flex: 1,
-                  padding: "11px 16px",
-                  borderRadius: "8px",
-                  border: "none",
-                  background: "#185FA5",
-                  color: "#fff",
-                  fontSize: "14px",
-                  fontWeight: "600",
-                  cursor: "pointer",
-                  transition: "all 0.2s",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = "#0e3d6e";
-                  e.currentTarget.style.boxShadow =
-                    "0 4px 12px rgba(24, 95, 165, 0.2)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "#185FA5";
-                  e.currentTarget.style.boxShadow = "none";
-                }}
-              >
-                Try Dark Mode
-              </button>
-              <button
-                onClick={() => setShowAlert(false)}
-                style={{
-                  flex: 1,
-                  padding: "11px 16px",
-                  borderRadius: "8px",
-                  border: `1px solid ${colors.border}`,
-                  background: "transparent",
-                  color: colors.text,
-                  fontSize: "14px",
-                  fontWeight: "600",
-                  cursor: "pointer",
-                  transition: "all 0.2s",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = colors.surfaceAlt;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "transparent";
-                }}
-              >
-                Maybe Later
-              </button>
-            </div>
+            <p className="hm-note">
+              {loggedIn ? "You're logged in on this device." : "Free to start. No account needed for the samples."}
+            </p>
           </div>
-        </div>
-      )}
 
-      <div
-        style={{
-          minHeight: "100vh",
-          background: colors.bg,
-          position: "relative",
-          overflow: "hidden",
-          transition: "background 0.3s ease",
-        }}
-      >
-        {/* Dark Mode Toggle */}
-        <div
-          style={{
-            position: "fixed",
-            bottom: "1.5rem",
-            right: "1.5rem",
-            zIndex: 900,
-          }}
-        >
-          <button
-            onClick={toggleDarkMode}
-            style={{
-              width: "44px",
-              height: "44px",
-              borderRadius: "10px",
-              border: `1px solid ${colors.border}`,
-              background: colors.surface,
-              color: colors.text,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              transition: "all 0.2s",
-              boxShadow: "0 8px 24px rgba(15, 23, 42, 0.16)",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = colors.surfaceAlt;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = colors.surface;
-            }}
-          >
-            {isDarkMode ? <MoonIcon /> : <SparkIcon />}
-          </button>
-        </div>
-        <BlobBackground amount="balanced" orientation="wide" />
-
-        <div
-          style={{
-            maxWidth: "1200px",
-            margin: "0 auto",
-            paddingTop: "clamp(1.25rem, 3vw, 2rem)",
-            paddingBottom: "clamp(3rem, 8vw, 5rem)",
-            paddingLeft: "clamp(1.25rem, 5vw, 3rem)",
-            paddingRight: "clamp(1.25rem, 5vw, 3rem)",
-            position: "relative",
-            zIndex: 1,
-          }}
-        >
-          {/* Main Grid */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns:
-                "repeat(auto-fit, minmax(min(100%, 380px), 1fr))",
-              gap: "clamp(2rem, 5vw, 4rem)",
-              alignItems: "center",
-            }}
-          >
-            {/* ─────────────────────── Left Column: Copy ─────────────────────── */}
-            <div className="hero-section">
-              {/* Status Pill */}
-              <div
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  padding: "8px 16px",
-                  borderRadius: "999px",
-                  background: colors.accentLight,
-                  color: "#185FA5",
-                  fontSize: "13px",
-                  fontWeight: "500",
-                  marginBottom: "1.5rem",
-                  border: `1px solid ${colors.border}`,
-                  transition: "all 0.3s ease",
-                }}
-              >
-                <span
-                  style={{
-                    width: "7px",
-                    height: "7px",
-                    borderRadius: "50%",
-                    background: "#185FA5",
-                    animation: "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
-                  }}
-                />
-                Free medical study resources
+          <div className="hm-demo-wrap">
+            <figure className="hm-demo" aria-label="Example of a question with feedback" style={{ margin: 0 }}>
+              <div className="hm-demo-top">
+                <strong>O&amp;G · Clinical</strong>
+                <span>Question 6 of 30</span>
               </div>
-
-              {/* Main Headline */}
-              <h1
-                style={{
-                  fontSize: "clamp(32px, 6vw, 56px)",
-                  lineHeight: "1.15",
-                  fontWeight: "600",
-                  color: colors.text,
-                  margin: "0 0 1.25rem",
-                  letterSpacing: "-0.03em",
-                  transition: "color 0.3s ease",
-                }}
-              >
-                Understand medicine through{" "}
-                <span style={{ color: "#185FA5", fontWeight: "700" }}>
-                  worked examples
-                </span>
-              </h1>
-
-              {/* Subheading */}
-              <p
-                style={{
-                  fontSize: "16px",
-                  lineHeight: "1.75",
-                  color: colors.textSecondary,
-                  marginBottom: "2rem",
-                  maxWidth: "520px",
-                  transition: "color 0.3s ease",
-                }}
-              >
-                Explore medical study notes, compare key concepts, and practise
-                questions with explanations for every option. Start learning
-                without creating an account.
+              <p className="hm-demo-q">
+                On magnesium sulphate, she has a respiratory rate of 9/min and
+                absent reflexes. Next step?
               </p>
-
-              {/* CTA Button */}
-              <button
-                onClick={() =>
-                  navigate("/quick-reviews")
-                }
-                style={{
-                  padding: "13px 28px",
-                  borderRadius: "9px",
-                  fontSize: "15px",
-                  fontWeight: "600",
-                  cursor: "pointer",
-                  background: "#185FA5",
-                  color: "#fff",
-                  border: "none",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  transition: "all 0.2s ease",
-                  boxShadow: "0 4px 12px rgba(24, 95, 165, 0.2)",
-                  marginBottom: "3rem",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = "#0e3d6e";
-                  e.currentTarget.style.boxShadow =
-                    "0 6px 20px rgba(24, 95, 165, 0.3)";
-                  e.currentTarget.style.transform = "translateY(-2px)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = "#185FA5";
-                  e.currentTarget.style.boxShadow =
-                    "0 4px 12px rgba(24, 95, 165, 0.2)";
-                  e.currentTarget.style.transform = "translateY(0)";
-                }}
-              >
-                Explore free study reviews
-                <ArrowRight />
-              </button>
-
-              {/* Features List */}
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "1rem",
-                }}
-              >
-                {features.map(({ label, desc, icon }, idx) => (
-                  <div
-                    key={idx}
-                    className="feature-item"
-                    style={{
-                      display: "flex",
-                      alignItems: "flex-start",
-                      gap: "12px",
-                      transition: "color 0.3s ease",
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: "40px",
-                        height: "40px",
-                        borderRadius: "10px",
-                        background: colors.accentLight,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        color: "#185FA5",
-                        flexShrink: 0,
-                        transition: "background 0.3s ease",
-                      }}
-                    >
-                      {icon}
-                    </div>
-                    <div>
-                      <p
-                        style={{
-                          fontSize: "14px",
-                          fontWeight: "600",
-                          color: colors.text,
-                          margin: "0 0 2px",
-                          transition: "color 0.3s ease",
-                        }}
-                      >
-                        {label}
-                      </p>
-                      <p
-                        style={{
-                          fontSize: "13px",
-                          color: colors.textSecondary,
-                          margin: 0,
-                          transition: "color 0.3s ease",
-                        }}
-                      >
-                        {desc}
-                      </p>
-                    </div>
-                  </div>
-                ))}
+              <div className="hm-opt hm-opt-wrong">
+                <strong>✕ Reduce the rate and recheck</strong>
+                <span>Too slow: these are signs of toxicity.</span>
               </div>
-            </div>
-
-            {/* ────────────────────── Right Column: Dashboard Card ────────────────────── */}
-            <div className="dashboard-card">
-              <ProductPreviewSection
-                colors={colors}
-                isDarkMode={isDarkMode}
-                navigate={navigate}
-              />
-            </div>
+              <div className="hm-opt hm-opt-right">
+                <strong>✓ Stop it and give calcium gluconate</strong>
+                <span>The antidote; support breathing.</span>
+              </div>
+              <div className="hm-chat">
+                What made you choose to slow it rather than stop it?
+              </div>
+            </figure>
           </div>
         </div>
-      </div>
+      </section>
 
-      <PublicStudyIntroduction />
-      {/* Add pulse animation */}
-      <style>{`
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.5; }
-        }
-`}</style>
-    </>
+      <div className="hm-main">
+        <section className="hm-section" aria-labelledby="hm-how">
+          <h2 id="hm-how" className="hm-h2">
+            Study the way exams test you
+          </h2>
+          <div className="hm-grid">
+            {STEPS.map((step) => (
+              <div className="hm-card" key={step.title}>
+                <span className="hm-icon">
+                  <svg
+                    aria-hidden="true"
+                    width="22"
+                    height="22"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    {step.icon}
+                  </svg>
+                </span>
+                <h3>{step.title}</h3>
+                <p>{step.text}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="hm-section" aria-labelledby="hm-reviews">
+          <div className="hm-head-row">
+            <h2 id="hm-reviews" className="hm-h2">
+              Popular quick reviews
+            </h2>
+            <Link className="hm-link" to="/quick-reviews">
+              See all {publicReviews.length}
+            </Link>
+          </div>
+          <div className="hm-grid">
+            {featured.map((review) => (
+              <Link
+                key={review.slug}
+                className="hm-card hm-review"
+                to={`/quick-reviews/${review.slug}`}
+              >
+                <span className="hm-eyebrow">{review.subject}</span>
+                <strong>{review.title}</strong>
+                <p>{review.excerpt}</p>
+                <span className="hm-meta">
+                  {review.readingTime} · Worked example and references
+                </span>
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        <section className="hm-routine" aria-labelledby="hm-routine">
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <h2 id="hm-routine" className="hm-h2">
+              A practical revision routine
+            </h2>
+            <p>
+              Bambo connects medical concepts to the decisions you make in exam
+              questions. Start with a short review, follow its worked example,
+              then explain the answer in your own words before checking the
+              sample questions.
+            </p>
+            <p>
+              Built for student revision, with a particular focus on the
+              LASUCOM community. Public resources are open to everyone.{" "}
+              <Link to="/about">
+                Learn about Bambo and the limits of these materials
+              </Link>
+              .
+            </p>
+          </div>
+          <ol>
+            <li>
+              <strong>Choose one question.</strong> Identify what it asks
+              before looking at the options: diagnosis, mechanism,
+              investigation or next priority.
+            </li>
+            <li>
+              <strong>Explain the clues.</strong> Write down which observation
+              supports your answer and which would change your mind. Use a
+              review when the mechanism is unclear.
+            </li>
+            <li>
+              <strong>Compare the alternatives.</strong> Work through why the
+              other options do not fit this particular stem.
+            </li>
+            <li>
+              <strong>Return to the topic.</strong> Attempt a similar problem
+              later without your notes. Track the reasoning you missed, not
+              just the score.
+            </li>
+          </ol>
+        </section>
+
+        <section className="hm-cta" aria-labelledby="hm-cta">
+          <span className="hm-blob" aria-hidden="true" />
+          <div>
+            <h2 id="hm-cta">Track what you've mastered</h2>
+            <p>
+              Create a free account to save your scores, see your weak topics
+              and climb your class leaderboard.
+            </p>
+          </div>
+          <Link className="hm-btn" to={loggedIn ? "/user-dashboard" : "/user-signup"}>
+            {loggedIn ? "Open my dashboard" : "Create free account"}
+          </Link>
+        </section>
+      </div>
+    </div>
   );
 }
 

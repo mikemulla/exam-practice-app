@@ -15,6 +15,10 @@ import SubjectRequestPage from "./pages/SubjectRequestPage";
 import TopicSelectionPage from "./pages/TopicSelectionPage";
 import AdminLoginPage from "./pages/AdminLoginPage";
 import ProtectedAdminRoute from "./components/ProtectedAdminRoute";
+import AdminQuestionReportsPage from "./pages/AdminQuestionReportsPage";
+import MistakesPage from "./pages/MistakesPage";
+import EmailPreferencesPage from "./pages/EmailPreferencesPage";
+import AdminDigestPage from "./pages/AdminDigestPage";
 import AdminRequestsPage from "./pages/AdminRequestdPage";
 import AdminUsersPage from "./pages/AdminUsersPage";
 import AdminNotifyUsersPage from "./pages/AdminNotifyUsersPage";
@@ -66,6 +70,7 @@ export function AppRoutes() {
         <Route path="/user-login" element={<UserLoginPage />} />
         <Route path="/user-signup" element={<UserSignupPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/email-preferences" element={<EmailPreferencesPage />} />
         <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
         {/* Protected user routes */}
         <Route
@@ -81,6 +86,14 @@ export function AppRoutes() {
           element={
             <ProtectedUserRoute>
               <UserPage />
+            </ProtectedUserRoute>
+          }
+        />
+        <Route
+          path="/mistakes"
+          element={
+            <ProtectedUserRoute>
+              <MistakesPage />
             </ProtectedUserRoute>
           }
         />
@@ -204,6 +217,22 @@ export function AppRoutes() {
           element={
             <ProtectedAdminRoute>
               <ManageTopicsPage />
+            </ProtectedAdminRoute>
+          }
+        />
+        <Route
+          path="/admin-digest"
+          element={
+            <ProtectedAdminRoute>
+              <AdminDigestPage />
+            </ProtectedAdminRoute>
+          }
+        />
+        <Route
+          path="/admin-reports"
+          element={
+            <ProtectedAdminRoute>
+              <AdminQuestionReportsPage />
             </ProtectedAdminRoute>
           }
         />

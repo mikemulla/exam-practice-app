@@ -17,6 +17,7 @@ const ADMIN_ROUTE_PATTERNS = [
   "/api/requests",
   "/api/users/admin",
   "/api/notifications",
+  "/api/reports/admin",
 ];
 
 const ADMIN_MUTATION_ROUTES = [

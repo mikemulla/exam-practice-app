@@ -307,6 +307,22 @@
     {
       "source": "/network-error",
       "destination": "/app-shell.html"
+    },
+    {
+      "source": "/admin-reports",
+      "destination": "/app-shell.html"
+    },
+    {
+      "source": "/mistakes",
+      "destination": "/app-shell.html"
+    },
+    {
+      "source": "/email-preferences",
+      "destination": "/app-shell.html"
+    },
+    {
+      "source": "/admin-digest",
+      "destination": "/app-shell.html"
     }
   ],
   "headers": [
@@ -582,6 +598,64 @@
     },
     {
       "source": "/network-error",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, follow"
+        }
+      ]
+    },
+    {
+      "source": "/admin-reports",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, follow"
+        }
+      ]
+    },
+    {
+      "source": "/mistakes",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, follow"
+        }
+      ]
+    },
+    {
+      "source": "/email-preferences",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, follow"
+        }
+      ]
+    },
+    {
+      "source": "/admin-digest",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, follow"
+        }
+      ]
+    },
+    {
+      "source": "/sw.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache"
+        },
+        {
+          "key": "Service-Worker-Allowed",
+          "value": "/"
+        }
+      ]
+    },
+    {
+      "source": "/offline.html",
       "headers": [
         {
           "key": "X-Robots-Tag",

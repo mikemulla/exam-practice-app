@@ -24,6 +24,11 @@ for (const [path, html] of pageHtml) {
   for (const match of html.matchAll(/href="(\/[^"?]*)"/g)) {
     const [target, fragment] = match[1].split("#");
     if (target.startsWith("/assets/") || ["/favicon.svg", "/user-login", "/user-signup"].includes(target)) continue;
+    // App files (install manifest, home-screen icons) must exist in the build.
+    if (target === "/manifest.webmanifest" || target.startsWith("/icons/")) {
+      await readFile(`dist${target}`);
+      continue;
+    }
     assert(pageHtml.has(target), `${path}: broken internal link ${target}`);
     if (fragment) assert(pageHtml.get(target).includes(`id="${fragment}"`), `${path}: missing linked section ${match[1]}`);
   }

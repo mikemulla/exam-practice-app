@@ -1,775 +1,129 @@
 import { useEffect, useMemo, useState } from "react";
-import api from "../lib/api";
 import { useNavigate } from "react-router-dom";
-import BlobBackground from "../components/BlobBackground";
+import api from "../lib/api";
+import StudentHeader from "../components/StudentHeader";
+import BamboLoader from "../components/BamboLoader";
+import { readUserInfo } from "../lib/userInfo";
+import "../styles/dashboard.css";
+import "../styles/student.css";
 
-function BookIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-      <path
-        d="M4 4.5C4 3.12 5.12 2 6.5 2H16v13H6.5A2.5 2.5 0 0 0 4 17.5v-13Z"
-        stroke="var(--button-primary)"
-        strokeWidth="1.4"
-      />
-      <path
-        d="M4 15.5A2.5 2.5 0 0 1 6.5 13H16"
-        stroke="var(--button-primary)"
-        strokeWidth="1.4"
-      />
-    </svg>
-  );
-}
+const listOf = (data, key) =>
+  Array.isArray(data) ? data : Array.isArray(data?.[key]) ? data[key] : Array.isArray(data?.data) ? data.data : [];
 
-function ChevronRight() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-      <path
-        d="M5 3l4 4-4 4"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
+const pct = (correct, total) => (Number(total) ? Math.round((Number(correct) / Number(total)) * 100) : 0);
 
-function ClockIcon() {
-  return (
-    <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
-      <circle
-        cx="7"
-        cy="7"
-        r="5.5"
-        stroke="var(--text-secondary)"
-        strokeWidth="1.2"
-      />
-      <path
-        d="M7 4.5V7l1.5 1.5"
-        stroke="var(--text-secondary)"
-        strokeWidth="1.2"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function LayersIcon() {
-  return (
-    <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
-      <path
-        d="M2 5l5-3 5 3-5 3-5-3Z"
-        stroke="var(--text-secondary)"
-        strokeWidth="1.2"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M2 9l5 3 5-3"
-        stroke="var(--text-secondary)"
-        strokeWidth="1.2"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function SkeletonCard() {
-  return (
-    <div style={S.card}>
-      <style>{`
-        @keyframes shimmer {
-          0%   { background-position: -400px 0 }
-          100% { background-position:  400px 0 }
-        }
-        .shimmer {
-          background     : linear-gradient(90deg, var(--surface-alt) 25%, #e8edf4 50%, var(--surface-alt) 75%);
-          background-size: 800px 100%;
-          animation      : shimmer 1.4s infinite;
-          border-radius  : 6px;
-        }
-      `}</style>
-      <div
-        className="shimmer"
-        style={{
-          width: 40,
-          height: 40,
-          borderRadius: 10,
-          marginBottom: "1rem",
-        }}
-      />
-      <div
-        className="shimmer"
-        style={{ height: 14, width: "60%", marginBottom: 10 }}
-      />
-      <div
-        className="shimmer"
-        style={{ height: 11, width: "40%", marginBottom: 20 }}
-      />
-      <div className="shimmer" style={{ height: 0.5, marginBottom: 20 }} />
-      <div className="shimmer" style={{ height: 36, borderRadius: 8 }} />
-    </div>
-  );
-}
-
-function SubjectCard({ subject, topicCount, index, onViewTopics }) {
-  const [hovered, setHovered] = useState(false);
-  const minutes = Math.floor((subject.duration || 300) / 60);
-
-  return (
-    <div
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        ...S.card,
-        border: `0.5px solid ${hovered ? "rgba(24,95,165,0.25)" : "var(--border-color)"}`,
-        boxShadow: hovered
-          ? "0 8px 32px rgba(24,95,165,0.10), 0 2px 8px var(--border-color)"
-          : "0 1px 4px var(--border-color)",
-        transform: hovered ? "translateY(-2px)" : "translateY(0)",
-        animationDelay: `${index * 60}ms`,
-      }}
-      className="subject-card-enter"
-    >
-      <div style={S.iconBubble}>
-        <BookIcon />
-      </div>
-      <p style={S.subjectName}>{subject.name}</p>
-      <div style={S.metaRow}>
-        <span style={S.metaPill}>
-          <ClockIcon />
-          {minutes} min
-        </span>
-        <span style={S.metaPill}>
-          <LayersIcon />
-          {topicCount} topic{topicCount === 1 ? "" : "s"}
-        </span>
-        <span
-          style={{
-            ...S.metaPill,
-            background: "var(--surface-alt)",
-            color: "var(--button-primary)",
-          }}
-        >
-          Timed
-        </span>
-      </div>
-      <div style={S.divider} />
-      <button
-        onClick={onViewTopics}
-        style={{
-          ...S.cta,
-          background: hovered ? "#145390" : "var(--button-primary)",
-        }}
-      >
-        <span>View topics</span>
-        <span style={S.ctaArrow}>
-          <ChevronRight />
-        </span>
-      </button>
-    </div>
-  );
-}
-
-function UserPage() {
-  const [subjects, setSubjects] = useState([]);
-  const [topics, setTopics] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [userInfo, setUserInfo] = useState({});
+export default function UserPage() {
   const navigate = useNavigate();
+  const [userInfo] = useState(readUserInfo);
+  const [subjects, setSubjects] = useState([]);
+  const [topicsBySubject, setTopicsBySubject] = useState({});
+  const [bySubject, setBySubject] = useState({});
+  const [query, setQuery] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    const info = JSON.parse(localStorage.getItem("userInfo") || "{}");
-    setUserInfo(info);
-
-    const fetchData = async () => {
+    let cancelled = false;
+    const opts = { _tokenType: "user" };
+    (async () => {
       try {
-        setIsLoading(true);
-
-        const token = localStorage.getItem("userToken");
-
-        if (!token) {
-          navigate("/user-login");
-          return;
-        }
-
-        const subjectsRes = await api.get("/api/subjects", {
-          _tokenType: "user",
-        });
-
-        const subjectsData = Array.isArray(subjectsRes.data)
-          ? subjectsRes.data
-          : Array.isArray(subjectsRes.data?.subjects)
-            ? subjectsRes.data.subjects
-            : Array.isArray(subjectsRes.data?.data)
-              ? subjectsRes.data.data
-              : [];
-
-        const allTopics = await Promise.all(
-          subjectsData.map((subject) =>
+        const [subjectsRes, summaryRes] = await Promise.all([
+          api.get("/api/subjects?limit=100", opts),
+          api.get("/api/results/me/summary", opts).catch(() => ({ data: {} })),
+        ]);
+        const list = listOf(subjectsRes.data, "subjects");
+        const topicLists = await Promise.all(
+          list.map((s) =>
             api
-              .get(`/api/topics/subject/${subject._id}`, {
-                _tokenType: "user",
-              })
-              .then((res) => {
-                if (Array.isArray(res.data)) return res.data;
-                if (Array.isArray(res.data?.topics)) return res.data.topics;
-                if (Array.isArray(res.data?.data)) return res.data.data;
-                return [];
-              })
-              .catch(() => []),
+              .get(`/api/topics/subject/${s._id}`, opts)
+              .then((res) => [s._id, listOf(res.data, "topics")])
+              .catch(() => [s._id, []]),
           ),
         );
-
-        setSubjects(subjectsData);
-        setTopics(allTopics.flat());
+        if (cancelled) return;
+        setSubjects(list);
+        setTopicsBySubject(Object.fromEntries(topicLists));
+        setBySubject(summaryRes.data?.bySubject || {});
       } catch (err) {
-        console.error("Error fetching dashboard data:", err);
+        console.error("Error loading subjects:", err);
+        if (!cancelled) setError("We couldn't load your subjects. Check your connection and try again.");
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
+    })();
+    return () => {
+      cancelled = true;
     };
-
-    fetchData();
   }, []);
 
-  const topicCountsBySubject = useMemo(() => {
-    const counts = {};
-    topics.forEach((topic) => {
-      const id = topic.subjectId?._id || topic.subjectId;
-      if (id) counts[id] = (counts[id] || 0) + 1;
-    });
-    return counts;
-  }, [topics]);
+  const shown = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return subjects
+      .filter((s) => !q || String(s.name).toLowerCase().includes(q))
+      .sort((a, b) => String(a.name).localeCompare(String(b.name)));
+  }, [subjects, query]);
 
-  const courseName = userInfo.course?.name || userInfo.courseName || null;
+  if (isLoading) return <BamboLoader message="Loading your subjects" />;
+
+  const classLabel = [userInfo.course?.name, userInfo.level ? `${userInfo.level} Level` : null].filter(Boolean).join(" · ");
 
   return (
-    <>
-      <style>{`
-        @keyframes fadeUp {
-            from   { opacity: 0; transform: translateY(14px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        .subject-card-enter {
-          animation : fadeUp 0.35s ease both;
-          transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
-        }
-        .header-fade { animation: fadeUp 0.4s ease both; }
-`}</style>
-
-      <div style={S.page}>
-          <BlobBackground amount="full" orientation="wide" />
-        <div style={S.inner}>
-          <div className="header-fade" style={S.pageHeader}>
-            <button
-              onClick={() => navigate("/user-dashboard")}
-              style={S.backBtn}
-            >
-              ← Back
-            </button>
-            <div style={S.eyebrow}>User dashboard</div>
-            <div style={S.headingRow}>
-              <h1 style={S.heading}>Choose a subject</h1>
-              <button
-                onClick={() => navigate("/request-subject")}
-                style={S.requestBtn}
-              >
-                + Request subject
-              </button>
-            </div>
-            <p style={S.subheading}>
-              Pick a subject below, choose a topic or take the full test, then
-              get instant review with explanations after submission.
-            </p>
-            {/* Show course/level context */}
-            {(courseName || userInfo.level) && (
-              <div style={S.contextRow}>
-                {courseName && (
-                  <span style={S.contextPill}>📚 {courseName}</span>
-                )}
-                {userInfo.level && (
-                  <span style={S.contextPill}>🎓 {userInfo.level} Level</span>
-                )}
-              </div>
-            )}
+    <div className="db">
+      <StudentHeader active="subjects" />
+      <main className="st-main">
+        <div className="st-head">
+          <div>
+            {classLabel && <p className="db-eyebrow">{classLabel}</p>}
+            <h1 className="st-h1">Subjects</h1>
+            <p className="st-sub">Choose a subject to see its topics, practise tests and quick reviews.</p>
           </div>
-
-          {/* Features Alert Banner */}
-          <div
-            style={{
-              background: "linear-gradient(135deg, #E6F1FB 0%, #F0F6FC 100%)",
-              border: "1px solid var(--button-primary)",
-              borderRadius: 14,
-              padding: "18px",
-              marginBottom: "2rem",
-              display: "flex",
-              flexDirection: "column",
-              gap: 14,
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-              }}
-            >
-              <div style={{ fontSize: 20 }}>✨</div>
-              <div
-                style={{
-                  fontSize: 14,
-                  fontWeight: 700,
-                  color: "#042C53",
-                }}
-              >
-                New Test Features
-              </div>
-            </div>
-
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))",
-                gap: 10,
-              }}
-            >
-              {/* Skip Questions */}
-              <div
-                style={{
-                  background: "rgba(255,255,255,0.8)",
-                  borderRadius: 8,
-                  padding: 10,
-                  display: "flex",
-                  gap: 8,
-                  alignItems: "flex-start",
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: 16,
-                    flexShrink: 0,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                    <path d="M2 4l6 4-6 4V4z" fill="var(--button-primary)" />
-                    <path
-                      d="M10 4v8"
-                      stroke="var(--button-primary)"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                </div>
-                <div>
-                  <div
-                    style={{
-                      fontSize: 11,
-                      fontWeight: 600,
-                      color: "#042C53",
-                    }}
-                  >
-                    Skip Questions
-                  </div>
-                  <div
-                    style={{
-                      fontSize: 10,
-                      color: "var(--text-secondary)",
-                      marginTop: 2,
-                      lineHeight: 1.3,
-                    }}
-                  >
-                    Move past difficult ones
-                  </div>
-                </div>
-              </div>
-
-              {/* Flag Questions */}
-              <div
-                style={{
-                  background: "rgba(255,255,255,0.8)",
-                  borderRadius: 8,
-                  padding: 10,
-                  display: "flex",
-                  gap: 8,
-                  alignItems: "flex-start",
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: 16,
-                    flexShrink: 0,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                    <path
-                      d="M3 2v12m0 0h7a2 2 0 002-2V4a2 2 0 00-2-2H3"
-                      stroke="var(--button-primary)"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      fill="var(--button-primary)"
-                    />
-                  </svg>
-                </div>
-                <div>
-                  <div
-                    style={{
-                      fontSize: 11,
-                      fontWeight: 600,
-                      color: "#042C53",
-                    }}
-                  >
-                    Flag Questions
-                  </div>
-                  <div
-                    style={{
-                      fontSize: 10,
-                      color: "var(--text-secondary)",
-                      marginTop: 2,
-                      lineHeight: 1.3,
-                    }}
-                  >
-                    Mark for review
-                  </div>
-                </div>
-              </div>
-
-              {/* Review Flags */}
-              <div
-                style={{
-                  background: "rgba(255,255,255,0.8)",
-                  borderRadius: 8,
-                  padding: 10,
-                  display: "flex",
-                  gap: 8,
-                  alignItems: "flex-start",
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: 16,
-                    flexShrink: 0,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                    <path
-                      d="M2 2h12a1 1 0 011 1v10a1 1 0 01-1 1H2a1 1 0 01-1-1V3a1 1 0 011-1z"
-                      stroke="var(--button-primary)"
-                      strokeWidth="1.5"
-                    />
-                    <path
-                      d="M2 4h12M5 7h6"
-                      stroke="var(--button-primary)"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                </div>
-                <div>
-                  <div
-                    style={{
-                      fontSize: 11,
-                      fontWeight: 600,
-                      color: "#042C53",
-                    }}
-                  >
-                    Review Flags
-                  </div>
-                  <div
-                    style={{
-                      fontSize: 10,
-                      color: "var(--text-secondary)",
-                      marginTop: 2,
-                      lineHeight: 1.3,
-                    }}
-                  >
-                    Jump to flagged items
-                  </div>
-                </div>
-              </div>
-
-              {/* Stop Test */}
-              <div
-                style={{
-                  background: "rgba(255,255,255,0.8)",
-                  borderRadius: 8,
-                  padding: 10,
-                  display: "flex",
-                  gap: 8,
-                  alignItems: "flex-start",
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: 16,
-                    flexShrink: 0,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                    <rect
-                      x="3"
-                      y="3"
-                      width="10"
-                      height="10"
-                      rx="1.5"
-                      fill="var(--button-primary)"
-                    />
-                  </svg>
-                </div>
-                <div>
-                  <div
-                    style={{
-                      fontSize: 11,
-                      fontWeight: 600,
-                      color: "#042C53",
-                    }}
-                  >
-                    Stop Test
-                  </div>
-                  <div
-                    style={{
-                      fontSize: 10,
-                      color: "var(--text-secondary)",
-                      marginTop: 2,
-                      lineHeight: 1.3,
-                    }}
-                  >
-                    Review without scoring
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {isLoading ? (
-            <div style={S.grid}>
-              {[...Array(6)].map((_, i) => (
-                <SkeletonCard key={i} />
-              ))}
-            </div>
-          ) : subjects.length === 0 ? (
-            <div style={S.emptyState}>
-              <div style={S.emptyIcon}>📚</div>
-              <p style={S.emptyTitle}>No subjects available</p>
-              <p style={S.emptyBody}>
-                No subjects have been assigned to your course and level yet. Ask
-                the admin to add subjects for{" "}
-                {courseName ? `${courseName}` : "your course"}
-                {userInfo.level ? ` — ${userInfo.level} Level` : ""}.
-              </p>
-            </div>
-          ) : (
-            <div style={S.grid}>
-              {subjects.map((subject, i) => (
-                <SubjectCard
-                  key={subject._id}
-                  subject={subject}
-                  topicCount={topicCountsBySubject[subject._id] || 0}
-                  index={i}
-                  onViewTopics={() =>
-                    navigate(`/subject/${subject._id}/topics`)
-                  }
-                />
-              ))}
-            </div>
-          )}
+          <button type="button" className="st-btn st-btn-outline" onClick={() => navigate("/request-subject")}>
+            Request a subject
+          </button>
         </div>
-      </div>
-    </>
+
+        {error && <div className="rs-banner" role="alert">{error}</div>}
+
+        {subjects.length > 3 && (
+          <label className="st-search" style={{ flex: "none", width: "100%", maxWidth: 360 }}>
+            <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+            <span className="sr-only" style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0 0 0 0)" }}>Search subjects</span>
+            <input type="search" placeholder="Search subjects" value={query} onChange={(e) => setQuery(e.target.value)} />
+          </label>
+        )}
+
+        {!error && subjects.length === 0 ? (
+          <div className="st-panel st-empty">
+            <p style={{ margin: 0 }}>There are no subjects for your course and level yet.</p>
+            <div><button type="button" className="st-btn" onClick={() => navigate("/request-subject")}>Request a subject</button></div>
+          </div>
+        ) : (
+          <div className="db-grid-3">
+            {shown.map((s) => {
+              const topics = topicsBySubject[s._id] || [];
+              const questionTotal = topics.reduce((n, t) => n + Number(t.questionCount || 0), 0);
+              const stats = bySubject[String(s._id)];
+              const avg = stats ? pct(stats.correct, stats.total) : 0;
+              return (
+                <button key={s._id} type="button" className="st-subject" onClick={() => navigate(`/subject/${s._id}/topics`)}>
+                  <strong>{s.name}</strong>
+                  <span className="db-small">
+                    {topics.length} topic{topics.length === 1 ? "" : "s"} · {questionTotal.toLocaleString("en-GB")} question{questionTotal === 1 ? "" : "s"}
+                  </span>
+                  <span className="db-track" style={{ display: "block", height: 6 }}>
+                    <span className="db-fill" style={{ display: "block", height: 6, width: `${stats ? Math.max(avg, 3) : 0}%`, background: "#185FA5" }} />
+                  </span>
+                  <span className="st-subject-foot">
+                    <span>{stats ? `${stats.attempts} test${stats.attempts === 1 ? "" : "s"} · average ${avg}%` : "Not started yet"}</span>
+                    <b>Open →</b>
+                  </span>
+                </button>
+              );
+            })}
+            {shown.length === 0 && <p className="db-small">No subjects match “{query}”.</p>}
+          </div>
+        )}
+      </main>
+    </div>
   );
 }
-
-export default UserPage;
-
-const S = {
-  page: {
-    minHeight: "100vh",
-    background: "var(--bg-primary)",
-    padding: "2.5rem 1.25rem 4rem",
-    position: "relative",
-    overflow: "hidden",
-  },
-  inner: {
-    maxWidth: "1080px",
-    margin: "0 auto",
-    position: "relative",
-    zIndex: 1,
-  },
-  pageHeader: { marginBottom: "2rem" },
-  eyebrow: {
-    fontSize: "11px",
-    fontWeight: "600",
-    color: "var(--text-secondary)",
-    textTransform: "uppercase",
-    letterSpacing: "0.08em",
-    marginBottom: "0.75rem",
-  },
-  headingRow: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    flexWrap: "wrap",
-    gap: "12px",
-    marginBottom: "0.625rem",
-  },
-  heading: {
-    fontSize: "clamp(22px, 3.5vw, 30px)",
-    fontWeight: "600",
-    color: "var(--text-primary)",
-    margin: 0,
-    letterSpacing: "-0.02em",
-  },
-  subheading: {
-    fontSize: "14px",
-    color: "var(--text-secondary)",
-    lineHeight: "1.65",
-    maxWidth: "520px",
-    margin: 0,
-  },
-  contextRow: {
-    display: "flex",
-    gap: "8px",
-    flexWrap: "wrap",
-    marginTop: "12px",
-  },
-  contextPill: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: "4px",
-    padding: "4px 12px",
-    borderRadius: "999px",
-    background: "var(--surface-alt)",
-    color: "var(--button-primary)",
-    fontSize: "12px",
-    fontWeight: "500",
-  },
-  backBtn: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: "6px",
-    marginBottom: "1.25rem",
-    padding: "7px 14px",
-    border: "0.5px solid var(--border-color)",
-    borderRadius: "8px",
-    background: "var(--bg-secondary)",
-    color: "var(--text-secondary)",
-    fontSize: "13px",
-    fontWeight: "500",
-    cursor: "pointer",
-  },
-  requestBtn: {
-    padding: "9px 16px",
-    border: "0.5px solid var(--border-color)",
-    borderRadius: "8px",
-    background: "var(--bg-secondary)",
-    color: "var(--text-secondary)",
-    fontSize: "13px",
-    fontWeight: "500",
-    cursor: "pointer",
-    whiteSpace: "nowrap",
-  },
-  grid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 260px), 1fr))",
-    gap: "14px",
-  },
-  card: {
-    background: "var(--bg-secondary)",
-    borderRadius: "14px",
-    padding: "1.375rem",
-    display: "flex",
-    flexDirection: "column",
-    cursor: "default",
-  },
-  iconBubble: {
-    width: "40px",
-    height: "40px",
-    borderRadius: "10px",
-    background: "var(--surface-alt)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: "1rem",
-    flexShrink: 0,
-  },
-  subjectName: {
-    fontSize: "15px",
-    fontWeight: "600",
-    color: "var(--text-primary)",
-    marginBottom: "0.625rem",
-    textTransform: "capitalize",
-    letterSpacing: "-0.01em",
-  },
-  metaRow: {
-    display: "flex",
-    gap: "6px",
-    flexWrap: "wrap",
-    marginBottom: "1.125rem",
-  },
-  metaPill: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: "4px",
-    padding: "3px 8px",
-    borderRadius: "999px",
-    background: "var(--surface-alt)",
-    color: "var(--text-secondary)",
-    fontSize: "11px",
-    fontWeight: "500",
-  },
-  divider: {
-    height: "0.5px",
-    background: "var(--border-color)",
-    marginBottom: "1.125rem",
-  },
-  cta: {
-    marginTop: "auto",
-    width: "100%",
-    padding: "10px 16px",
-    borderRadius: "8px",
-    fontSize: "13px",
-    fontWeight: "600",
-    cursor: "pointer",
-    color: "var(--bg-secondary)",
-    border: "none",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    transition: "background 0.15s",
-    letterSpacing: "-0.01em",
-  },
-  ctaArrow: { display: "flex", alignItems: "center", opacity: 0.8 },
-  emptyState: {
-    background: "var(--bg-secondary)",
-    border: "0.5px solid var(--border-color)",
-    borderRadius: "14px",
-    padding: "3.5rem 2rem",
-    textAlign: "center",
-  },
-  emptyIcon: { fontSize: "32px", marginBottom: "1rem" },
-  emptyTitle: {
-    fontSize: "15px",
-    fontWeight: "600",
-    color: "var(--text-primary)",
-    marginBottom: "6px",
-  },
-  emptyBody: {
-    fontSize: "13px",
-    color: "var(--text-secondary)",
-    lineHeight: "1.65",
-    maxWidth: "360px",
-    margin: "0 auto",
-  },
-};

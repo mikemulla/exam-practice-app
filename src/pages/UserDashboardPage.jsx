@@ -1,29 +1,22 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import api from "../lib/api";
-import BlobBackground from "../components/BlobBackground";
+import StudentHeader from "../components/StudentHeader";
+import BamboLoader from "../components/BamboLoader";
+import LeaderboardPanel from "../components/LeaderboardPanel";
+import OnboardingTour from "../components/OnboardingTour";
+import { TOUR_VERSION, studentId } from "../lib/session";
+import "../styles/dashboard.css";
+
+/* ── helpers ─────────────────────────────────────────── */
 
 const pct = (score, total) =>
-  total ? Math.round((Number(score || 0) / Number(total || 0)) * 100) : 0;
-
-const fmtTime = (seconds) => {
-  const value = Number(seconds || 0);
-  if (!value) return "0s";
-  if (value < 60) return `${value}s`;
-  return `${Math.floor(value / 60)}m ${value % 60}s`;
-};
-
-const fmtDate = (date) => {
-  if (!date) return "";
-  return new Date(date).toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-  });
-};
+  Number(total) ? Math.round((Number(score || 0) / Number(total)) * 100) : 0;
 
 const safeArray = (value) => {
   if (Array.isArray(value)) return value;
   if (Array.isArray(value?.results)) return value.results;
+  if (Array.isArray(value?.subjects)) return value.subjects;
   if (Array.isArray(value?.data)) return value.data;
   return [];
 };
@@ -38,1424 +31,636 @@ const normalizeSummary = (value) => ({
   bySubject: value?.bySubject || {},
 });
 
-const gradeColor = (p) =>
-  p >= 80 ? "#3B6D11" : p >= 50 ? "var(--button-primary)" : "#A32D2D";
-const gradeBg = (p) => (p >= 80 ? "#EAF3DE" : p >= 50 ? "#E6F1FB" : "#FCEBEB");
-const gradeMid = (p) => (p >= 80 ? "#3B6D11" : p >= 50 ? "#378ADD" : "#E24B4A");
+const idOf = (ref) => (ref && typeof ref === "object" ? ref._id : ref) || null;
+const nameOf = (ref, fallback) =>
+  (ref && typeof ref === "object" ? ref.name : null) || fallback;
 
-const getEncouragement = (summary) => {
-  const avg = summary?.avgScore || 0;
-  const totalTests = summary?.totalTests || 0;
+const scoreTone = (p) =>
+  p >= 80
+    ? { color: "#15803D", bg: "#F0FDF4", bar: "#16A34A" }
+    : p >= 50
+      ? { color: "#185FA5", bg: "#E8F1FB", bar: "#3B82F6" }
+      : { color: "#9A3412", bg: "#FFF7ED", bar: "#EA580C" };
 
-  if (totalTests === 0) {
-    return {
-      title: "Start your progress record",
-      text: "Take your first test so your dashboard can begin showing performance trends.",
-    };
-  }
-
-  if (avg >= 80) {
-    return {
-      title: "Strong performance",
-      text: "Your average score is high. Keep practising to maintain consistency.",
-    };
-  }
-
-  if (avg >= 50) {
-    return {
-      title: "Good foundation",
-      text: "You are building momentum. Focus on weaker topics to raise your average.",
-    };
-  }
-
-  return {
-    title: "Keep building",
-    text: "Your dashboard is showing where to improve. Review missed questions and try again.",
-  };
+const fmtTime = (seconds) => {
+  const value = Number(seconds || 0);
+  if (!value) return "–";
+  if (value < 60) return `${value}s`;
+  return `${Math.floor(value / 60)}m ${value % 60}s`;
 };
 
-const t = {
-  navy: "#042C53",
-  blue: "var(--button-primary)",
-  blueMid: "#378ADD",
-  blueLight: "#E6F1FB",
-  bluePale: "#B5D4F4",
-  green: "#3B6D11",
-  greenLight: "#EAF3DE",
-  red: "#A32D2D",
-  redLight: "#FCEBEB",
-  text: "var(--text-primary)",
-  textSec: "var(--text-secondary)",
-  textTert: "var(--text-secondary)",
-  border: "var(--border-color)",
-  borderFaint: "rgba(0,0,0,0.04)",
-  bg: "var(--bg-primary)",
-  surface: "var(--bg-secondary)",
-  surface2: "var(--surface-alt)",
-};
-
-function SectionLabel({ children }) {
-  return (
-    <div
-      style={{
-        fontSize: 10,
-        textTransform: "uppercase",
-        letterSpacing: "0.1em",
-        color: t.textTert,
-        fontWeight: 600,
-        marginBottom: 12,
-      }}
-    >
-      {children}
-    </div>
-  );
+function relativeDay(date) {
+  if (!date) return "";
+  const d = new Date(date);
+  const today = new Date();
+  const startOf = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const diff = Math.round((startOf(today) - startOf(d)) / 86400000);
+  if (diff <= 0) return "today";
+  if (diff === 1) return "yesterday";
+  if (diff < 7) return d.toLocaleDateString("en-GB", { weekday: "short" });
+  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 }
 
-function Delta({ children, color, bg }) {
-  return (
-    <span
-      style={{
-        fontSize: 10,
-        fontWeight: 500,
-        padding: "2px 7px",
-        borderRadius: 999,
-        background: bg,
-        color,
-      }}
-    >
-      {children}
-    </span>
-  );
+function greeting() {
+  const h = new Date().getHours();
+  if (h < 12) return "Good morning";
+  if (h < 17) return "Good afternoon";
+  return "Good evening";
 }
 
-function StatCard({ value, label, color, delta, deltaBg, deltaColor }) {
-  return (
-    <div
-      style={{
-        background: t.surface,
-        border: `0.5px solid ${t.border}`,
-        borderRadius: 12,
-        padding: "16px 14px",
-        flex: 1,
-        minWidth: 100,
-        display: "flex",
-        flexDirection: "column",
-        gap: 8,
-      }}
-    >
-      <div
-        style={{
-          fontSize: 26,
-          fontWeight: 600,
-          lineHeight: 1,
-          color: color || t.text,
-          fontFamily: "'DM Serif Display', serif",
-          fontStyle: "italic",
-        }}
-      >
-        {value}
-      </div>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 6,
-          flexWrap: "wrap",
-        }}
-      >
-        <span
-          style={{
-            fontSize: 10,
-            color: t.textTert,
-            textTransform: "uppercase",
-            letterSpacing: "0.07em",
-            fontWeight: 500,
-          }}
-        >
-          {label}
-        </span>
-        {delta && (
-          <Delta color={deltaColor} bg={deltaBg}>
-            {delta}
-          </Delta>
-        )}
-      </div>
-    </div>
-  );
+function retakePath(result) {
+  const subjectId = idOf(result.subjectId);
+  const topicId = idOf(result.topicId);
+  if (result.mode === "mistakes" || result.mode === "review") return "/mistakes";
+  if (result.mode === "topic" && topicId) return `/test/topic/${topicId}`;
+  if (result.mode === "random" && subjectId)
+    return `/test/subject/${subjectId}?mode=random&limit=${result.total || 20}`;
+  if (subjectId) return `/test/subject/${subjectId}`;
+  return "/user";
 }
 
-function SubjectRow({ name, percent }) {
-  return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 10,
-        padding: "7px 0",
-        borderBottom: `0.5px solid ${t.borderFaint}`,
-      }}
-    >
-      <span
-        style={{
-          fontSize: 12,
-          color: t.text,
-          width: 90,
-          flexShrink: 0,
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-          textTransform: "capitalize",
-        }}
-      >
-        {name}
-      </span>
-      <div
-        style={{
-          flex: 1,
-          height: 5,
-          background: t.borderFaint,
-          borderRadius: 999,
-          overflow: "hidden",
-        }}
-      >
-        <div
-          style={{
-            height: "100%",
-            width: `${percent}%`,
-            background: gradeMid(percent),
-            borderRadius: 999,
-            transition: "width 0.8s cubic-bezier(.4,0,.2,1)",
-          }}
-        />
-      </div>
-      <span
-        style={{
-          fontSize: 11,
-          fontWeight: 600,
-          width: 32,
-          textAlign: "right",
-          flexShrink: 0,
-          color: gradeMid(percent),
-        }}
-      >
-        {percent}%
-      </span>
-    </div>
-  );
-}
+const MODE_LABEL = { topic: "Topic test", subject: "Full subject test", random: "Random test", retry: "Retry of missed questions", mistakes: "Mistake practice", review: "Spaced review" };
 
-function HistRow({ title, topic, date, time, percent }) {
-  return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        padding: "9px 0",
-        borderBottom: `0.5px solid ${t.borderFaint}`,
-      }}
-    >
-      <div>
-        <div
-          style={{
-            fontSize: 12,
-            fontWeight: 500,
-            color: t.text,
-            textTransform: "capitalize",
-          }}
-        >
-          {title}
-        </div>
-        {topic && (
-          <div style={{ fontSize: 11, color: t.textTert, marginTop: 2 }}>
-            {topic}
-          </div>
-        )}
-        <div style={{ fontSize: 11, color: t.textTert, marginTop: 2 }}>
-          {date} · {time}
-        </div>
-      </div>
-      <span
-        style={{
-          fontSize: 11,
-          fontWeight: 600,
-          padding: "3px 9px",
-          borderRadius: 999,
-          background: gradeBg(percent),
-          color: gradeColor(percent),
-          whiteSpace: "nowrap",
-          marginLeft: 12,
-        }}
-      >
-        {percent}%
-      </span>
-    </div>
-  );
-}
-
-function ProgressChart({ results }) {
-  const chartData = useMemo(() => {
-    return safeArray(results)
-      .slice()
-      .reverse()
-      .slice(-8)
-      .map((r, i) => ({ label: i + 1, score: pct(r.score, r.total) }));
-  }, [results]);
-
-  if (chartData.length === 0) {
-    return (
-      <div
-        style={{
-          background: t.surface,
-          border: `0.5px solid ${t.border}`,
-          borderRadius: 12,
-          padding: 18,
-        }}
-      >
-        <SectionLabel>Progress trend</SectionLabel>
-        <div style={{ fontSize: 12, color: t.textSec }}>
-          Your score trend will appear here after you complete a test.
-        </div>
-      </div>
-    );
+/* Per-topic stats from the result history (newest first). */
+function buildTopicStats(results) {
+  const map = new Map();
+  for (const r of results) {
+    const topicId = idOf(r.topicId);
+    if (!topicId || ["retry", "mistakes", "review"].includes(r.mode)) continue;
+    if (!map.has(topicId)) {
+      map.set(topicId, {
+        topicId,
+        name: nameOf(r.topicId, "Topic"),
+        subjectId: idOf(r.subjectId),
+        subjectName: nameOf(r.subjectId, "Subject"),
+        attempts: [],
+      });
+    }
+    map.get(topicId).attempts.push(pct(r.score, r.total));
   }
-
-  const W = 560;
-  const H = 160;
-  const PX = 30;
-  const PY = 20;
-  const xStep =
-    chartData.length === 1 ? 0 : (W - PX * 2) / (chartData.length - 1);
-  const pts = chartData.map((d, i) => ({
-    ...d,
-    x: PX + i * xStep,
-    y: H - PY - (d.score / 100) * (H - PY * 2),
-  }));
-  const polyline = pts.map((p) => `${p.x},${p.y}`).join(" ");
-  const area = `${pts.map((p) => `${p.x}, ${p.y}`).join(" ")} ${pts[pts.length - 1].x},${H} ${pts[0].x},${H}`;
-
-  return (
-    <div
-      style={{
-        background: t.surface,
-        border: `0.5px solid ${t.border}`,
-        borderRadius: 12,
-        padding: 18,
-      }}
-    >
-      <SectionLabel>Progress trend</SectionLabel>
-      <div style={{ fontSize: 12, color: t.textSec, marginBottom: 14 }}>
-        Last {chartData.length} test{chartData.length !== 1 ? "s" : ""} by score
-        percentage
-      </div>
-      <div style={{ overflowX: "auto" }}>
-        <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", minWidth: 320 }}>
-          {[0, 25, 50, 75, 100].map((tick) => {
-            const y = H - PY - (tick / 100) * (H - PY * 2);
-            return (
-              <g key={tick}>
-                <line
-                  x1={PX}
-                  x2={W - PX}
-                  y1={y}
-                  y2={y}
-                  stroke={t.borderFaint}
-                  strokeWidth="1"
-                />
-                <text x="2" y={y + 4} fontSize="9" fill={t.textTert}>
-                  {tick}%
-                </text>
-              </g>
-            );
-          })}
-          <polygon
-            points={area}
-            fill="var(--button-primary)"
-            fillOpacity="0.06"
-          />
-          {pts.length > 1 && (
-            <polyline
-              points={polyline}
-              fill="none"
-              stroke="var(--button-primary)"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          )}
-          {pts.map((p, i) => (
-            <g key={i}>
-              <circle cx={p.x} cy={p.y} r="4" fill={gradeColor(p.score)} />
-              <text
-                x={p.x}
-                y={p.y - 8}
-                fontSize="9"
-                fill={t.text}
-                textAnchor="middle"
-              >
-                {p.score}%
-              </text>
-              <text
-                x={p.x}
-                y={H - 4}
-                fontSize="9"
-                fill={t.textTert}
-                textAnchor="middle"
-              >
-                {p.label}
-              </text>
-            </g>
-          ))}
-        </svg>
-      </div>
-    </div>
-  );
-}
-
-function EmptyState({ onStart }) {
-  return (
-    <div style={{ padding: "40px 20px", textAlign: "center" }}>
-      <div style={{ fontSize: 28, marginBottom: 10 }}>🎯</div>
-      <div
-        style={{
-          fontSize: 14,
-          fontWeight: 500,
-          color: t.text,
-          marginBottom: 6,
-        }}
-      >
-        No test results yet
-      </div>
-      <p style={{ fontSize: 12, color: t.textSec, marginBottom: 16 }}>
-        Complete your first test to start tracking your progress.
-      </p>
-      <button
-        onClick={onStart}
-        style={{
-          padding: "9px 20px",
-          borderRadius: 8,
-          border: "none",
-          background: t.blue,
-          color: "var(--bg-secondary)",
-          fontSize: 13,
-          fontWeight: 500,
-          cursor: "pointer",
-        }}
-      >
-        Start practising →
-      </button>
-    </div>
-  );
-}
-
-function useIsMobile() {
-  const [mobile, setMobile] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return window.innerWidth <= 720;
+  return [...map.values()].map((t) => {
+    const recent = t.attempts.slice(0, 3);
+    const avg = Math.round(recent.reduce((a, b) => a + b, 0) / recent.length);
+    const mastered = t.attempts.length >= 2 && t.attempts[0] >= 80 && t.attempts[1] >= 80;
+    return { ...t, avg, mastered };
   });
-
-  useEffect(() => {
-    const fn = () => setMobile(window.innerWidth <= 720);
-    window.addEventListener("resize", fn);
-    return () => window.removeEventListener("resize", fn);
-  }, []);
-
-  return mobile;
 }
+
+function weeklyChange(results) {
+  const weekAgo = Date.now() - 7 * 86400000;
+  let ws = 0, wt = 0, os = 0, ot = 0;
+  for (const r of results) {
+    const t = new Date(r.createdAt).getTime();
+    if (t >= weekAgo) { ws += Number(r.score || 0); wt += Number(r.total || 0); }
+    else { os += Number(r.score || 0); ot += Number(r.total || 0); }
+  }
+  if (!wt || !ot) return null;
+  return Math.round((ws / wt) * 100) - Math.round((os / ot) * 100);
+}
+
+/* ── small pieces ────────────────────────────────────── */
+
+const Icon = ({ d, size = 20 }) => (
+  <svg aria-hidden="true" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    {d}
+  </svg>
+);
+const ICONS = {
+  redo: <path d="M3 12a9 9 0 1 0 3-6.7L3 8m0-5v5h5" />,
+  shuffle: <path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5" />,
+  book: (<><path d="M4 5a2 2 0 0 1 2-2h12v18H6a2 2 0 0 1-2-2z" /><path d="M8 7h6M8 11h8" /></>),
+  grid: (<><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></>),
+  flame: <path d="M12 2s5 5 5 10a5 5 0 0 1-10 0c0-2 1-4 2-5 0 2 1 3 2 3 0-3 1-6 1-8z" />,
+  moon: <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />,
+  sun: (<><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></>),
+};
+
+function PlanItem({ tone, icon, title, note, onClick }) {
+  return (
+    <button type="button" className="db-plan" onClick={onClick}>
+      <span className={`db-plan-icon tone-${tone}`}><Icon d={ICONS[icon]} /></span>
+      <span className="db-plan-body">
+        <strong>{title}</strong>
+        <span>{note}</span>
+      </span>
+      <span className="db-plan-go" aria-hidden="true">›</span>
+    </button>
+  );
+}
+
+/* ── page ────────────────────────────────────────────── */
+
+const TABS = [
+  ["overview", "Home"],
+  ["history", "My results"],
+  ["leaderboard", "Leaderboard"],
+];
 
 export default function UserDashboardPage() {
   const navigate = useNavigate();
-  const isMobile = useIsMobile();
-  const userInfo = JSON.parse(localStorage.getItem("userInfo") || "{}");
+  const [searchParams, setSearchParams] = useSearchParams();
 
+  const [userInfo] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("userInfo") || "{}"); }
+    catch { return {}; }
+  });
   const [summary, setSummary] = useState(() => normalizeSummary(null));
   const [results, setResults] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [tab, setTab] = useState("overview");
-  const [isSideNavOpen, setIsSideNavOpen] = useState(false);
+  const [subjects, setSubjects] = useState([]);
   const [badges, setBadges] = useState([]);
-  const [badgePopup, setBadgePopup] = useState(null);
-
-  const fetchData = async () => {
+  const [rank, setRank] = useState(null);
+  const [active, setActive] = useState(null);
+  const [mistakeCount, setMistakeCount] = useState(0);
+  const [dueToday, setDueToday] = useState(0);
+  const [discarding, setDiscarding] = useState(false);
+  const [tourOpen, setTourOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [badgePopup, setBadgePopup] = useState(() => {
     try {
-      setIsLoading(true);
+      const stored = sessionStorage.getItem("newBadge");
+      return stored ? JSON.parse(stored) : null;
+    } catch { return null; }
+  });
 
-      const [summaryResult, historyResult, badgesResult] =
-        await Promise.allSettled([
-          api.get("/api/results/me/summary", { _tokenType: "user" }),
-          api.get("/api/results/me", { _tokenType: "user" }),
-          api.get("/api/badges/me", { _tokenType: "user" }),
-        ]);
+  const tabParam = searchParams.get("tab");
+  const tab = TABS.some(([key]) => key === tabParam) ? tabParam : "overview";
+  const setTab = (next) => {
+    setSearchParams(next === "overview" ? {} : { tab: next });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
-      if (summaryResult.status === "fulfilled") {
-        setSummary(normalizeSummary(summaryResult.value.data));
-      } else {
-        console.error("Summary load error:", summaryResult.reason);
-        setSummary(normalizeSummary(null));
-      }
-
-      if (historyResult.status === "fulfilled") {
-        setResults(safeArray(historyResult.value.data));
-      } else {
-        console.error("History load error:", historyResult.reason);
-        setResults([]);
-      }
-
-      if (badgesResult.status === "fulfilled") {
-        setBadges(safeArray(badgesResult.value.data?.badges));
-      } else {
-        console.error("Badges load error:", badgesResult.reason);
-        setBadges([]);
-      }
-    } catch (error) {
-      console.error("Error fetching dashboard data:", error);
-      setSummary(normalizeSummary(null));
-      setResults([]);
-      setBadges([]);
-    } finally {
+  useEffect(() => {
+    let cancelled = false;
+    const opts = { _tokenType: "user" };
+    Promise.allSettled([
+      api.get("/api/results/me/summary", opts),
+      api.get("/api/results/me?limit=100", opts),
+      api.get("/api/badges/me", opts),
+      api.get("/api/subjects?limit=100", opts),
+      api.get("/api/leaderboard/me?period=month", opts),
+      api.get("/api/tests/active", opts),
+      api.get("/api/tests/mistakes", opts),
+      api.get(`/api/tests/review?tz=${new Date().getTimezoneOffset()}`, opts),
+    ]).then(([sum, hist, bad, subs, lb, act, mis, rev]) => {
+      if (cancelled) return;
+      if (sum.status === "fulfilled") setSummary(normalizeSummary(sum.value.data));
+      if (hist.status === "fulfilled") setResults(safeArray(hist.value.data));
+      if (bad.status === "fulfilled") setBadges(safeArray(bad.value.data?.badges));
+      if (subs.status === "fulfilled") setSubjects(safeArray(subs.value.data));
+      if (lb.status === "fulfilled") setRank(lb.value.data);
+      if (act.status === "fulfilled") setActive(act.value.data?.active || null);
+      if (mis.status === "fulfilled") setMistakeCount(Number(mis.value.data?.total || 0));
+      if (rev.status === "fulfilled") setDueToday(Number(rev.value.data?.dueToday || 0));
       setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchData();
+    });
+    return () => { cancelled = true; };
   }, []);
 
+  // One-time intro tour (once per account; "App tour" in the menu replays it).
+  const tourParam = searchParams.get("tour");
   useEffect(() => {
-    const storedBadge = sessionStorage.getItem("newBadge");
-
-    if (!storedBadge) return undefined;
-
+    if (isLoading) return undefined;
+    const key = `bambo:tour:v${TOUR_VERSION}:${studentId()}`;
+    if (tourParam === "1") {
+      const t = setTimeout(() => setTourOpen(true), 0);
+      return () => clearTimeout(t);
+    }
     try {
-      const parsedBadge = JSON.parse(storedBadge);
-      setBadgePopup(parsedBadge);
+      if (localStorage.getItem(key)) return undefined;
+    } catch { /* ignore */ }
+    let cancelled = false;
+    api
+      .get("/api/me/onboarding", { _tokenType: "user" })
+      .then((res) => {
+        if (cancelled) return;
+        if (Number(res.data?.version || 0) >= TOUR_VERSION) {
+          try { localStorage.setItem(key, "1"); } catch { /* ignore */ }
+        } else {
+          setTourOpen(true);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [isLoading, tourParam]);
 
-      const timer = setTimeout(() => {
-        setBadgePopup(null);
-        sessionStorage.removeItem("newBadge");
-      }, 5000);
-
-      return () => clearTimeout(timer);
-    } catch (error) {
-      console.error("Badge popup parse error:", error);
-      sessionStorage.removeItem("newBadge");
-      return undefined;
-    }
-  }, []);
-
-  const handleLogout = () => {
-    localStorage.removeItem("userToken");
-    localStorage.removeItem("userInfo");
-    navigate("/user-login");
+  const finishTour = () => {
+    setTourOpen(false);
+    try { localStorage.setItem(`bambo:tour:v${TOUR_VERSION}:${studentId()}`, "1"); } catch { /* ignore */ }
+    api.put("/api/me/onboarding", { version: TOUR_VERSION }, { _tokenType: "user" }).catch(() => {});
+    if (tourParam) setSearchParams({});
   };
 
-  const closeSideNav = () => {
-    setIsSideNavOpen(false);
-  };
+  useEffect(() => {
+    if (!badgePopup) return undefined;
+    const timer = setTimeout(() => {
+      setBadgePopup(null);
+      try { sessionStorage.removeItem("newBadge"); } catch { /* ignore */ }
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [badgePopup]);
 
-  const goToPage = (path) => {
-    closeSideNav();
-    navigate(path);
-  };
-
-  const switchTab = (nextTab) => {
-    setTab(nextTab);
-    closeSideNav();
-  };
-
-  const resultList = safeArray(results);
-  const subjectEntries = Object.values(summary?.bySubject || {}).sort(
-    (a, b) => Number(b.attempts || 0) - Number(a.attempts || 0),
+  const topicStats = useMemo(() => buildTopicStats(results), [results]);
+  const weakest = useMemo(
+    () => topicStats.filter((t) => t.avg < 80).sort((a, b) => a.avg - b.avg).slice(0, 4),
+    [topicStats],
   );
-  const encouragement = getEncouragement(summary);
+  const masteredCount = topicStats.filter((t) => t.mastered).length;
+  const change = useMemo(() => weeklyChange(results), [results]);
+  const lastTen = results.slice(0, 10).reverse();
+  const latest = results[0] || null;
 
-  const s = {
-    page: {
-      fontFamily: "'Sora', sans-serif",
-      background: t.bg,
-      minHeight: "100vh",
-      paddingBottom: isMobile ? 88 : 0,
-      position: "relative",
-      overflow: "hidden",
-      zIndex: 0,
-    },
-    topbar: {
-      background: "transparent",
-      borderBottom: "none",
-      padding: isMobile ? "14px 16px 4px" : "18px 28px 4px",
-      display: isMobile ? "grid" : "flex",
-      gridTemplateColumns: isMobile ? "38px minmax(0, 1fr)" : undefined,
-      justifyContent: isMobile ? undefined : "space-between",
-      alignItems: "center",
-      gap: isMobile ? 10 : 12,
-      position: "sticky",
-      top: 0,
-      zIndex: 100,
-      boxSizing: "border-box",
-    },
-    avatar: {
-      width: 40,
-      height: 40,
-      borderRadius: "50%",
-      background: t.blueLight,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      fontSize: 13,
-      fontWeight: 600,
-      color: t.blue,
-      flexShrink: 0,
-    },
-    navPill: (active) => ({
-      fontSize: 12,
-      fontWeight: 500,
-      padding: "6px 14px",
-      borderRadius: 999,
-      border: `0.5px solid ${active ? t.navy : t.border}`,
-      background: active ? t.navy : t.surface,
-      color: active ? t.bluePale : t.textSec,
-      cursor: "pointer",
-      whiteSpace: "nowrap",
-    }),
-    ctaPill: {
-      display: "inline-flex",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: 8,
-      width: "fit-content",
-      maxWidth: isMobile ? "min(58vw, 190px)" : "none",
-      justifySelf: isMobile ? "end" : undefined,
-      minWidth: 0,
-      minHeight: isMobile ? 38 : "auto",
-      boxSizing: "border-box",
-      fontSize: isMobile ? 13 : 12,
-      fontWeight: 500,
-      padding: isMobile ? "9px 14px" : "7px 16px 7px 12px",
-      borderRadius: 999,
-      border: `0.5px solid ${t.blue}`,
-      background: `${t.blue}1a`,
-      color: t.blue,
-      cursor: "pointer",
-      whiteSpace: "nowrap",
-    },
-    dotPing: {
-      position: "relative",
-      width: 7,
-      height: 7,
-      borderRadius: 999,
-      background: t.blue,
-      display: "inline-block",
-    },
-    dotPingPulse: {
-      position: "absolute",
-      inset: -3,
-      borderRadius: 999,
-      background: t.blue,
-      opacity: 0.35,
-      animation: "ctaPing 1.6s ease-out infinite",
-    },
-    sideNavItem: (active) => ({
-      width: "100%",
-      textAlign: "left",
-      padding: "12px 14px",
-      borderRadius: 12,
-      border: `0.5px solid ${active ? t.blue : t.border}`,
-      background: active ? t.blueLight : t.surface,
-      color: active ? t.blue : t.text,
-      fontSize: 13,
-      fontWeight: 600,
-      cursor: "pointer",
-      fontFamily: "'Sora', sans-serif",
-    }),
-    main: {
-      maxWidth: 960,
-      margin: "0 auto",
-      padding: isMobile ? "10px 14px 24px" : "20px 20px 40px",
-      display: "flex",
-      flexDirection: "column",
-      gap: 20,
-    },
-    welcomeBlock: {
-      background: "transparent",
-      padding: isMobile ? "4px 0 8px" : "6px 0 10px",
-    },
-    welcomeTitle: {
-      fontSize: isMobile ? 18 : 22,
-      fontWeight: 700,
-      color: t.text,
-      lineHeight: 1.15,
-    },
-    welcomeMeta: {
-      fontSize: isMobile ? 12 : 13,
-      color: t.textSec,
-      marginTop: 3,
-    },
-    statsGrid: {
-      display: "grid",
-      gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)",
-      gap: 10,
-    },
-    contentGrid: {
-      display: "grid",
-      gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
-      gap: 14,
-    },
-    card: {
-      background: t.surface,
-      border: `0.5px solid ${t.border}`,
-      borderRadius: 12,
-      padding: 18,
-    },
-    ctaRow: {
-      display: "grid",
-      gridTemplateColumns: isMobile ? "1fr" : "2fr 1fr 1fr",
-      gap: isMobile ? 10 : 12,
-    },
-    ctaMain: {
-      background: t.navy,
-      borderRadius: 12,
-      padding: isMobile ? 16 : 20,
-      cursor: "pointer",
-      position: "relative",
-      overflow: "hidden",
-      minWidth: 0,
-    },
-    ctaSec: {
-      background: t.surface,
-      border: `0.5px solid ${t.border}`,
-      borderRadius: 12,
-      padding: isMobile ? 16 : 18,
-      cursor: "pointer",
-      display: "flex",
-      flexDirection: "column",
-      minWidth: 0,
-    },
-    insightCard: {
-      background: t.surface2,
-      border: `0.5px solid ${t.border}`,
-      borderRadius: 12,
-      padding: 18,
-      display: "flex",
-      flexDirection: "column",
-    },
-    achievementGrid: {
-      display: "grid",
-      gridTemplateColumns: isMobile
-        ? "repeat(2, minmax(0, 1fr))"
-        : "repeat(auto-fit, minmax(150px, 1fr))",
-      gap: 12,
-    },
-    achievementCard: {
-      background: t.surface2,
-      border: `0.5px solid ${t.border}`,
-      borderRadius: 12,
-      padding: 14,
-    },
-    badgePopup: {
-      position: "fixed",
-      top: isMobile ? 14 : 24,
-      right: isMobile ? 14 : 24,
-      left: isMobile ? 14 : "auto",
-      background: "#111827",
-      color: "white",
-      padding: 18,
-      borderRadius: 16,
-      zIndex: 2000,
-      maxWidth: isMobile ? "unset" : 320,
-      boxShadow: "0 15px 40px rgba(0,0,0,0.3)",
-    },
-    histTableHead: {
-      display: "grid",
-      gridTemplateColumns: isMobile ? "1fr auto auto" : "1fr auto auto auto",
-      gap: 12,
-      padding: "8px 0",
-      borderBottom: `0.5px solid ${t.border}`,
-      marginBottom: 4,
-    },
-    histTableRow: {
-      display: "grid",
-      gridTemplateColumns: isMobile ? "1fr auto auto" : "1fr auto auto auto",
-      gap: 12,
-      padding: "10px 0",
-      alignItems: "center",
-      borderBottom: `0.5px solid ${t.borderFaint}`,
-    },
-  };
+  const subjectCards = useMemo(() => {
+    const seen = new Set();
+    const cards = subjects.map((s) => {
+      seen.add(String(s._id));
+      const stats = summary.bySubject[String(s._id)];
+      return { id: s._id, name: s.name, stats };
+    });
+    for (const [id, stats] of Object.entries(summary.bySubject)) {
+      if (!seen.has(id) && id !== "deleted-subject") cards.push({ id, name: stats.name, stats });
+    }
+    return cards;
+  }, [subjects, summary.bySubject]);
 
-  const skeletonCards = [1, 2, 3, 4].map((i) => (
-    <div
-      key={i}
-      style={{
-        flex: 1,
-        minWidth: 100,
-        height: 72,
-        borderRadius: 12,
-        background: "var(--border-color)",
-      }}
-    />
-  ));
+  if (isLoading) return <BamboLoader message="Loading your dashboard" />;
+
+  const firstName = (userInfo.fullName || "").trim().split(/\s+/)[0] || "there";
+  const classLabel = [userInfo.course?.name, userInfo.level ? `${userInfo.level} Level` : null].filter(Boolean).join(" · ");
+
+  /* today's plan, built only from real data */
+  const plan = [];
+  if (dueToday > 0) {
+    plan.push({
+      tone: "green", icon: "book",
+      title: `Review ${dueToday} question${dueToday === 1 ? "" : "s"} due today`,
+      note: "Spaced review: catch them just before you forget",
+      to: "/mistakes",
+    });
+  }
+  if (mistakeCount > 0 && dueToday === 0) {
+    plan.push({
+      tone: "red", icon: "redo",
+      title: `Fix ${mistakeCount} mistake${mistakeCount === 1 ? "" : "s"}`,
+      note: "Questions you got wrong last time. Get them right to clear them",
+      to: "/mistakes",
+    });
+  }
+  if (weakest[0]) {
+    plan.push({
+      tone: "orange", icon: "redo",
+      title: `Retake: ${weakest[0].name}`,
+      note: `Your weakest topic · ${weakest[0].avg}% on recent attempts`,
+      to: `/test/topic/${weakest[0].topicId}`,
+    });
+  }
+  const topSubject = Object.entries(summary.bySubject)
+    .filter(([id]) => id !== "deleted-subject")
+    .sort((a, b) => Number(b[1].attempts || 0) - Number(a[1].attempts || 0))[0];
+  if (topSubject && plan.length < 3) {
+    plan.push({
+      tone: "blue", icon: "shuffle",
+      title: `20 random questions: ${topSubject[1].name}`,
+      note: "A mixed test from across the subject",
+      to: `/test/subject/${topSubject[0]}?mode=random&limit=20`,
+    });
+  }
+  const reviewSubjectId = weakest[0]?.subjectId || topSubject?.[0];
+  if (reviewSubjectId && plan.length < 3) {
+    const reviewName = weakest[0]?.subjectName || topSubject?.[1]?.name;
+    plan.push({
+      tone: "blue", icon: "book",
+      title: `Quick reviews: ${reviewName}`,
+      note: weakest[0] ? `Read up on ${weakest[0].name} before retaking it` : "Short summaries of each topic",
+      to: `/subject/${reviewSubjectId}/quick-review`,
+    });
+  }
+  if (plan.length === 0) {
+    plan.push(
+      { tone: "blue", icon: "grid", title: "Choose a subject", note: "Pick a subject and start a topic test", to: "/user" },
+      { tone: "green", icon: "book", title: "Try the free sample questions", note: "10 worked questions with explanations", to: "/sample-questions" },
+    );
+  }
 
   return (
-    <div style={s.page}>
-      <BlobBackground amount="full" orientation="wide" />
-      <style>{`
-  @keyframes ctaPing {
-    0% { transform: scale(1); opacity: 0.35; }
-    70%, 100% { transform: scale(2.4); opacity: 0; }
-  }
-`}</style>
-      <link
-        href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600&family=DM+Serif+Display:ital@0;1&display=swap"
-        rel="stylesheet"
-      />
+    <div className="db">
+      <StudentHeader active={tab === "overview" ? "home" : tab === "history" ? "results" : "leaderboard"} />
 
-      {badgePopup && (
-        <div style={s.badgePopup}>
-          <div style={{ fontSize: 42 }}>{badgePopup?.icon}</div>
-          <div
-            style={{
-              fontSize: 18,
-              fontWeight: 700,
-              marginTop: 10,
-            }}
-          >
-            New Badge Unlocked!
+      <main className="db-main">
+        <div className="db-top">
+          <div>
+            {classLabel && <p className="db-eyebrow">{classLabel}</p>}
+            <h1 className="db-h1">
+              {tab === "overview" ? `${greeting()}, ${firstName}` : tab === "history" ? "My results" : "Leaderboard"}
+            </h1>
           </div>
-          <div
-            style={{
-              fontSize: 16,
-              marginTop: 8,
-            }}
-          >
-            {badgePopup?.title}
-          </div>
-          <div
-            style={{
-              fontSize: 13,
-              opacity: 0.8,
-              marginTop: 6,
-              lineHeight: 1.5,
-            }}
-          >
-            {badgePopup?.description}
-          </div>
-        </div>
-      )}
-
-      <header style={s.topbar}>
-        <button
-          type="button"
-          onClick={() => setIsSideNavOpen(true)}
-          aria-label="Open navigation"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            width: 38,
-            height: 38,
-            borderRadius: 999,
-            border: `0.5px solid ${t.border}`,
-            background: "rgba(255,255,255,0.04)",
-            color: t.text,
-            cursor: "pointer",
-          }}
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-            <path
-              d="M4 7h16M4 12h16M4 17h16"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-            />
-          </svg>
-        </button>
-
-        <button style={s.ctaPill} onClick={() => navigate("/user")}>
-          <span style={s.dotPing}>
-            <span style={s.dotPingPulse} />
-          </span>
-          Practice now
-        </button>
-      </header>
-
-      {isSideNavOpen && (
-        <div
-          onClick={closeSideNav}
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(15, 23, 42, 0.45)",
-            zIndex: 900,
-          }}
-        />
-      )}
-
-      <aside
-        style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          width: isMobile ? "82vw" : 320,
-          maxWidth: 340,
-          height: "100dvh",
-          background: t.surface,
-          borderRight: `0.5px solid ${t.border}`,
-          zIndex: 1000,
-          transform: isSideNavOpen ? "translateX(0)" : "translateX(-105%)",
-          transition: "transform 0.25s ease",
-          boxShadow: isSideNavOpen ? "18px 0 45px rgba(15,23,42,0.18)" : "none",
-          display: "flex",
-          flexDirection: "column",
-          padding: 18,
-          paddingBottom: "35px",
-          boxSizing: "border-box",
-          overflowY: "auto",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: 22,
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={s.avatar}>
-              {(userInfo.fullName || "S")
-                .split(" ")
-                .map((w) => w[0])
-                .slice(0, 2)
-                .join("")
-                .toUpperCase()}
-            </div>
-            <div>
-              <div style={{ fontSize: 14, fontWeight: 600, color: t.text }}>
-                {userInfo.fullName || "Student"}
-              </div>
-              <div style={{ fontSize: 11, color: t.textSec }}>
-                {userInfo.course?.name || "Course"} ·{" "}
-                {userInfo.level ? `${userInfo.level}L` : "Level"}
-              </div>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={closeSideNav}
-            aria-label="Close navigation"
-            style={{
-              width: 34,
-              height: 34,
-              borderRadius: 999,
-              border: `0.5px solid ${t.border}`,
-              background: t.surface2,
-              color: t.text,
-              cursor: "pointer",
-            }}
-          >
-            ×
-          </button>
-        </div>
-
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <button
-            type="button"
-            onClick={() => goToPage("/")}
-            style={s.sideNavItem(false)}
-          >
-            Home
-          </button>
-
-          <button
-            type="button"
-            onClick={() => switchTab("overview")}
-            style={s.sideNavItem(tab === "overview")}
-          >
-            Overview
-          </button>
-
-          <button
-            type="button"
-            onClick={() => switchTab("history")}
-            style={s.sideNavItem(tab === "history")}
-          >
-            History
-          </button>
-
-          <button
-            type="button"
-            onClick={() => goToPage("/user")}
-            style={s.sideNavItem(false)}
-          >
-            Practice
-          </button>
-
-          <button
-            type="button"
-            onClick={() => goToPage("/request-subject")}
-            style={s.sideNavItem(false)}
-          >
-            Request Subject
-          </button>
-        </div>
-
-        <div style={{ marginTop: "auto" }}>
-          <button
-            type="button"
-            onClick={handleLogout}
-            style={{
-              ...s.sideNavItem(false),
-              color: t.red,
-              background: t.redLight,
-              borderColor: t.redLight,
-              width: "100%",
-            }}
-          >
-            Sign out
-          </button>
-        </div>
-      </aside>
-
-      <main style={s.main}>
-        <div style={s.welcomeBlock}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={s.avatar}>
-              {(userInfo.fullName || "S")
-                .split(" ")
-                .map((w) => w[0])
-                .slice(0, 2)
-                .join("")
-                .toUpperCase()}
-            </div>
-
-            <div>
-              <div style={s.welcomeTitle}>
-                Welcome, {userInfo.fullName || "Student"}
-              </div>
-              <div style={s.welcomeMeta}>
-                {userInfo.course?.name || "Course"} ·{" "}
-                {userInfo.level ? `${userInfo.level}L` : "Level"}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {isMobile && (
-          <div
-            style={{
-              display: "flex",
-              gap: 6,
-              overflowX: "auto",
-              paddingBottom: 4,
-              scrollbarWidth: "none",
-            }}
-          >
-            {["overview", "history"].map((item) => (
-              <button
-                key={item}
-                onClick={() => setTab(item)}
-                style={{
-                  fontSize: 12,
-                  fontWeight: 500,
-                  padding: "6px 14px",
-                  borderRadius: 999,
-                  border: `0.5px solid ${tab === item ? t.navy : t.border}`,
-                  background: tab === item ? t.navy : t.surface,
-                  color: tab === item ? t.bluePale : t.textSec,
-                  whiteSpace: "nowrap",
-                  cursor: "pointer",
-                }}
-              >
-                {item.charAt(0).toUpperCase() + item.slice(1)}
-              </button>
-            ))}
-          </div>
-        )}
-
-        <div>
-          <SectionLabel>Your stats</SectionLabel>
-          {isLoading ? (
-            <div style={{ display: "flex", gap: 10 }}>{skeletonCards}</div>
-          ) : (
-            <div style={s.statsGrid}>
-              <StatCard
-                value={`${summary.avgScore}%`}
-                label="Avg score"
-                color={gradeColor(summary.avgScore)}
-              />
-              <StatCard value={summary.totalTests} label="Tests taken" />
-              <StatCard
-                value={`${summary.best}%`}
-                label="Best score"
-                color={t.blue}
-              />
-              <StatCard
-                value={summary.streak}
-                label="Day streak"
-                delta={summary.streak > 0 ? "Active" : "Start"}
-                deltaBg={t.greenLight}
-                deltaColor={t.green}
-              />
+          {summary.streak > 0 && (
+            <div className="db-streak">
+              <Icon d={ICONS.flame} size={18} />
+              {summary.streak}-day streak · practise today to keep it
             </div>
           )}
         </div>
 
         {tab === "overview" && (
           <>
-            <div style={s.contentGrid}>
-              <div style={s.card}>
-                <SectionLabel>Performance by subject</SectionLabel>
-                {isLoading ? (
-                  <div style={{ color: t.textTert, fontSize: 13 }}>
-                    Loading...
-                  </div>
-                ) : subjectEntries.length === 0 ? (
-                  <EmptyState onStart={() => navigate("/user")} />
-                ) : (
-                  subjectEntries.map((subj, i) => {
-                    const p = pct(subj.correct, subj.total);
-                    return (
-                      <SubjectRow
-                        key={`${subj.name}-${i}`}
-                        name={subj.name || "Unknown"}
-                        percent={p}
-                      />
-                    );
-                  })
-                )}
-              </div>
-
-              <div style={s.card}>
-                <SectionLabel>Recent tests</SectionLabel>
-                {isLoading ? (
-                  <div style={{ color: t.textTert, fontSize: 13 }}>
-                    Loading...
-                  </div>
-                ) : resultList.length === 0 ? (
-                  <EmptyState onStart={() => navigate("/user")} />
+            <section className="db-grid-2" aria-label="Next step and today's plan">
+              <div className="db-hero">
+                {active ? (
+                  <>
+                    <p className="db-hero-label">{active.remaining > 0 ? "Unfinished test" : "Time ran out on your test"}</p>
+                    <div>
+                      <h2>{active.topicName || (active.mode === "mistakes" ? "Mistake practice" : active.mode === "random" ? "Random mix" : active.subjectName || "Your test")}</h2>
+                      <p>{active.subjectName}{active.mode === "topic" ? " · Topic test" : ""}</p>
+                    </div>
+                    <div>
+                      <div className="db-hero-meta">
+                        <span>{active.answered} of {active.total} answered</span>
+                        <span>{active.remaining > 0 ? `${Math.floor(active.remaining / 60)}:${String(active.remaining % 60).padStart(2, "0")} left` : "Submit to see your score"}</span>
+                      </div>
+                      <div className="db-hero-track">
+                        <div className="db-hero-fill" style={{ width: `${(active.answered / Math.max(active.total, 1)) * 100}%` }} />
+                      </div>
+                    </div>
+                    <div className="db-hero-actions">
+                      <button type="button" className="db-btn-white" onClick={() => navigate(`/test/subject/${active.subjectId}?resume=${active.sessionId}`)}>
+                        {active.remaining > 0 ? "Resume test" : "Submit my answers"}
+                      </button>
+                      <button
+                        type="button"
+                        className="db-btn-ghost"
+                        disabled={discarding}
+                        onClick={async () => {
+                          setDiscarding(true);
+                          try {
+                            await api.post(`/api/tests/${active.sessionId}/discard`, {}, { _tokenType: "user" });
+                            setActive(null);
+                          } finally {
+                            setDiscarding(false);
+                          }
+                        }}
+                      >
+                        Discard
+                      </button>
+                    </div>
+                  </>
+                ) : latest ? (
+                  <>
+                    <p className="db-hero-label">Pick up where you left off</p>
+                    <div>
+                      <h2>{nameOf(latest.topicId, null) || nameOf(latest.subjectId, "Your last test")}</h2>
+                      <p>
+                        {nameOf(latest.subjectId, "Subject")} · {MODE_LABEL[latest.mode] || "Test"} · {relativeDay(latest.createdAt)}
+                      </p>
+                    </div>
+                    <div>
+                      <div className="db-hero-meta">
+                        <span>Last score {latest.score}/{latest.total}</span>
+                        <span>{pct(latest.score, latest.total)}%</span>
+                      </div>
+                      <div className="db-hero-track">
+                        <div className="db-hero-fill" style={{ width: `${pct(latest.score, latest.total)}%` }} />
+                      </div>
+                    </div>
+                    <div className="db-hero-actions">
+                      <button type="button" className="db-btn-white" onClick={() => navigate(retakePath(latest))}>Retake test</button>
+                      {idOf(latest.subjectId) && (
+                        <button type="button" className="db-btn-ghost" onClick={() => navigate(`/subject/${idOf(latest.subjectId)}/topics`)}>Choose another topic</button>
+                      )}
+                    </div>
+                  </>
                 ) : (
                   <>
-                    {resultList.slice(0, 5).map((r, i) => (
-                      <HistRow
-                        key={r._id || i}
-                        title={r.subjectId?.name || "Unknown"}
-                        topic={r.topicId?.name}
-                        date={fmtDate(r.createdAt)}
-                        time={fmtTime(r.timeTaken)}
-                        percent={pct(r.score, r.total)}
-                      />
-                    ))}
-                    <span
-                      onClick={() => setTab("history")}
-                      style={{
-                        fontSize: 12,
-                        color: t.blue,
-                        cursor: "pointer",
-                        marginTop: 10,
-                        display: "inline-block",
-                        fontWeight: 500,
-                      }}
-                    >
-                      View all history →
-                    </span>
+                    <p className="db-hero-label">Welcome to Bambo</p>
+                    <div>
+                      <h2>Take your first test</h2>
+                      <p>Pick a subject, choose a topic and answer a short timed test. Your progress shows up here.</p>
+                    </div>
+                    <div className="db-hero-actions">
+                      <button type="button" className="db-btn-white" onClick={() => navigate("/user")}>Choose a subject</button>
+                    </div>
                   </>
                 )}
               </div>
-            </div>
 
-            <ProgressChart results={resultList} />
-
-            <div style={s.card}>
-              <SectionLabel>Achievements</SectionLabel>
-
-              {isLoading ? (
-                <div style={{ color: t.textTert, fontSize: 13 }}>
-                  Loading achievements...
+              <div className="db-card">
+                <div className="db-card-head">
+                  <h2 className="db-h2">Today's plan</h2>
+                  <span className="db-small">{plan.length} step{plan.length === 1 ? "" : "s"}</span>
                 </div>
-              ) : badges.length === 0 ? (
-                <div
-                  style={{ fontSize: 12, color: t.textSec, lineHeight: 1.5 }}
-                >
-                  No badges earned yet. Complete tests to unlock achievements.
+                {plan.map((item) => (
+                  <PlanItem key={item.title} {...item} onClick={() => navigate(item.to)} />
+                ))}
+              </div>
+            </section>
+
+            <section className="db-grid-4" aria-label="Your numbers">
+              <div className="db-stat">
+                <p className="db-stat-label">Average score</p>
+                <p className="db-stat-value">{summary.avgScore}%</p>
+                <p className="db-stat-note">
+                  {change === null ? (
+                    `Best: ${summary.best}%`
+                  ) : change >= 0 ? (
+                    <span className="db-up">↑ {change} point{change === 1 ? "" : "s"} this week</span>
+                  ) : (
+                    <span className="db-down">↓ {Math.abs(change)} point{change === -1 ? "" : "s"} this week</span>
+                  )}
+                </p>
+              </div>
+              <div className="db-stat">
+                <p className="db-stat-label">Questions answered</p>
+                <p className="db-stat-value">{summary.totalQuestions.toLocaleString("en-GB")}</p>
+                <p className="db-stat-note">across {summary.totalTests} test{summary.totalTests === 1 ? "" : "s"}</p>
+              </div>
+              <div className="db-stat">
+                <p className="db-stat-label">Topics mastered</p>
+                <p className="db-stat-value">{masteredCount}<small> / {topicStats.length}</small></p>
+                <p className="db-stat-note">80%+ on your last 2 attempts</p>
+              </div>
+              <button type="button" className="db-stat clickable" onClick={() => setTab("leaderboard")}>
+                <p className="db-stat-label">Leaderboard · this month</p>
+                <p className="db-stat-value">{rank?.me?.rank ? `#${rank.me.rank}` : "–"}</p>
+                <p className="db-stat-note">
+                  {rank?.me?.rank ? `of ${rank.rankedCount} · ${rank.me.perfects} perfect${rank.me.perfects === 1 ? "" : "s"}` : "Score 100% on a topic to get ranked"}
+                </p>
+              </button>
+            </section>
+
+            <section className="db-grid-2-wide">
+              <div className="db-card">
+                <div className="db-card-head">
+                  <h2 className="db-h2">Weakest topics</h2>
+                  {weakest[0] && (
+                    <button type="button" className="db-link" onClick={() => navigate(`/test/topic/${weakest[0].topicId}`)}>Practise the weakest</button>
+                  )}
                 </div>
+                {weakest.length === 0 ? (
+                  <p className="db-small">
+                    {topicStats.length === 0 ? "Take a few topic tests and your weakest topics will show up here." : "Nothing below 80% right now. Nice work!"}
+                  </p>
+                ) : (
+                  weakest.map((t) => {
+                    const tone = scoreTone(t.avg);
+                    return (
+                      <button key={t.topicId} type="button" className="db-topic-row" onClick={() => navigate(`/test/topic/${t.topicId}`)} style={{ border: "none", background: "none", padding: 0, textAlign: "left", cursor: "pointer", color: "inherit", font: "inherit" }} aria-label={`Practise ${t.name}, ${t.avg}%`}>
+                        <span className="db-topic-head">
+                          <span>{t.name}</span>
+                          <span style={{ color: tone.color, fontWeight: 600 }}>{t.avg}%</span>
+                        </span>
+                        <span className="db-track" style={{ display: "block" }}>
+                          <span className="db-fill" style={{ display: "block", width: `${Math.max(t.avg, 3)}%`, background: tone.bar }} />
+                        </span>
+                      </button>
+                    );
+                  })
+                )}
+                <p className="db-small">Based on your last 3 attempts at each topic.</p>
+              </div>
+
+              <div className="db-card">
+                <div className="db-card-head">
+                  <h2 className="db-h2">Last {Math.min(results.length, 10) || 10} tests</h2>
+                  <button type="button" className="db-link" onClick={() => setTab("history")}>All results</button>
+                </div>
+                {results.length === 0 ? (
+                  <p className="db-small">Your recent scores will appear here after your first test.</p>
+                ) : (
+                  <>
+                    <div className="db-chart" role="img" aria-label={`Scores of your last ${lastTen.length} tests: ${lastTen.map((r) => pct(r.score, r.total) + "%").join(", ")}`}>
+                      {lastTen.map((r, i) => (
+                        <div
+                          key={r._id || i}
+                          className={`db-chart-bar${i === lastTen.length - 1 ? " latest" : ""}`}
+                          style={{ height: `${Math.max(pct(r.score, r.total), 3)}%` }}
+                          title={`${nameOf(r.topicId, null) || nameOf(r.subjectId, "Test")}: ${pct(r.score, r.total)}%`}
+                        />
+                      ))}
+                    </div>
+                    <div>
+                      {results.slice(0, 3).map((r, i) => {
+                        const p = pct(r.score, r.total);
+                        return (
+                          <div className="db-list-row" key={r._id || i}>
+                            <span style={{ minWidth: 0 }}>
+                              <strong>{nameOf(r.topicId, null) || nameOf(r.subjectId, "Test")}</strong>
+                              <span style={{ color: "var(--text-secondary)" }}> · {relativeDay(r.createdAt)}</span>
+                            </span>
+                            <span style={{ fontWeight: 600, color: p < 50 ? "#9A3412" : "inherit", whiteSpace: "nowrap" }}>{r.score}/{r.total}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+              </div>
+            </section>
+
+            <section aria-label="Your subjects" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <div className="db-card-head">
+                <h2 className="db-h2">Your subjects</h2>
+                <button type="button" className="db-link" onClick={() => navigate("/user")}>See all</button>
+              </div>
+              {subjectCards.length === 0 ? (
+                <div className="db-card"><p className="db-small">No subjects for your course and level yet. You can request one from the account menu.</p></div>
               ) : (
-                <div style={s.achievementGrid}>
-                  {badges.map((badge) => (
-                    <div key={badge._id || badge.key} style={s.achievementCard}>
-                      <div style={{ fontSize: 30 }}>{badge.icon}</div>
-                      <div
-                        style={{
-                          marginTop: 8,
-                          fontWeight: 600,
-                          fontSize: 12,
-                          color: t.text,
-                        }}
-                      >
-                        {badge.title}
-                      </div>
-                      <div
-                        style={{
-                          marginTop: 4,
-                          fontSize: 10,
-                          color: t.textSec,
-                          lineHeight: 1.4,
-                        }}
-                      >
-                        {badge.description}
-                      </div>
+                <div className="db-grid-3">
+                  {subjectCards.slice(0, 6).map((s) => {
+                    const avg = s.stats ? pct(s.stats.correct, s.stats.total) : 0;
+                    return (
+                      <button key={s.id} type="button" className="db-subject" onClick={() => navigate(`/subject/${s.id}/topics`)}>
+                        <strong>{s.name}</strong>
+                        <span className="db-small">
+                          {s.stats ? `${s.stats.attempts} test${s.stats.attempts === 1 ? "" : "s"} · average ${avg}%` : "Not started yet"}
+                        </span>
+                        <span className="db-track" style={{ display: "block", height: 6 }}>
+                          <span className="db-fill" style={{ display: "block", height: 6, width: `${s.stats ? Math.max(avg, 3) : 0}%`, background: "#185FA5" }} />
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+
+            {badges.length > 0 && (
+              <section className="db-card" aria-label="Achievements">
+                <h2 className="db-h2">Achievements</h2>
+                <div className="db-badges">
+                  {badges.map((b) => (
+                    <div className="db-badge" key={b._id || b.key}>
+                      <span aria-hidden="true">{b.icon}</span>
+                      <div><strong>{b.title}</strong><small>{b.description}</small></div>
                     </div>
                   ))}
                 </div>
-              )}
-            </div>
-
-            <div style={s.ctaRow}>
-              <div
-                style={s.ctaMain}
-                onClick={() => navigate("/user")}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = "#0C447C";
-                  e.currentTarget.style.transform = "translateY(-1px)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = t.navy;
-                  e.currentTarget.style.transform = "translateY(0)";
-                }}
-              >
-                <div
-                  style={{
-                    position: "absolute",
-                    top: 18,
-                    right: 18,
-                    fontSize: 16,
-                    color: "rgba(255,255,255,0.3)",
-                  }}
-                >
-                  →
-                </div>
-                <div
-                  style={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: 8,
-                    background: "rgba(255,255,255,0.12)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    marginBottom: 14,
-                  }}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <path d="M5 3l14 9-14 9V3z" fill="white" />
-                  </svg>
-                </div>
-                <div
-                  style={{
-                    fontSize: 15,
-                    fontWeight: 600,
-                    color: "var(--bg-secondary)",
-                    marginBottom: 4,
-                  }}
-                >
-                  Start practising
-                </div>
-                <div
-                  style={{
-                    fontSize: 12,
-                    color: "rgba(255,255,255,0.5)",
-                    lineHeight: 1.4,
-                  }}
-                >
-                  {summary.totalTests === 0
-                    ? "You have not taken any tests yet. Start now."
-                    : `${summary.totalTests} test${summary.totalTests !== 1 ? "s" : ""} completed. Keep going.`}
-                </div>
-                <span
-                  style={{
-                    fontSize: 12,
-                    color: t.bluePale,
-                    marginTop: 12,
-                    display: "block",
-                    fontWeight: 500,
-                  }}
-                >
-                  Pick a subject →
-                </span>
-              </div>
-
-              <div
-                style={s.ctaSec}
-                onClick={() => navigate("/request-subject")}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = t.surface2;
-                  e.currentTarget.style.transform = "translateY(-1px)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = t.surface;
-                  e.currentTarget.style.transform = "translateY(0)";
-                }}
-              >
-                <div
-                  style={{
-                    width: 30,
-                    height: 30,
-                    borderRadius: 8,
-                    background: t.blueLight,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    marginBottom: 12,
-                  }}
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                    <path
-                      d="M12 5v14M5 12h14"
-                      stroke={t.blue}
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                </div>
-                <div
-                  style={{
-                    fontSize: 13,
-                    fontWeight: 600,
-                    color: t.text,
-                    marginBottom: 4,
-                  }}
-                >
-                  Request subject
-                </div>
-                <div
-                  style={{ fontSize: 11, color: t.textSec, lineHeight: 1.4 }}
-                >
-                  Add a new topic to the library.
-                </div>
-              </div>
-
-              <div style={s.insightCard}>
-                <div
-                  style={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: "50%",
-                    background: t.blue,
-                    marginBottom: 10,
-                  }}
-                />
-                <div
-                  style={{
-                    fontSize: 13,
-                    fontWeight: 600,
-                    color: t.text,
-                    marginBottom: 5,
-                  }}
-                >
-                  {encouragement.title}
-                </div>
-                <div
-                  style={{ fontSize: 12, color: t.textSec, lineHeight: 1.5 }}
-                >
-                  {encouragement.text}
-                </div>
-              </div>
-            </div>
+              </section>
+            )}
           </>
         )}
 
         {tab === "history" && (
-          <div style={s.card}>
-            <SectionLabel>All test history</SectionLabel>
-
-            <div style={s.histTableHead}>
-              {(isMobile
-                ? ["Subject", "Date", "Score"]
-                : ["Subject / Topic", "Date", "Time", "Score"]
-              ).map((h) => (
-                <span
-                  key={h}
-                  style={{
-                    fontSize: 10,
-                    fontWeight: 600,
-                    color: t.textTert,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.08em",
-                  }}
-                >
-                  {h}
-                </span>
-              ))}
-            </div>
-
-            {isLoading ? (
-              <div
-                style={{ padding: "32px 0", color: t.textTert, fontSize: 13 }}
-              >
-                Loading...
+          <section className="db-card" aria-label="All test history">
+            {results.length === 0 ? (
+              <div className="db-empty">
+                <span>No tests yet. Your results will be listed here.</span>
+                <button type="button" className="db-btn" onClick={() => navigate("/user")}>Start practising</button>
               </div>
-            ) : resultList.length === 0 ? (
-              <EmptyState onStart={() => navigate("/user")} />
             ) : (
-              resultList.map((r, i) => {
-                const p = pct(r.score, r.total);
-                const subject = r.subjectId?.name || "Unknown";
-                const topic = r.topicId?.name;
-
-                return (
-                  <div key={r._id || i} style={s.histTableRow}>
-                    <div>
-                      <div
-                        style={{
-                          fontSize: 12,
-                          fontWeight: 500,
-                          color: t.text,
-                          textTransform: "capitalize",
-                        }}
-                      >
-                        {subject}
-                      </div>
-                      {topic && (
-                        <div
-                          style={{
-                            fontSize: 11,
-                            color: t.textTert,
-                            marginTop: 1,
-                          }}
-                        >
-                          {topic}
-                        </div>
-                      )}
-                    </div>
-                    <span style={{ fontSize: 11, color: t.textTert }}>
-                      {fmtDate(r.createdAt)}
-                    </span>
-                    {!isMobile && (
-                      <span style={{ fontSize: 11, color: t.textSec }}>
-                        {fmtTime(r.timeTaken)}
-                      </span>
-                    )}
-                    <span
-                      style={{
-                        fontSize: 11,
-                        fontWeight: 600,
-                        padding: "3px 9px",
-                        borderRadius: 999,
-                        background: gradeBg(p),
-                        color: gradeColor(p),
-                        textAlign: "center",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {p}%
-                    </span>
-                  </div>
-                );
-              })
+              <div style={{ overflowX: "auto" }}>
+                <table className="db-table">
+                  <thead>
+                    <tr>
+                      <th>Test</th>
+                      <th>Date</th>
+                      <th className="db-hide-sm">Time</th>
+                      <th>Score</th>
+                      <th aria-label="Actions" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {results.map((r, i) => {
+                      const p = pct(r.score, r.total);
+                      const tone = scoreTone(p);
+                      return (
+                        <tr key={r._id || i}>
+                          <td>
+                            {nameOf(r.topicId, null) || nameOf(r.subjectId, "Test")}
+                            <small>{nameOf(r.subjectId, "")} · {MODE_LABEL[r.mode] || "Test"}</small>
+                          </td>
+                          <td style={{ whiteSpace: "nowrap" }}>{relativeDay(r.createdAt)}</td>
+                          <td className="db-hide-sm">{fmtTime(r.timeTaken)}</td>
+                          <td>
+                            <span className="db-pill" style={{ background: tone.bg, color: tone.color }}>{r.score}/{r.total} · {p}%</span>
+                          </td>
+                          <td style={{ textAlign: "right" }}>
+                            <button type="button" className="db-link" onClick={() => navigate(retakePath(r))}>Retake</button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             )}
-          </div>
+          </section>
         )}
+
+        {tab === "leaderboard" && <LeaderboardPanel />}
       </main>
+
+      {tourOpen && <OnboardingTour onDone={finishTour} />}
+
+      {badgePopup && !tourOpen && (
+        <div className="db-toast" role="status">
+          <span aria-hidden="true">{badgePopup.icon}</span>
+          <div>
+            <strong>New badge: {badgePopup.title}</strong>
+            <small>{badgePopup.description}</small>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

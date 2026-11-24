@@ -1,8 +1,15 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
+import { hasStudentSession } from "../lib/session";
 
 function PublicNavbar() {
   const [open, setOpen] = useState(false);
+  // Checked after the page loads, so the pre-rendered page stays the same for everyone.
+  const [loggedIn, setLoggedIn] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setLoggedIn(hasStudentSession()), 0);
+    return () => clearTimeout(t);
+  }, []);
   const location = useLocation();
   useEffect(() => setOpen(false), [location.pathname]);
 
@@ -56,12 +63,20 @@ function PublicNavbar() {
           </nav>
 
           <div className="public-actions">
-            <Link className="public-nav-button secondary" to="/user-login">
-              Log in
-            </Link>
-            <Link className="public-nav-button primary" to="/user-signup">
-              Create account
-            </Link>
+            {loggedIn ? (
+              <Link className="public-nav-button primary" to="/user-dashboard">
+                Go to my dashboard
+              </Link>
+            ) : (
+              <>
+                <Link className="public-nav-button secondary" to="/user-login">
+                  Log in
+                </Link>
+                <Link className="public-nav-button primary" to="/user-signup">
+                  Create account
+                </Link>
+              </>
+            )}
           </div>
 
           <button
@@ -99,12 +114,20 @@ function PublicNavbar() {
                 Contact
               </NavLink>
               <div className="mobile-actions">
-                <Link className="public-nav-button secondary" to="/user-login">
-                  Log in
-                </Link>
-                <Link className="public-nav-button primary" to="/user-signup">
-                  Create account
-                </Link>
+                {loggedIn ? (
+                  <Link className="public-nav-button primary" to="/user-dashboard" style={{ gridColumn: "1 / -1" }}>
+                    Go to my dashboard
+                  </Link>
+                ) : (
+                  <>
+                    <Link className="public-nav-button secondary" to="/user-login">
+                      Log in
+                    </Link>
+                    <Link className="public-nav-button primary" to="/user-signup">
+                      Create account
+                    </Link>
+                  </>
+                )}
               </div>
             </nav>
           </div>

@@ -1,862 +1,284 @@
 import { useEffect, useMemo, useState } from "react";
-import api from "../lib/api";
 import { useNavigate, useParams } from "react-router-dom";
-import BlobBackground from "../components/BlobBackground";
+import api from "../lib/api";
+import StudentHeader from "../components/StudentHeader";
+import BamboLoader from "../components/BamboLoader";
+import "../styles/dashboard.css";
+import "../styles/student.css";
 
-function ChevronRight() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 14 14" fill="none">
-      <path
-        d="M5 3l4 4-4 4"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
+const listOf = (data, key) =>
+  Array.isArray(data) ? data : Array.isArray(data?.[key]) ? data[key] : Array.isArray(data?.data) ? data.data : [];
+const pct = (s, t) => (Number(t) ? Math.round((Number(s) / Number(t)) * 100) : 0);
+const idOf = (ref) => (ref && typeof ref === "object" ? ref._id : ref) || null;
+
+const STATUS = {
+  none: { label: "Not started", cls: "tag-none" },
+  work: { label: "Needs work", cls: "tag-work" },
+  good: { label: "Doing well", cls: "tag-good" },
+  master: { label: "Mastered", cls: "tag-master" },
+};
+
+function shortDate(date) {
+  if (!date) return "";
+  const d = new Date(date);
+  const days = Math.round((Date.now() - d.getTime()) / 86400000);
+  if (days <= 0) return "Today";
+  if (days === 1) return "Yesterday";
+  if (days < 7) return d.toLocaleDateString("en-GB", { weekday: "short" });
+  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 }
 
-function BookmarkIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-      <path
-        d="M5 2h10a1 1 0 0 1 1 1v14l-6-3-6 3V3a1 1 0 0 1 1-1Z"
-        stroke="var(--button-primary)"
-        strokeWidth="1.3"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
+const toneBar = (p) => (p >= 80 ? "#16A34A" : p >= 50 ? "#3B82F6" : "#EA580C");
+const minutes = (seconds) => Math.max(1, Math.round(Number(seconds || 0) / 60));
 
-function QuickReviewIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-      <path
-        d="M4 3.5h8.5A2.5 2.5 0 0 1 15 6v10.5H6.5A2.5 2.5 0 0 0 4 19V3.5Z"
-        stroke="var(--button-primary)"
-        strokeWidth="1.3"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M7 7h5M7 10h5M7 13h3"
-        stroke="var(--button-primary)"
-        strokeWidth="1.3"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function LayersIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 14 14" fill="none">
-      <path
-        d="M2 5l5-3 5 3-5 3-5-3Z"
-        stroke="var(--button-primary)"
-        strokeWidth="1.2"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M2 9l5 3 5-3"
-        stroke="var(--button-primary)"
-        strokeWidth="1.2"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function SearchIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
-      <circle
-        cx="8.5"
-        cy="8.5"
-        r="5.5"
-        stroke="currentColor"
-        strokeWidth="1.5"
-      />
-      <path
-        d="M13 13l4 4"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function TopicSelectionPage() {
+export default function TopicSelectionPage() {
   const { subjectId } = useParams();
   const navigate = useNavigate();
-
   const [subject, setSubject] = useState(null);
   const [topics, setTopics] = useState([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [subjectQuestions, setSubjectQuestions] = useState([]);
+  const [results, setResults] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [randomQuestionCount, setRandomQuestionCount] = useState(20);
-
-  const S = {
-    page: {
-      minHeight: "100vh",
-      background: "var(--bg-primary)",
-      padding: "2.5rem 1.25rem 4rem",
-      position: "relative",
-      overflow: "hidden",
-    },
-    inner: {
-      maxWidth: "1080px",
-      margin: "0 auto",
-      position: "relative",
-      zIndex: 1,
-    },
-    header: {
-      marginBottom: "2rem",
-    },
-    backBtn: {
-      display: "inline-flex",
-      alignItems: "center",
-      gap: "6px",
-      marginBottom: "1.25rem",
-      padding: "7px 14px",
-      border: "0.5px solid var(--border-color)",
-      borderRadius: "8px",
-      background: "var(--bg-secondary)",
-      color: "var(--text-secondary)",
-      fontSize: "13px",
-      fontWeight: "500",
-      cursor: "pointer",
-      transition: "all 0.2s",
-    },
-    eyebrow: {
-      fontSize: "11px",
-      fontWeight: "600",
-      color: "var(--text-secondary)",
-      textTransform: "uppercase",
-      letterSpacing: "0.08em",
-      marginBottom: "0.75rem",
-    },
-    heading: {
-      fontSize: "clamp(24px, 4vw, 32px)",
-      fontWeight: "600",
-      color: "var(--text-primary)",
-      margin: "0 0 0.625rem",
-      letterSpacing: "-0.02em",
-    },
-    subheading: {
-      fontSize: "14px",
-      color: "var(--text-secondary)",
-      lineHeight: "1.65",
-      maxWidth: "540px",
-      margin: "0",
-    },
-    statsRow: {
-      display: "flex",
-      gap: "20px",
-      flexWrap: "wrap",
-      marginTop: "1rem",
-      fontSize: "13px",
-    },
-    statItem: {
-      display: "flex",
-      alignItems: "center",
-      gap: "6px",
-      color: "var(--text-secondary)",
-    },
-    statValue: {
-      fontWeight: "600",
-      color: "var(--button-primary)",
-    },
-    searchWrapper: {
-      position: "relative",
-      marginTop: "1.5rem",
-      marginBottom: "1.5rem",
-      maxWidth: "560px",
-    },
-    searchIcon: {
-      position: "absolute",
-      left: "14px",
-      top: "50%",
-      transform: "translateY(-50%)",
-      color: "var(--text-secondary)",
-      pointerEvents: "none",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    searchInput: {
-      width: "100%",
-      boxSizing: "border-box",
-      border: "0.5px solid var(--border-color)",
-      borderRadius: "10px",
-      padding: "12px 14px 12px 42px",
-      background: "var(--bg-secondary)",
-      color: "var(--text-primary)",
-      fontSize: "14px",
-      fontWeight: "500",
-      outline: "none",
-      transition: "all 0.2s ease",
-    },
-    clearSearchButton: {
-      position: "absolute",
-      right: "10px",
-      top: "50%",
-      transform: "translateY(-50%)",
-      width: "26px",
-      height: "26px",
-      border: "none",
-      borderRadius: "50%",
-      background: "var(--surface-alt)",
-      color: "var(--text-secondary)",
-      cursor: "pointer",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      fontSize: "16px",
-      fontWeight: "700",
-      lineHeight: 1,
-    },
-    grid: {
-      display: "grid",
-      gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))",
-      gap: "16px",
-    },
-    card: {
-      background: "var(--bg-secondary)",
-      border: "0.5px solid var(--border-color)",
-      borderRadius: "14px",
-      padding: "1.5rem",
-      display: "flex",
-      flexDirection: "column",
-      cursor: "default",
-      transition: "all 0.2s ease",
-    },
-    cardHover: {
-      borderColor: "rgba(24, 95, 165, 0.25)",
-      boxShadow: "0 8px 32px rgba(24,95,165,0.10), 0 2px 8px rgba(0,0,0,0.06)",
-      transform: "translateY(-2px)",
-    },
-    iconBubble: {
-      width: "44px",
-      height: "44px",
-      borderRadius: "11px",
-      background: "var(--surface-alt)",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      marginBottom: "1.25rem",
-      flexShrink: 0,
-    },
-    cardTitle: {
-      fontSize: "16px",
-      fontWeight: "600",
-      color: "var(--text-primary)",
-      margin: "0 0 8px",
-      letterSpacing: "-0.01em",
-    },
-    cardDescription: {
-      fontSize: "13px",
-      color: "var(--text-secondary)",
-      margin: "0 0 1.25rem",
-      lineHeight: "1.65",
-      flex: 1,
-    },
-    cardMeta: {
-      display: "flex",
-      alignItems: "center",
-      gap: "4px",
-      padding: "6px 10px",
-      borderRadius: "999px",
-      background: "var(--surface-alt)",
-      color: "var(--text-secondary)",
-      fontSize: "12px",
-      fontWeight: "500",
-      marginBottom: "1.25rem",
-      width: "fit-content",
-    },
-    divider: {
-      height: "0.5px",
-      background: "var(--border-color)",
-      marginBottom: "1.25rem",
-    },
-    button: {
-      marginTop: "auto",
-      width: "100%",
-      padding: "11px 16px",
-      border: "none",
-      borderRadius: "8px",
-      fontSize: "13px",
-      fontWeight: "600",
-      cursor: "pointer",
-      transition: "all 0.15s",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      letterSpacing: "-0.01em",
-    },
-    buttonPrimary: {
-      background: "var(--button-primary)",
-      color: "#fff",
-    },
-    buttonSecondary: {
-      background: "var(--surface-alt)",
-      color: "var(--button-primary)",
-    },
-    countControl: {
-      display: "flex",
-      flexDirection: "column",
-      gap: "6px",
-      marginBottom: "1.25rem",
-    },
-    countLabel: {
-      fontSize: "12px",
-      color: "var(--text-secondary)",
-      fontWeight: "600",
-    },
-    countSelect: {
-      width: "100%",
-      padding: "10px 12px",
-      borderRadius: "8px",
-      border: "0.5px solid var(--border-color)",
-      background: "var(--bg-secondary)",
-      color: "var(--text-primary)",
-      fontSize: "13px",
-      fontWeight: "600",
-      outline: "none",
-      cursor: "pointer",
-    },
-    emptyState: {
-      background: "var(--bg-secondary)",
-      border: "0.5px solid var(--border-color)",
-      borderRadius: "14px",
-      padding: "3.5rem 2rem",
-      textAlign: "center",
-    },
-    emptyIcon: {
-      fontSize: "40px",
-      marginBottom: "1rem",
-    },
-    emptyTitle: {
-      fontSize: "16px",
-      fontWeight: "600",
-      color: "var(--text-primary)",
-      margin: "0 0 8px",
-    },
-    emptyBody: {
-      fontSize: "13px",
-      color: "var(--text-secondary)",
-      lineHeight: "1.65",
-      maxWidth: "360px",
-      margin: "0 auto",
-    },
-    loadingGrid: {
-      display: "grid",
-      gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))",
-      gap: "16px",
-    },
-  };
+  const [error, setError] = useState("");
+  const [filter, setFilter] = useState("all");
+  const [query, setQuery] = useState("");
+  const [randomCount, setRandomCount] = useState(20);
+  const [mistakes, setMistakes] = useState(0);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setIsLoading(true);
+    let cancelled = false;
+    const opts = { _tokenType: "user" };
+    Promise.all([
+      api.get(`/api/subjects/${subjectId}`, opts),
+      api.get(`/api/topics/subject/${subjectId}`, opts),
+      api.get("/api/results/me?limit=100", opts).catch(() => ({ data: [] })),
+      api.get(`/api/tests/mistakes?subjectId=${subjectId}`, opts).catch(() => ({ data: { total: 0 } })),
+    ])
+      .then(([subjectRes, topicsRes, resultsRes, mistakesRes]) => {
+        if (cancelled) return;
+        setSubject(subjectRes.data);
+        setTopics(listOf(topicsRes.data, "topics"));
+        setResults(listOf(resultsRes.data, "results").filter((r) => String(idOf(r.subjectId)) === String(subjectId)));
+        setMistakes(Number(mistakesRes.data?.total || 0));
+      })
+      .catch((err) => {
+        console.error("Error loading subject:", err);
+        if (!cancelled) setError((err?.status ?? err?.response?.status) === 403 ? "This subject isn't part of your course and level." : "We couldn't load this subject. Check your connection and try again.");
+      })
+      .finally(() => !cancelled && setIsLoading(false));
+    return () => {
+      cancelled = true;
+    };
+  }, [subjectId]);
 
-        const token = localStorage.getItem("userToken");
-
-        if (!token) {
-          navigate("/user-login");
-          return;
+  const rows = useMemo(() => {
+    const byTopic = new Map();
+    for (const r of results) {
+      const tid = idOf(r.topicId);
+      if (!tid || ["retry", "mistakes", "review"].includes(r.mode)) continue;
+      if (!byTopic.has(String(tid))) byTopic.set(String(tid), []);
+      byTopic.get(String(tid)).push(r);
+    }
+    return topics
+      .map((t) => {
+        const attempts = byTopic.get(String(t._id)) || [];
+        const scores = attempts.map((r) => pct(r.score, r.total));
+        const last = attempts[0] || null;
+        const best = scores.length ? Math.max(...scores) : null;
+        let status = "none";
+        if (attempts.length) {
+          if (scores.length >= 2 && scores[0] >= 80 && scores[1] >= 80) status = "master";
+          else if (scores[0] >= 80) status = "good";
+          else status = "work";
         }
+        const missed = last ? Number(last.total) - Number(last.score) : 0;
+        return { topic: t, attempts, last, best, status, missed, canRetry: Boolean(last && last.sessionId && missed > 0) };
+      })
+      .sort((a, b) => String(a.topic.name).localeCompare(String(b.topic.name), undefined, { numeric: true }));
+  }, [topics, results]);
 
-        const [subjectResponse, topicsResponse, questionsResponse] =
-          await Promise.all([
-            api.get(`/api/subjects/${subjectId}`, { _tokenType: "user" }),
-            api.get(`/api/topics/subject/${subjectId}`, { _tokenType: "user" }),
-            api.get(`/api/questions/subject/${subjectId}`, {
-              _tokenType: "user",
-            }),
-          ]);
+  if (isLoading) return <BamboLoader message="Loading topics" />;
 
-        const subjectData =
-          subjectResponse.data?.subject || subjectResponse.data;
-        const topicsData = Array.isArray(topicsResponse.data)
-          ? topicsResponse.data
-          : topicsResponse.data?.topics || [];
-        const questionsData = Array.isArray(questionsResponse.data)
-          ? questionsResponse.data
-          : questionsResponse.data?.questions || [];
-
-        setSubject(subjectData);
-        setTopics(topicsData);
-        setSubjectQuestions(questionsData);
-      } catch (error) {
-        console.error("Error loading topics:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [subjectId, navigate]);
-
-  const topicQuestionCounts = useMemo(() => {
-    const counts = {};
-    const questions = Array.isArray(subjectQuestions) ? subjectQuestions : [];
-
-    questions.forEach((question) => {
-      const currentTopicId = question.topicId?._id || question.topicId;
-      if (currentTopicId) {
-        counts[currentTopicId] = (counts[currentTopicId] || 0) + 1;
-      }
-    });
-
-    return counts;
-  }, [subjectQuestions]);
-
-  const filteredTopics = useMemo(() => {
-    const normalizedQuery = searchQuery.trim().toLowerCase();
-
-    if (!normalizedQuery) {
-      return Array.isArray(topics) ? topics : [];
-    }
-
-    return (Array.isArray(topics) ? topics : []).filter((topic) =>
-      String(topic.name || "")
-        .toLowerCase()
-        .includes(normalizedQuery),
-    );
-  }, [topics, searchQuery]);
-
-  const totalQuestionCount = Array.isArray(subjectQuestions)
-    ? subjectQuestions.length
-    : 0;
-
-  const randomCountOptions = useMemo(() => {
-    const baseOptions = [10, 20, 30, 40, 50, 75, 100];
-
-    const availableOptions = baseOptions.filter(
-      (count) => count <= totalQuestionCount,
-    );
-
-    if (
-      totalQuestionCount > 0 &&
-      !availableOptions.includes(totalQuestionCount)
-    ) {
-      availableOptions.push(totalQuestionCount);
-    }
-
-    return availableOptions;
-  }, [totalQuestionCount]);
-
-  useEffect(() => {
-    if (totalQuestionCount > 0 && randomQuestionCount > totalQuestionCount) {
-      setRandomQuestionCount(totalQuestionCount);
-    }
-  }, [totalQuestionCount, randomQuestionCount]);
-
-  if (isLoading) {
+  if (error || !subject) {
     return (
-      <div style={S.page}>
-        <style>{`
-          @keyframes shimmer {
-            0%   { background-position: -400px 0 }
-            100% { background-position:  400px 0 }
-          }
-.shimmer {
-            background     : linear-gradient(90deg, var(--surface-alt) 25%, #e8edf4 50%, var(--surface-alt) 75%);
-            background-size: 800px 100%;
-            animation      : shimmer 1.4s infinite;
-            border-radius  : 6px;
-          }
-          .skeleton-card {
-            background    : var(--bg-secondary);
-            border        : 0.5px solid var(--border-color);
-            border-radius : 14px;
-            padding       : 1.5rem;
-            display       : flex;
-            flex-direction: column;
-          }
-        `}</style>
-        <div style={S.inner}>
-          <div style={S.loadingGrid}>
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="skeleton-card">
-                <div
-                  className="shimmer"
-                  style={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: 11,
-                    marginBottom: "1.25rem",
-                  }}
-                />
-                <div
-                  className="shimmer"
-                  style={{ height: 16, marginBottom: 8 }}
-                />
-                <div
-                  className="shimmer"
-                  style={{ height: 13, width: "70%", marginBottom: 20 }}
-                />
-                <div
-                  className="shimmer"
-                  style={{ height: 24, borderRadius: 8 }}
-                />
-              </div>
-            ))}
-          </div>
-        </div>
+      <div className="db">
+        <StudentHeader active="subjects" />
+        <main className="st-main">
+          <div className="rs-banner" role="alert">{error || "Subject not found."}</div>
+          <div><button type="button" className="st-btn" onClick={() => navigate("/user")}>Back to subjects</button></div>
+        </main>
       </div>
     );
   }
 
-  if (!subject) {
-    return (
-      <div style={S.page}>
-        <div style={S.inner}>
-          <div style={S.emptyState}>
-            <div style={S.emptyIcon}>⚠️</div>
-            <p style={S.emptyTitle}>Unable to load subject</p>
-            <p style={S.emptyBody}>Please try again or go back.</p>
-            <button
-              onClick={() => navigate("/user")}
-              style={{
-                marginTop: "1.5rem",
-                padding: "10px 20px",
-                background: "var(--button-primary)",
-                color: "#fff",
-                border: "none",
-                borderRadius: "8px",
-                fontSize: "13px",
-                fontWeight: "600",
-                cursor: "pointer",
-              }}
-            >
-              ← Back to subjects
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const totalQuestions = topics.reduce((n, t) => n + Number(t.questionCount || 0), 0);
+  const attempted = rows.filter((r) => r.status !== "none");
+  const mastered = rows.filter((r) => r.status === "master").length;
+  const needsWork = rows.filter((r) => r.status === "work");
+  const sum = results.filter((r) => !["retry", "mistakes", "review"].includes(r.mode)).reduce((a, r) => ({ s: a.s + Number(r.score || 0), t: a.t + Number(r.total || 0) }), { s: 0, t: 0 });
+  const average = sum.t ? pct(sum.s, sum.t) : null;
+  const weakest = [...needsWork].sort((a, b) => pct(a.last.score, a.last.total) - pct(b.last.score, b.last.total))[0];
 
-  const TopicCard = ({ topic, questionCount }) => {
-    const [hovered, setHovered] = useState(false);
+  const q = query.trim().toLowerCase();
+  const shown = rows.filter(
+    (r) => (filter === "all" || r.status === filter) && (!q || String(r.topic.name).toLowerCase().includes(q)),
+  );
 
-    return (
-      <div
-        style={{
-          ...S.card,
-          ...(hovered ? S.cardHover : {}),
-        }}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-      >
-        <div style={S.iconBubble}>
-          <LayersIcon />
-        </div>
-        <h3 style={S.cardTitle}>{topic.name}</h3>
-        <p style={S.cardDescription}>
-          Practice questions from this specific topic with detailed review.
-        </p>
-        <div style={S.cardMeta}>
-          <span style={{ fontSize: "11px" }}>📊</span>
-          <span>
-            {questionCount} question{questionCount === 1 ? "" : "s"}
-          </span>
-        </div>
-        <div style={S.divider} />
-        <button
-          onClick={() => navigate(`/test/topic/${topic._id}`)}
-          style={{
-            ...S.button,
-            ...S.buttonPrimary,
-          }}
-          onMouseEnter={(e) => {
-            if (hovered) e.currentTarget.style.backgroundColor = "#0e3d6e";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = "var(--button-primary)";
-          }}
-        >
-          <span>Start topic test</span>
-          <ChevronRight />
-        </button>
-      </div>
-    );
-  };
+  const countOptions = [5, 10, 20, 30, 50, 100].filter((n) => n < totalQuestions);
+  if (totalQuestions > 0) countOptions.push(Math.min(totalQuestions, 200));
+  const safeCount = Math.min(randomCount, totalQuestions || 0) || countOptions[0] || 0;
 
-  const QuickReviewCard = () => {
-    const [hovered, setHovered] = useState(false);
-
-    return (
-      <div
-        style={{
-          ...S.card,
-          ...(hovered ? S.cardHover : {}),
-        }}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-      >
-        <div style={S.iconBubble}>
-          <QuickReviewIcon />
-        </div>
-        <h3 style={S.cardTitle}>Quick Review</h3>
-        <p style={S.cardDescription}>
-          Read important notes, key points, clinical pearls, mnemonics, and exam
-          tips before starting your practice session.
-        </p>
-        <div style={S.cardMeta}>
-          <span style={{ fontSize: "11px" }}>📖</span>
-          <span>
-            {Array.isArray(topics) ? topics.length : 0} review topic
-            {Array.isArray(topics) && topics.length === 1 ? "" : "s"}
-          </span>
-        </div>
-        <div style={S.divider} />
-        <button
-          onClick={() => navigate(`/subject/${subject._id}/quick-review`)}
-          style={{
-            ...S.button,
-            ...S.buttonPrimary,
-          }}
-          onMouseEnter={(e) => {
-            if (hovered) e.currentTarget.style.backgroundColor = "#0e3d6e";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = "var(--button-primary)";
-          }}
-        >
-          <span>Open Quick Review</span>
-          <ChevronRight />
-        </button>
-      </div>
-    );
-  };
-
-  const RandomSubjectCard = () => {
-    const [hovered, setHovered] = useState(false);
-
-    const selectedCount =
-      totalQuestionCount > 0
-        ? Math.min(Number(randomQuestionCount || 10), totalQuestionCount)
-        : 0;
-
-    const startRandomTest = () => {
-      if (!selectedCount) return;
-
-      navigate(
-        `/test/subject/${subject._id}?mode=random&limit=${selectedCount}`,
-      );
-    };
-
-    return (
-      <div
-        style={{
-          ...S.card,
-          ...(hovered ? S.cardHover : {}),
-        }}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-      >
-        <div style={S.iconBubble}>
-          <BookmarkIcon />
-        </div>
-        <h3 style={S.cardTitle}>Randomized practice</h3>
-        <p style={S.cardDescription}>
-          Practice randomized questions from all topics in this subject. Choose
-          how many questions you want before you start.
-        </p>
-        <div style={S.cardMeta}>
-          <span style={{ fontSize: "11px" }}>🔀</span>
-          <span>
-            {totalQuestionCount} available question
-            {totalQuestionCount === 1 ? "" : "s"}
-          </span>
-        </div>
-
-        <div style={S.countControl}>
-          <label style={S.countLabel}>Number of questions</label>
-          <select
-            value={selectedCount || ""}
-            onChange={(e) => setRandomQuestionCount(Number(e.target.value))}
-            style={S.countSelect}
-            disabled={totalQuestionCount === 0}
-          >
-            {randomCountOptions.length === 0 ? (
-              <option value="">No questions available</option>
-            ) : (
-              randomCountOptions.map((count) => (
-                <option key={count} value={count}>
-                  {count} question{count === 1 ? "" : "s"}
-                </option>
-              ))
-            )}
-          </select>
-        </div>
-
-        <div style={S.divider} />
-        <button
-          onClick={startRandomTest}
-          disabled={!selectedCount}
-          style={{
-            ...S.button,
-            ...S.buttonSecondary,
-            opacity: selectedCount ? 1 : 0.6,
-            cursor: selectedCount ? "pointer" : "not-allowed",
-          }}
-          onMouseEnter={(e) => {
-            if (hovered && selectedCount) {
-              e.currentTarget.style.backgroundColor = "#e2e8f0";
-            }
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = "var(--surface-alt)";
-          }}
-        >
-          <span>Start randomized test</span>
-          <ChevronRight />
-        </button>
-      </div>
-    );
-  };
+  const chips = [
+    ["all", `All ${rows.length}`],
+    ["none", `Not started ${rows.filter((r) => r.status === "none").length}`],
+    ["work", `Needs work ${needsWork.length}`],
+    ["master", `Mastered ${mastered}`],
+  ];
 
   return (
-    <>
-      <style>{`
-        @keyframes fadeUp {
-             from    { opacity: 0; transform: translateY(14px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        .topic-page-header { animation: fadeUp 0.4s ease both; }
-        .topic-card-enter {
-          animation: fadeUp 0.35s ease both;
-        }
+    <div className="db">
+      <StudentHeader active="subjects" />
+      <main className="st-main">
+        <nav className="st-crumb" aria-label="Breadcrumb">
+          <button type="button" onClick={() => navigate("/user")}>Subjects</button>
+          <span aria-hidden="true">/</span>
+          <span style={{ textTransform: "capitalize" }}>{subject.name}</span>
+        </nav>
 
-        .topic-search-input:focus {
-          border-color: rgba(24, 95, 165, 0.45) !important;
-          box-shadow  : 0 0 0 3px rgba(24, 95, 165, 0.08);
-        }
-
-        @media (max-width: 640px) {
-          .topic-search-wrapper {
-            max-width: 100% !important;
-          }
-        }
-`}</style>
-      <div style={S.page}>
-          <BlobBackground amount="full" orientation="wide" />
-        <div style={S.inner}>
-          {/* Header */}
-          <div className="topic-page-header" style={S.header}>
-            <button
-              onClick={() => navigate("/user")}
-              style={S.backBtn}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = "var(--surface-alt)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = "var(--bg-secondary)";
-              }}
-            >
-              ← Back
-            </button>
-
-            <p style={S.eyebrow}>Topic selection</p>
-            <h1 style={S.heading}>{subject.name}</h1>
-            <p style={S.subheading}>
-              Review key notes first, then choose focused topic practice or
-              randomized questions from all topics in this subject.
+        <div className="st-head">
+          <div>
+            <h1 className="st-h1" style={{ textTransform: "capitalize" }}>{subject.name}</h1>
+            <p className="st-sub">
+              {topics.length} topic{topics.length === 1 ? "" : "s"} · {totalQuestions.toLocaleString("en-GB")} questions · every question is explained
             </p>
-
-            {/* Stats */}
-            <div style={S.statsRow}>
-              <div style={S.statItem}>
-                <span>{Array.isArray(topics) ? topics.length : 0}</span>
-                <span>
-                  topic{Array.isArray(topics) && topics.length === 1 ? "" : "s"}
-                </span>
-              </div>
-              <div style={S.statItem}>
-                <span style={S.statValue}>{totalQuestionCount}</span>
-                <span>question{totalQuestionCount === 1 ? "" : "s"}</span>
-              </div>
-            </div>
-
-            <div className="topic-search-wrapper" style={S.searchWrapper}>
-              <div style={S.searchIcon}>
-                <SearchIcon />
-              </div>
-
-              <input
-                className="topic-search-input"
-                type="text"
-                placeholder="Search topics..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                style={{
-                  ...S.searchInput,
-                  paddingRight: searchQuery ? "44px" : "14px",
-                }}
-              />
-
-              {searchQuery && (
-                <button
-                  type="button"
-                  aria-label="Clear search"
-                  style={S.clearSearchButton}
-                  onClick={() => setSearchQuery("")}
-                >
-                  ×
-                </button>
-              )}
-            </div>
           </div>
-
-          {/* Cards Grid */}
-          {!Array.isArray(topics) || topics.length === 0 ? (
-            <div style={S.emptyState}>
-              <div style={S.emptyIcon}>🎯</div>
-              <p style={S.emptyTitle}>No topics available</p>
-              <p style={S.emptyBody}>
-                This subject doesn't have any topics yet, but you can still use
-                randomized practice if questions are available.
-              </p>
-            </div>
-          ) : searchQuery && filteredTopics.length === 0 ? (
-            <div style={S.emptyState}>
-              <div style={S.emptyIcon}>🔍</div>
-              <p style={S.emptyTitle}>No matching topics found</p>
-              <p style={S.emptyBody}>
-                No topic matches "{searchQuery}". Try another keyword.
-              </p>
-            </div>
-          ) : null}
-
-          <div style={S.grid}>
-            <QuickReviewCard />
-            <RandomSubjectCard />
-            {filteredTopics.map((topic, index) => {
-              const topicCount = topicQuestionCounts[topic._id] || 0;
-              return (
-                <div
-                  key={topic._id}
-                  className="topic-card-enter"
-                  style={{ animationDelay: `${index * 50}ms` }}
-                >
-                  <TopicCard topic={topic} questionCount={topicCount} />
-                </div>
-              );
-            })}
+          <div className="st-figures">
+            <div><strong>{attempted.length}</strong>attempted</div>
+            <div><strong>{mastered}</strong>mastered</div>
+            <div><strong>{average === null ? "–" : `${average}%`}</strong>average</div>
           </div>
         </div>
-      </div>
-    </>
+
+        <section className="st-modes" aria-label="Ways to practise">
+          <button type="button" className="st-mode primary" disabled={!totalQuestions} onClick={() => navigate(`/test/subject/${subjectId}`)}>
+            <strong>Full subject test</strong>
+            <span>All {totalQuestions.toLocaleString("en-GB")} questions across every topic · {minutes(subject.duration)} min timer</span>
+          </button>
+          <div className="st-mode" style={{ cursor: "default" }}>
+            <strong>Random mix</strong>
+            <span>Questions picked at random from all topics</span>
+            <div className="st-mode-row">
+              <label style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0 0 0 0)" }} htmlFor="random-count">Number of questions</label>
+              <select id="random-count" className="st-select" value={safeCount} onChange={(e) => setRandomCount(Number(e.target.value))} disabled={!totalQuestions}>
+                {countOptions.map((n) => (
+                  <option key={n} value={n}>{n} questions</option>
+                ))}
+              </select>
+              <button type="button" className="st-btn" style={{ minHeight: 40 }} disabled={!safeCount} onClick={() => navigate(`/test/subject/${subjectId}?mode=random&limit=${safeCount}`)}>
+                Start
+              </button>
+            </div>
+          </div>
+          {mistakes > 0 ? (
+            <button type="button" className="st-mode" onClick={() => navigate(`/test/subject/${subjectId}?mode=mistakes&limit=${Math.min(mistakes, 30)}`)}>
+              <strong>Fix your mistakes</strong>
+              <span>{mistakes} question{mistakes === 1 ? "" : "s"} you got wrong last time{mistakes > 30 ? " · 30 at a time" : ""}</span>
+            </button>
+          ) : (
+            <button type="button" className="st-mode" disabled={!weakest} onClick={() => weakest && navigate(`/test/topic/${weakest.topic._id}`)}>
+              <strong>Weakest topic</strong>
+              <span>{weakest ? `${weakest.topic.name} · last score ${pct(weakest.last.score, weakest.last.total)}%` : "Take a few topic tests and your weakest one shows up here"}</span>
+            </button>
+          )}
+          <button type="button" className="st-mode" onClick={() => navigate(`/subject/${subjectId}/quick-review`)}>
+            <strong>Quick reviews</strong>
+            <span>Short summaries to read before a test</span>
+          </button>
+        </section>
+
+        <section className="st-panel" aria-label="Topics">
+          <div className="st-toolbar">
+            <div className="st-chips" role="group" aria-label="Filter topics">
+              {chips.map(([key, label]) => (
+                <button key={key} type="button" className="st-chip" aria-pressed={filter === key} onClick={() => setFilter(key)}>
+                  {label}
+                </button>
+              ))}
+            </div>
+            <label className="st-search">
+              <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+              <span style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0 0 0 0)" }}>Search topics</span>
+              <input type="search" placeholder="Search topics" value={query} onChange={(e) => setQuery(e.target.value)} />
+            </label>
+          </div>
+
+          <div role="table" aria-label="Topics">
+            <div className="st-trow st-thead" role="row">
+              <span role="columnheader">Topic</span>
+              <span role="columnheader">Questions</span>
+              <span role="columnheader">Your best</span>
+              <span role="columnheader">Last attempt</span>
+              <span role="columnheader" style={{ textAlign: "right" }}>Actions</span>
+            </div>
+            {shown.length === 0 ? (
+              <p className="st-empty">{rows.length === 0 ? "No topics have been added to this subject yet." : "No topics match this filter."}</p>
+            ) : (
+              shown.map((r) => {
+                const st = STATUS[r.status];
+                const count = Number(r.topic.questionCount || 0);
+                return (
+                  <div className="st-trow" role="row" key={r.topic._id}>
+                    <div role="cell">
+                      <div className="st-topic-name">{r.topic.name}</div>
+                      <span className={`st-tag ${st.cls}`}>{st.label}</span>
+                    </div>
+                    <div role="cell" className="st-muted">
+                      <span className="st-cell-label">Questions</span>
+                      {count}
+                    </div>
+                    <div role="cell">
+                      <span className="st-cell-label">Your best</span>
+                      {r.best === null ? (
+                        <span className="st-muted">—</span>
+                      ) : (
+                        <div className="st-best">
+                          <span className="db-track" style={{ display: "block" }}>
+                            <span className="db-fill" style={{ display: "block", height: 6, width: `${Math.max(r.best, 3)}%`, background: toneBar(r.best) }} />
+                          </span>
+                          <b>{r.best}%</b>
+                        </div>
+                      )}
+                    </div>
+                    <div role="cell" className="st-muted">
+                      <span className="st-cell-label">Last attempt</span>
+                      {r.last ? `${shortDate(r.last.createdAt)}, ${r.last.score}/${r.last.total}` : "—"}
+                    </div>
+                    <div role="cell" className="st-actions">
+                      {r.canRetry && (
+                        <button type="button" className="st-btn st-btn-text" onClick={() => navigate(`/test/subject/${subjectId}?retry=${r.last._id}`)}>
+                          Retry {r.missed} missed
+                        </button>
+                      )}
+                      {r.status === "none" && (
+                        <button type="button" className="st-btn st-btn-text" onClick={() => navigate(`/subject/${subjectId}/quick-review`)}>
+                          Quick review
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className={`st-btn${r.status === "master" || r.status === "none" ? " st-btn-outline" : ""}`}
+                        disabled={!count}
+                        onClick={() => navigate(`/test/topic/${r.topic._id}`)}
+                      >
+                        {r.status === "none" ? "Start" : r.status === "master" ? "Practise again" : "Practise"}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </section>
+      </main>
+    </div>
   );
 }
-
-export default TopicSelectionPage;

@@ -1,2296 +1,825 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import confetti from "canvas-confetti";
 import api from "../lib/api";
-import * as FireworksPreset from "react-canvas-confetti/dist/presets/fireworks";
-import BlobBackground from "../components/BlobBackground";
+import BamboLoader from "../components/BamboLoader";
 import MistakeTutor from "../components/MistakeTutor";
+import "../styles/dashboard.css";
+import "../styles/student.css";
 
-const resolvePresetComponent = (presetModule) => {
-  const candidates = [
-    presetModule?.default?.default,
-    presetModule?.default?.Fireworks,
-    presetModule?.Fireworks?.default,
-    presetModule?.Fireworks,
-    presetModule?.default,
-    presetModule,
-  ];
-  return candidates.find(
-    (candidate) =>
-      typeof candidate === "function" ||
-      Boolean(candidate && candidate.$$typeof),
-  );
+/* ── helpers ─────────────────────────────────────────── */
+
+const LETTERS = "ABCDEF";
+const fmtClock = (s) => `${Math.floor(Math.max(0, s) / 60)}:${String(Math.max(0, s) % 60).padStart(2, "0")}`;
+const fmtDuration = (s) => {
+  const v = Number(s || 0);
+  if (v < 60) return `${v} sec`;
+  const m = Math.round(v / 60);
+  return `${m} min`;
+};
+const pct = (s, t) => (Number(t) ? Math.round((Number(s) / Number(t)) * 100) : 0);
+
+const toImageSrc = (data, type) => {
+  if (!data || !type) return "";
+  return String(data).startsWith("data:") ? data : `data:${type};base64,${data}`;
 };
 
-const Fireworks = resolvePresetComponent(FireworksPreset);
-
-/* ─── Design tokens ─── */
-const T = {
-  bg: "var(--bg-primary)",
-  surface: "var(--bg-secondary)",
-  surfaceAlt: "var(--surface-alt)",
-  border: "var(--border-color)",
-  borderStrong: "var(--border-strong)",
-  ink: "var(--text-primary)",
-  inkMid: "var(--text-secondary)",
-  inkFaint: "var(--text-secondary)",
-  accent: "var(--button-primary)",
-  accentLight: "#E6F1FB",
-  accentMid: "#0e3d6e",
-  accentDark: "#042C53",
-  success: "#16A34A",
-  successLight: "#DCFCE7",
-  danger: "#DC2626",
-  dangerLight: "#FEE2E2",
-  dangerBorder: "#FCA5A5",
-  warning: "#F59E0B",
-  warningLight: "#FEF3C7",
-  warningBorder: "#FCD34D",
-  flag: "#EF4444",
-  flagLight: "#FEE2E2",
-  radius: "10px",
-  radiusSm: "6px",
-  radiusLg: "14px",
-  shadow: "0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)",
-  shadowMd: "0 2px 8px rgba(0,0,0,0.08), 0 8px 32px rgba(0,0,0,0.06)",
-  fontSans: "Inter, system-ui, sans-serif",
+const Svg = ({ children, size = 20, stroke = 2 }) => (
+  <svg aria-hidden="true" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round">
+    {children}
+  </svg>
+);
+const I = {
+  close: <path d="M18 6 6 18M6 6l12 12" />,
+  back: <path d="m15 18-6-6 6-6" />,
+  next: <path d="m9 18 6-6-6-6" />,
+  flag: <path d="M4 22V4m0 0h12l-2 4 2 4H4" />,
+  grid: (<><rect x="4" y="4" width="6" height="6" rx="1" /><rect x="14" y="4" width="6" height="6" rx="1" /><rect x="4" y="14" width="6" height="6" rx="1" /><rect x="14" y="14" width="6" height="6" rx="1" /></>),
+  clock: (<><circle cx="12" cy="13" r="8" /><path d="M12 9v4l2 2M9 2h6" /></>),
+  check: <path d="m5 12 5 5 9-10" />,
 };
 
-const injectFonts = () => {
-  if (document.getElementById("test-fonts")) return;
-  const link = document.createElement("link");
-  link.id = "test-fonts";
-  link.rel = "stylesheet";
-  link.href =
-    "https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap";
-  document.head.appendChild(link);
-};
-
-const globalCSS = `
-  @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(10px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-  @keyframes fadeIn {
-    from { opacity: 0; }
-    to   { opacity: 1; }
-  }
-  @keyframes modalScale {
-    from { 
-      opacity: 0; 
-      transform: translate(-50%, -50%) scale(0.95);
-    }
-    to { 
-      opacity: 1; 
-      transform: translate(-50%, -50%) scale(1);
-    }
-  }
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
-  }
-  @keyframes flagPulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.1); }
-  }
-  @keyframes slideInRight {
-    from { opacity: 0; transform: translateX(12px); }
-    to { opacity: 1; transform: translateX(0); }
-  }
-  .quiz-option {
-    transition: all 0.2s ease;
-  }
-  .quiz-option:hover {
-    border-color: ${T.accent} !important;
-    background: ${T.accentLight} !important;
-  }
-  .quiz-btn:hover { opacity: 0.88; transform: translateY(-1px); }
-  .quiz-btn:active { transform: scale(0.98); }
-  .dot-nav {
-    transition: all 0.25s cubic-bezier(0.4,0,0.2,1);
-  }
-  .dot-nav:hover { transform: scale(1.4); }
-  .flag-btn {
-    position: relative;
-    overflow: hidden;
-  }
-  .flag-btn::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 0;
-    height: 0;
-    background: rgba(255,255,255,0.3);
-    border-radius: 50%;
-    transform: translate(-50%, -50%);
-    transition: width 0.3s, height 0.3s;
-  }
-  .flag-btn:active::after {
-    width: 40px;
-    height: 40px;
-  }
-`;
-
-const injectStyles = () => {
-  if (document.getElementById("test-styles")) return;
-  const s = document.createElement("style");
-  s.id = "test-styles";
-  s.textContent = globalCSS;
-  document.head.appendChild(s);
-};
-
-/* ─── Helpers ─── */
-const shuffleArray = (arr) => {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-};
-
-const formatTime = (s) =>
-  `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
-
-const questionImageSrc = (question) => {
-  if (!question) return "";
-
-  if (question.imageData && question.imageContentType) {
-    if (String(question.imageData).startsWith("data:")) {
-      return question.imageData;
-    }
-    return `data:${question.imageContentType};base64,${question.imageData}`;
-  }
-
-  const rawImageUrl =
-    question.imageUrl ||
-    question.image ||
-    question.questionImage ||
-    question.imagePath ||
-    "";
-
-  if (!rawImageUrl) return "";
-
-  if (
-    String(rawImageUrl).startsWith("http") ||
-    String(rawImageUrl).startsWith("data:")
-  ) {
-    return rawImageUrl;
-  }
-
-  const baseUrl =
-    import.meta.env.VITE_API_URL ||
-    import.meta.env.VITE_API_BASE_URL ||
-    "http://localhost:5000";
-
-  return `${baseUrl}${String(rawImageUrl).startsWith("/") ? "" : "/"}${rawImageUrl}`;
-};
-
-/* ─── Icons ─── */
-const Icon = {
-  left: () => (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <path
-        d="M10 12L6 8l4-4"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  ),
-  right: () => (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <path
-        d="M6 4l4 4-4 4"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  ),
-  clock: ({ warn }) => (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-      <circle
-        cx="8"
-        cy="8"
-        r="6"
-        stroke={warn ? T.danger : T.inkMid}
-        strokeWidth="1.3"
-      />
-      <path
-        d="M8 5.5v2.5l1.5 1"
-        stroke={warn ? T.danger : T.inkMid}
-        strokeWidth="1.3"
-        strokeLinecap="round"
-      />
-    </svg>
-  ),
-  flag: ({ filled = false }) => (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-      <path
-        d="M3 2v12m0 0h7a2 2 0 002-2V4a2 2 0 00-2-2H3"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill={filled ? "currentColor" : "none"}
-      />
-    </svg>
-  ),
-  check: () => (
-    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-      <path
-        d="M1.5 6l3 3 6-6"
-        stroke="currentColor"
-        strokeWidth="1.7"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  ),
-  x: () => (
-    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-      <path
-        d="M2.5 2.5l7 7M9.5 2.5l-7 7"
-        stroke="currentColor"
-        strokeWidth="1.7"
-        strokeLinecap="round"
-      />
-    </svg>
-  ),
-  skip: () => (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-      <path d="M2 4l6 4-6 4V4z" fill="currentColor" />
-      <path
-        d="M10 4v8"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-    </svg>
-  ),
-  chevron: ({ open }) => (
-    <svg
-      width="12"
-      height="12"
-      viewBox="0 0 12 12"
-      fill="none"
-      style={{
-        transition: "transform 0.25s",
-        transform: open ? "rotate(90deg)" : "rotate(0deg)",
-      }}
-    >
-      <path
-        d="M4.5 3l3 3-3 3"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  ),
-  trophy: () => (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-      <path
-        d="M8 21h8M12 17v4M7 4H4a1 1 0 00-1 1v2a4 4 0 004 4h.5M17 4h3a1 1 0 011 1v2a4 4 0 01-4 4h-.5"
-        stroke={T.accent}
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-      <path
-        d="M7 4h10v6a5 5 0 01-10 0V4z"
-        stroke={T.accent}
-        strokeWidth="1.5"
-      />
-    </svg>
-  ),
-};
-
-/* ─── Badge ─── */
-function Badge({ variant, children }) {
-  const variants = {
-    correct: { bg: T.successLight, color: T.success, border: "#86efac" },
-    incorrect: { bg: T.dangerLight, color: T.danger, border: T.dangerBorder },
-    flagged: { bg: T.flagLight, color: T.flag, border: "#FCA5A5" },
-    info: { bg: T.accentLight, color: T.accent, border: "#bfdbfe" },
-    neutral: { bg: "var(--surface-alt)", color: T.inkMid, border: T.border },
-  };
-  const c = variants[variant] || variants.neutral;
+function ScoreRing({ value }) {
+  const r = 44;
+  const c = 2 * Math.PI * r;
+  const color = value >= 80 ? "#15803D" : value >= 50 ? "#185FA5" : "#EA580C";
   return (
-    <span
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        fontSize: "12px",
-        fontWeight: "600",
-        padding: "4px 10px",
-        borderRadius: "6px",
-        background: c.bg,
-        color: c.color,
-        border: `1px solid ${c.border}`,
-        letterSpacing: "0.01em",
-        flexShrink: 0,
-        gap: "4px",
-      }}
-    >
-      {children}
-    </span>
+    <svg role="img" aria-label={`Score ${value} percent`} width="104" height="104" viewBox="0 0 104 104" style={{ flex: "none" }}>
+      <circle cx="52" cy="52" r={r} fill="none" stroke="var(--border-color)" strokeWidth="10" />
+      <circle cx="52" cy="52" r={r} fill="none" stroke={color} strokeWidth="10" strokeLinecap="round" strokeDasharray={`${(c * value) / 100} ${c}`} transform="rotate(-90 52 52)" />
+      <text x="52" y="59" textAnchor="middle" fontFamily="Inter, sans-serif" fontSize="23" fontWeight="700" fill="currentColor">{value}%</text>
+    </svg>
   );
 }
 
-/* ─── Button ─── */
-function Btn({
-  variant = "ghost",
-  children,
-  onClick,
-  disabled,
-  style = {},
-  isIconOnly = false,
-}) {
-  const base = {
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: "6px",
-    padding: isIconOnly ? "8px" : "10px 16px",
-    borderRadius: T.radiusSm,
-    fontSize: "13px",
-    fontWeight: "600",
-    cursor: disabled ? "not-allowed" : "pointer",
-    border: "none",
-    transition: "all 0.2s",
-    opacity: disabled ? 0.5 : 1,
-    letterSpacing: "0.01em",
-  };
-  const variants = {
-    primary: { background: T.accent, color: "#fff" },
-    ghost: {
-      background: "transparent",
-      color: T.inkMid,
-      border: `1px solid ${T.borderStrong}`,
-    },
-    danger: {
-      background: T.dangerLight,
-      color: T.danger,
-      border: `1px solid ${T.dangerBorder}`,
-    },
-    flag: {
-      background: "transparent",
-      color: T.flag,
-      border: `1.5px solid ${T.flag}`,
-    },
-    flagActive: {
-      background: T.flag,
-      color: "#fff",
-      border: `1.5px solid ${T.flag}`,
-    },
-  };
-  return (
-    <button
-      className="quiz-btn flag-btn"
-      onClick={!disabled ? onClick : undefined}
-      disabled={disabled}
-      style={{ ...base, ...variants[variant], ...style }}
-      title={variant === "flag" ? "Flag for review" : ""}
-    >
-      {children}
-    </button>
-  );
-}
-
-/* ─── Flagged indicator badge with dropdown ─── */
-function FlaggedBadge({
-  count,
-  questions,
-  selectedAnswers,
-  currentQuestionIndex,
-  onSelectFlagged,
-  flaggedQuestions,
-}) {
-  const [showDropdown, setShowDropdown] = useState(false);
-  const dropdownRef = useRef(null);
-
+function Sheet({ title, children, onClose }) {
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setShowDropdown(false);
-      }
-    };
-
-    if (showDropdown) {
-      document.addEventListener("mousedown", handleClickOutside);
-      return () =>
-        document.removeEventListener("mousedown", handleClickOutside);
-    }
-  }, [showDropdown]);
-
-  if (count === 0) return null;
-
-  const flaggedQuestionsList = questions.filter((q) =>
-    flaggedQuestions.has(q._id),
-  );
-
+    const onKey = (e) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
   return (
-    <div
-      ref={dropdownRef}
-      style={{
-        position: "relative",
-      }}
-    >
-      <button
-        onClick={() => setShowDropdown(!showDropdown)}
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          gap: "6px",
-          padding: "6px 12px",
-          borderRadius: "20px",
-          background: T.flagLight,
-          border: `1.5px solid ${T.flag}`,
-          cursor: "pointer",
-          transition: "all 0.2s",
-          fontSize: "12px",
-          fontWeight: "600",
-          color: T.flag,
-          animation: "slideInRight 0.3s ease",
-          fontFamily: T.fontSans,
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.background = T.flag;
-          e.currentTarget.style.color = "#fff";
-          e.currentTarget.style.transform = "scale(1.05)";
-        }}
-        onMouseLeave={(e) => {
-          if (!showDropdown) {
-            e.currentTarget.style.background = T.flagLight;
-            e.currentTarget.style.color = T.flag;
-            e.currentTarget.style.transform = "scale(1)";
-          }
-        }}
-      >
-        <Icon.flag filled />
-        <span>{count}</span>
-      </button>
-
-      {showDropdown && (
-        <div
-          style={{
-            position: "fixed",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-            width: "calc(100vw - 32px)",
-            maxWidth: "320px",
-            maxHeight: "60vh",
-            background: T.surface,
-            border: `1px solid ${T.border}`,
-            borderRadius: T.radiusLg,
-            boxShadow: T.shadowMd,
-            zIndex: 1000,
-            overflowY: "auto",
-            animation: "modalScale 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
-          }}
-        >
-          <div
-            style={{
-              padding: "12px",
-              borderBottom: `1px solid ${T.border}`,
-              fontSize: "12px",
-              fontWeight: "600",
-              color: T.inkFaint,
-              textTransform: "uppercase",
-              letterSpacing: "0.05em",
-              position: "sticky",
-              top: 0,
-              background: T.surface,
-              zIndex: 10,
-            }}
-          >
-            Flagged Questions ({count})
-          </div>
-
-          {flaggedQuestionsList.map((question, idx) => {
-            const questionIndex = questions.findIndex(
-              (q) => q._id === question._id,
-            );
-            const isAnswered = Boolean(selectedAnswers[question._id]);
-            const isCurrent = questionIndex === currentQuestionIndex;
-
-            return (
-              <button
-                key={question._id}
-                onClick={() => {
-                  onSelectFlagged(questionIndex);
-                  setShowDropdown(false);
-                }}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "10px",
-                  padding: "12px",
-                  borderBottom:
-                    idx < flaggedQuestionsList.length - 1
-                      ? `1px solid ${T.border}`
-                      : "none",
-                  background: isCurrent ? T.accentLight : "transparent",
-                  border: "none",
-                  cursor: "pointer",
-                  width: "100%",
-                  textAlign: "left",
-                  transition: "all 0.15s",
-                  fontSize: "13px",
-                  color: T.ink,
-                  fontFamily: T.fontSans,
-                }}
-                onMouseEnter={(e) => {
-                  if (!isCurrent) {
-                    e.currentTarget.style.background = "var(--surface-alt)";
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isCurrent) {
-                    e.currentTarget.style.background = "transparent";
-                  }
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    width: "24px",
-                    height: "24px",
-                    borderRadius: "6px",
-                    background: T.flagLight,
-                    color: T.flag,
-                    fontSize: "12px",
-                    fontWeight: "600",
-                    flexShrink: 0,
-                  }}
-                >
-                  {questionIndex + 1}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p
-                    style={{
-                      margin: 0,
-                      fontSize: "13px",
-                      fontWeight: "500",
-                      color: T.ink,
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    Q{String(questionIndex + 1).padStart(2, "0")}
-                  </p>
-                  <p
-                    style={{
-                      margin: "2px 0 0",
-                      fontSize: "12px",
-                      color: T.inkMid,
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {question.questionText}
-                  </p>
-                </div>
-                {isAnswered && (
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      width: "20px",
-                      height: "20px",
-                      borderRadius: "50%",
-                      background: T.accentLight,
-                      color: T.accent,
-                      fontSize: "11px",
-                      flexShrink: 0,
-                    }}
-                  >
-                    <Icon.check />
-                  </div>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* ─── Review option row ─── */
-function ReviewOption({ option, isCorrect, isUserAnswer }) {
-  if (!isCorrect && !isUserAnswer) return null;
-  const isWrong = isUserAnswer && !isCorrect;
-  const color = isWrong ? T.danger : T.success;
-  const bg = isWrong ? T.dangerLight : T.successLight;
-  const border = isWrong ? T.dangerBorder : "#86efac";
-  const label =
-    isCorrect && isUserAnswer
-      ? "Your answer · correct"
-      : isCorrect
-        ? "Correct answer"
-        : "Your answer · incorrect";
-
-  return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: "10px",
-        padding: "10px 12px",
-        borderRadius: T.radiusSm,
-        marginBottom: "6px",
-        background: bg,
-        border: `1px solid ${border}`,
-        color,
-      }}
-    >
-      <span
-        style={{
-          width: "18px",
-          height: "18px",
-          borderRadius: "50%",
-          flexShrink: 0,
-          background: color,
-          color: "#fff",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontSize: "11px",
-        }}
-      >
-        {isCorrect ? <Icon.check /> : <Icon.x />}
-      </span>
-      <span style={{ fontSize: "13px", flex: 1 }}>{option}</span>
-      <span
-        style={{
-          fontSize: "11px",
-          opacity: 0.75,
-          whiteSpace: "nowrap",
-        }}
-      >
-        {label}
-      </span>
-    </div>
-  );
-}
-
-/* ─── Explanation toggle ─── */
-function ExplanationToggle({ text }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div style={{ marginTop: "12px" }}>
-      <button
-        onClick={() => setOpen(!open)}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "5px",
-          background: "none",
-          border: "none",
-          cursor: "pointer",
-          padding: 0,
-          fontSize: "13px",
-          color: T.accent,
-          fontWeight: "600",
-          transition: "color 0.15s",
-        }}
-      >
-        <Icon.chevron open={open} />
-        {open ? "Hide" : "Show"} explanation
-      </button>
-      {open && (
-        <p
-          style={{
-            fontSize: "13px",
-            color: T.inkMid,
-            lineHeight: "1.7",
-            marginTop: "10px",
-            padding: "12px 14px",
-            background: T.surfaceAlt,
-            borderRadius: T.radiusSm,
-            borderLeft: `3px solid ${T.accent}`,
-            animation: "fadeIn 0.2s ease",
-            margin: "10px 0 0",
-          }}
-        >
-          {text}
-        </p>
-      )}
-    </div>
-  );
-}
-
-/* ─── Question review card ─── */
-function QuestionReviewCard({
-  question,
-  index,
-  userAnswer,
-  imageSrc,
-  isFlagged,
-  resultId,
-}) {
-  const isCorrect = userAnswer === question.correctAnswer;
-  const displayImageSrc = imageSrc || questionImageSrc(question);
-  return (
-    <div
-      style={{
-        background: T.surface,
-        border: `1px solid ${isFlagged ? T.flag : T.border}`,
-        borderRadius: T.radiusLg,
-        padding: "1.5rem",
-        marginBottom: "1rem",
-        boxShadow: isFlagged
-          ? `0 0 0 2px ${T.flagLight}, ${T.shadow}`
-          : T.shadow,
-        animation: `fadeUp 0.3s ease ${Math.min(index * 0.03, 0.3)}s both`,
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-start",
-          gap: "12px",
-          marginBottom: "1rem",
-          flexWrap: "wrap",
-        }}
-      >
-        <div style={{ flex: 1 }}>
-          <p
-            style={{
-              fontSize: "14px",
-              lineHeight: "1.65",
-              color: T.ink,
-              margin: 0,
-            }}
-          >
-            <span
-              style={{
-                fontSize: "12px",
-                color: T.inkFaint,
-                marginRight: "8px",
-                fontWeight: "600",
-              }}
-            >
-              {String(index + 1).padStart(2, "0")}
-            </span>
-            {question.questionText}
-          </p>
-        </div>
-        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-          {isFlagged && (
-            <Badge variant="flagged">
-              <Icon.flag filled /> Flagged
-            </Badge>
-          )}
-          <Badge variant={isCorrect ? "correct" : "incorrect"}>
-            {isCorrect ? "✓ Correct" : "✗ Incorrect"}
-          </Badge>
-        </div>
+    <div className="tt-scrim" onClick={onClose}>
+      <div className="tt-sheet" role="dialog" aria-modal="true" aria-label={title} onClick={(e) => e.stopPropagation()}>
+        <h2>{title}</h2>
+        {children}
       </div>
-
-      {displayImageSrc && (
-        <div
-          style={{
-            margin: "0 0 1rem",
-            padding: "10px",
-            background: T.surfaceAlt,
-            border: `1px solid ${T.border}`,
-            borderRadius: T.radius,
-          }}
-        >
-          <img
-            src={displayImageSrc}
-            alt="Question"
-            style={{
-              display: "block",
-              width: "100%",
-              maxWidth: "560px",
-              maxHeight: "360px",
-              objectFit: "contain",
-              borderRadius: T.radiusSm,
-              margin: "0 auto",
-            }}
-          />
-        </div>
-      )}
-
-      {question.options.map((opt, i) => (
-        <ReviewOption
-          key={i}
-          option={opt}
-          isCorrect={opt === question.correctAnswer}
-          isUserAnswer={opt === userAnswer}
-        />
-      ))}
-      <ExplanationToggle text={question.explanation} />
-      {resultId && !isCorrect && (
-        <MistakeTutor resultId={resultId} questionId={question._id} />
-      )}
     </div>
   );
 }
 
-/* ─── Stat cell ─── */
-function StatCell({ value, label }) {
+const REPORT_REASONS = [
+  ["wrong_answer", "The marked answer is wrong"],
+  ["unclear", "The question is unclear or has two right answers"],
+  ["explanation", "The explanation is wrong or unhelpful"],
+  ["typo", "Typo or formatting problem"],
+  ["image", "The picture is missing or wrong"],
+  ["other", "Something else"],
+];
+
+function ReportSheet({ question, onClose, onSent }) {
+  const [reason, setReason] = useState("");
+  const [message, setMessage] = useState("");
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState("");
+  const send = async () => {
+    setSending(true);
+    setError("");
+    try {
+      await api.post("/api/reports", { questionId: question._id, reason, message: message.trim() }, { _tokenType: "user" });
+      onSent(question._id);
+    } catch (err) {
+      setError(err?.data?.message || err?.message || "Couldn't send your report. Please try again.");
+      setSending(false);
+    }
+  };
+  const needsText = reason === "other" && message.trim().length < 5;
   return (
-    <div
-      style={{
-        background: T.surfaceAlt,
-        borderRadius: T.radiusSm,
-        padding: "1rem",
-        textAlign: "center",
-        border: `1px solid ${T.border}`,
-      }}
-    >
-      <p
-        style={{
-          fontSize: "24px",
-          fontWeight: "700",
-          color: T.accent,
-          lineHeight: 1.1,
-          margin: 0,
-        }}
-      >
-        {value}
-      </p>
-      <p
-        style={{
-          fontSize: "12px",
-          color: T.inkFaint,
-          marginTop: "6px",
-          margin: "6px 0 0",
-          fontWeight: "500",
-          textTransform: "uppercase",
-          letterSpacing: "0.05em",
-        }}
-      >
-        {label}
-      </p>
-    </div>
+    <Sheet title="Report a problem" onClose={onClose}>
+      <p>Thanks for helping keep the questions accurate. What's wrong?</p>
+      <div className="rp-reasons" role="radiogroup" aria-label="What's wrong">
+        {REPORT_REASONS.map(([value, label]) => (
+          <label key={value} className={`rp-reason${reason === value ? " on" : ""}`}>
+            <input type="radio" name="report-reason" value={value} checked={reason === value} onChange={() => setReason(value)} />
+            {label}
+          </label>
+        ))}
+      </div>
+      <label className="rp-text">
+        <span>{reason === "wrong_answer" ? "Which answer is right, and why? Write the answer out, because the letters are shuffled for each student." : "Anything to add? (optional)"}</span>
+        <textarea rows={3} maxLength={1000} value={message} onChange={(e) => setMessage(e.target.value)} placeholder={reason === "wrong_answer" ? "e.g. \"Stop the infusion\" is right because…" : "Tell us more"} />
+      </label>
+      {error && <p style={{ color: "#b91c1c" }} role="alert">{error}</p>}
+      <div className="tt-sheet-actions">
+        <button type="button" className="st-btn st-btn-lg" disabled={!reason || needsText || sending} onClick={send}>
+          {sending ? "Sending…" : "Send report"}
+        </button>
+        <button type="button" className="st-btn st-btn-text st-btn-lg" onClick={onClose}>Cancel</button>
+      </div>
+    </Sheet>
   );
 }
 
-/* ═══════════════════════════════════════════════
-   Main component
-═══════════════════════════════════════════════ */
+/* ── page ────────────────────────────────────────────── */
+
 function SubjectTestPage() {
   const params = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  const subjectId = params.subjectId || searchParams.get("subjectId") || "";
-  const topicId = params.topicId || searchParams.get("topicId") || "";
-  const isTopicMode = Boolean(topicId);
-  const testMode = searchParams.get("mode") || "";
+  const routeSubjectId = params.subjectId || searchParams.get("subjectId") || "";
+  const routeTopicId = params.topicId || searchParams.get("topicId") || "";
+  const retryOf = searchParams.get("retry") || "";
+  const resumeId = searchParams.get("resume") || "";
+  const isMistakes = searchParams.get("mode") === "mistakes";
+  const isReview = searchParams.get("mode") === "review";
   const requestedLimit = Number(searchParams.get("limit") || 0);
-  const isRandomMode =
-    !isTopicMode && testMode === "random" && requestedLimit > 0;
+  const isRandom = !routeTopicId && !retryOf && searchParams.get("mode") === "random" && requestedLimit > 0;
 
-  const [subject, setSubject] = useState(null);
-  const [topic, setTopic] = useState(null);
+  const [attempt, setAttempt] = useState(0);
+  const [phase, setPhase] = useState("loading"); // loading | error | test | grading | results | review
+  const [loadError, setLoadError] = useState("");
+  const [meta, setMeta] = useState({ mode: "subject", subjectId: "", topicId: null, subjectName: "", topicName: "", duration: 300 });
   const [questions, setQuestions] = useState([]);
-  const [questionImages, setQuestionImages] = useState({});
-  const [isPreloadingImages, setIsPreloadingImages] = useState(false);
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [selectedAnswers, setSelectedAnswers] = useState({});
-  const [flaggedQuestions, setFlaggedQuestions] = useState(new Set());
-  const [showResults, setShowResults] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [errorMessage, setErrorMessage] = useState("");
-  const [timeLeft, setTimeLeft] = useState(300);
-  const [reviewMode, setReviewMode] = useState("all");
-  const [showFlaggedFilter, setShowFlaggedFilter] = useState(false);
-  const [stoppedTest, setStoppedTest] = useState(false);
-  const resultSavedRef = useRef(false);
-  const submissionIdRef = useRef(crypto.randomUUID());
-  const [savedResultId, setSavedResultId] = useState(null);
-  const [tutorUnavailable, setTutorUnavailable] = useState(false);
-  const [resultSaveError, setResultSaveError] = useState("");
-  const [saveRetry, setSaveRetry] = useState(0);
-  const perfectScoreAudioRef = useRef(null);
-  const hasPlayedPerfectScoreRef = useRef(false);
+  const [images, setImages] = useState({});
+  const [index, setIndex] = useState(0);
+  const [answers, setAnswers] = useState({});
+  const [flagged, setFlagged] = useState(() => new Set());
+  const [timeLeft, setTimeLeft] = useState(0);
+  const [sheet, setSheet] = useState(null); // grid | finish | exit
+  const [gradeError, setGradeError] = useState("");
+  const [result, setResult] = useState(null);
+  const [review, setReview] = useState({ list: [], pos: 0, kind: "mistakes" });
+  const [reportFor, setReportFor] = useState(null); // question being reported
+  const [reported, setReported] = useState(() => new Set());
 
+  const [resumed, setResumed] = useState(false);
+  const [saveState, setSaveState] = useState("idle"); // idle | saving | saved | failed
+  const sessionIdRef = useRef(null);
+  const endAtRef = useRef(0);
+  const finishingRef = useRef(false);
+  const celebratedRef = useRef(false);
+
+  /* load / start a session */
   useEffect(() => {
-    injectFonts();
-    injectStyles();
-  }, []);
-
-  const defaultDuration = subject?.duration || 300;
-
-  const makeImageSrc = (imageData, imageContentType) => {
-    if (!imageData || !imageContentType) return "";
-    if (String(imageData).startsWith("data:")) return imageData;
-    return `data:${imageContentType};base64,${imageData}`;
-  };
-
-  const getDisplayImageSrc = (question) => {
-    if (!question?._id) return "";
-    return questionImages[question._id] || questionImageSrc(question);
-  };
-
-  const fetchQuestionImage = async (questionId) => {
-    const response = await api.get(`/api/questions/${questionId}/image`, {
-      _tokenType: "user",
-    });
-
-    return makeImageSrc(
-      response.data?.imageData,
-      response.data?.imageContentType,
-    );
-  };
-
-  const preloadImagesInBatches = async (questionList, batchSize = 5) => {
-    const imageQuestions = questionList.filter(
-      (question) =>
-        question?._id &&
-        (question.hasImage ||
-          question.imageContentType ||
-          question.imageSize) &&
-        !question.imageData,
-    );
-
-    if (imageQuestions.length === 0) return;
-
-    setIsPreloadingImages(true);
-
-    try {
-      for (let i = 0; i < imageQuestions.length; i += batchSize) {
-        const batch = imageQuestions.slice(i, i + batchSize);
-
-        const loadedImages = await Promise.all(
-          batch.map(async (question) => {
-            try {
-              const imageSrc = await fetchQuestionImage(question._id);
-              return [question._id, imageSrc];
-            } catch (error) {
-              console.error(
-                "Question image preload failed:",
-                question._id,
-                error,
-              );
-              return [question._id, ""];
-            }
-          }),
-        );
-
-        setQuestionImages((previousImages) => {
-          const nextImages = { ...previousImages };
-
-          loadedImages.forEach(([questionId, imageSrc]) => {
-            if (imageSrc) nextImages[questionId] = imageSrc;
-          });
-
-          return nextImages;
+    let cancelled = false;
+    const opts = { _tokenType: "user" };
+    (async () => {
+      try {
+        const body = retryOf
+          ? { retryOf }
+          : isReview
+            ? { subjectId: routeSubjectId, mode: "review", limit: requestedLimit || 30, tz: new Date().getTimezoneOffset() }
+            : isMistakes
+            ? { subjectId: routeSubjectId, mode: "mistakes", limit: requestedLimit || 30 }
+          : routeTopicId
+            ? { topicId: routeTopicId }
+            : isRandom
+              ? { subjectId: routeSubjectId, mode: "random", limit: requestedLimit }
+              : { subjectId: routeSubjectId, mode: "subject" };
+        const start = resumeId
+          ? await api.get(`/api/tests/${resumeId}`, opts)
+          : await api.post("/api/tests/start", body, opts);
+        if (cancelled) return;
+        const data = start.data || {};
+        const subjectId = data.subjectId || routeSubjectId;
+        const topicId = data.topicId || routeTopicId || null;
+        const [subjectRes, topicRes] = await Promise.all([
+          subjectId ? api.get(`/api/subjects/${subjectId}`, opts).catch(() => null) : null,
+          topicId ? api.get(`/api/topics/${topicId}`, opts).catch(() => null) : null,
+        ]);
+        if (cancelled) return;
+        sessionIdRef.current = data.sessionId;
+        finishingRef.current = false;
+        celebratedRef.current = false;
+        const duration = Number(data.duration) > 0 ? Number(data.duration) : 300;
+        const remaining = Number.isFinite(Number(data.remaining)) ? Number(data.remaining) : duration;
+        endAtRef.current = Date.now() + remaining * 1000;
+        setMeta({
+          mode: data.mode || "subject",
+          subjectId,
+          topicId,
+          subjectName: subjectRes?.data?.name || "",
+          topicName: topicRes?.data?.name || "",
+          duration,
         });
-      }
-    } finally {
-      setIsPreloadingImages(false);
-    }
-  };
-
-  useEffect(() => {
-    const fetchPageData = async () => {
-      try {
-        setIsLoading(true);
-        setErrorMessage("");
-        const token = localStorage.getItem("userToken");
-
-        if (!token) {
-          navigate("/user-login");
-          return;
+        setQuestions(data.questions || []);
+        setImages({});
+        const saved = data.progress || {};
+        setIndex(Math.min(Number(saved.index || 0), Math.max((data.questions || []).length - 1, 0)));
+        setAnswers(Object.fromEntries((saved.answers || []).filter((a) => a.selectedAnswer != null).map((a) => [a.questionId, a.selectedAnswer])));
+        setFlagged(new Set(saved.flagged || []));
+        setResumed(Boolean(resumeId));
+        setTimeLeft(remaining);
+        setResult(null);
+        setGradeError("");
+        setSheet(null);
+        setPhase((data.questions || []).length ? "test" : "error");
+        if (!(data.questions || []).length) setLoadError("There are no questions in this test yet.");
+        // Load pictures in small batches in the background.
+        const withImages = (data.questions || []).filter((q) => q.hasImage);
+        for (let i = 0; i < withImages.length && !cancelled; i += 5) {
+          const batch = await Promise.all(
+            withImages.slice(i, i + 5).map((q) =>
+              api
+                .get(`/api/questions/${q._id}/image`, opts)
+                .then((res) => [q._id, toImageSrc(res.data?.imageData, res.data?.imageContentType)])
+                .catch(() => [q._id, ""]),
+            ),
+          );
+          if (!cancelled) setImages((prev) => ({ ...prev, ...Object.fromEntries(batch.filter(([, src]) => src)) }));
         }
-
-        const userRequest = { _tokenType: "user" };
-
-        if (!subjectId && !topicId) {
-          throw new Error("Missing subject or topic ID");
-        }
-
-        if (isTopicMode) {
-          const [topicResponse, questionsResponse] = await Promise.all([
-            api.get(`/api/topics/${topicId}`, userRequest),
-            api.get(`/api/questions/topic/${topicId}`, userRequest),
-          ]);
-          const selectedTopic = topicResponse.data;
-          if (!selectedTopic) throw new Error("Topic not found");
-          const resolvedSubjectId =
-            selectedTopic.subjectId?._id ||
-            selectedTopic.subject?._id ||
-            selectedTopic.subjectId ||
-            selectedTopic.subject;
-
-          if (!resolvedSubjectId) {
-            throw new Error("Topic subject not found");
-          }
-
-          const subjectResponse = await api.get(
-            `/api/subjects/${resolvedSubjectId}`,
-            userRequest,
-          );
-          const unique = Array.from(
-            new Map(questionsResponse.data.map((q) => [q._id, q])).values(),
-          );
-
-          const preparedQuestions = shuffleArray(
-            unique.map((q) => ({ ...q, options: shuffleArray(q.options) })),
-          );
-
-          setTopic(selectedTopic);
-          setSubject(subjectResponse.data);
-          setQuestionImages({});
-          setQuestions(preparedQuestions);
-          preloadImagesInBatches(preparedQuestions);
-        } else {
-          const [subjectResponse, questionsResponse] = await Promise.all([
-            api.get(`/api/subjects/${subjectId}`, userRequest),
-            api.get(`/api/questions/subject/${subjectId}`, userRequest),
-          ]);
-          const unique = Array.from(
-            new Map(questionsResponse.data.map((q) => [q._id, q])).values(),
-          );
-
-          const randomizedQuestions = shuffleArray(
-            unique.map((q) => ({ ...q, options: shuffleArray(q.options) })),
-          );
-
-          const preparedQuestions = isRandomMode
-            ? randomizedQuestions.slice(
-                0,
-                Math.min(requestedLimit, randomizedQuestions.length),
-              )
-            : randomizedQuestions;
-
-          setTopic(null);
-          setSubject(subjectResponse.data);
-          setQuestionImages({});
-          setQuestions(preparedQuestions);
-          preloadImagesInBatches(preparedQuestions);
-        }
-        setCurrentQuestionIndex(0);
-        setSelectedAnswers({});
-        setFlaggedQuestions(new Set());
-        setShowResults(false);
-        setReviewMode("all");
-        resultSavedRef.current = false;
-        submissionIdRef.current = crypto.randomUUID();
-        setSavedResultId(null);
-        setTutorUnavailable(false);
-        setResultSaveError("");
-        setStoppedTest(false);
       } catch (err) {
-        console.error(err);
-        setErrorMessage("Unable to load this test right now.");
-      } finally {
-        setIsLoading(false);
+        if (cancelled) return;
+        console.error("Failed to start test:", err);
+        const status = err?.status ?? err?.response?.status;
+        const serverMessage = err?.data?.message ?? err?.response?.data?.message;
+        setLoadError(
+          serverMessage && status && status < 500
+            ? serverMessage
+            : "We couldn't load this test right now. Check your connection and try again.",
+        );
+        setPhase("error");
       }
-    };
-    fetchPageData();
-  }, [subjectId, topicId, isTopicMode, isRandomMode, requestedLimit, navigate]);
-
-  useEffect(() => {
-    if (!subject) return;
-    setTimeLeft(subject.duration || 300);
-  }, [subject]);
-
-  useEffect(() => {
-    if (isLoading || showResults || questions.length === 0) return;
-    if (timeLeft <= 0) {
-      setShowResults(true);
-      return;
-    }
-    const t = setInterval(() => setTimeLeft((p) => p - 1), 1000);
-    return () => clearInterval(t);
-  }, [timeLeft, isLoading, showResults, questions.length]);
-
-  const score = useMemo(
-    () =>
-      questions.reduce(
-        (n, q) => (selectedAnswers[q._id] === q.correctAnswer ? n + 1 : n),
-        0,
-      ),
-    [questions, selectedAnswers],
-  );
-
-  const isPerfectScore =
-    showResults && questions.length > 0 && score === questions.length;
-  useEffect(() => {
-    if (
-      isPerfectScore &&
-      !hasPlayedPerfectScoreRef.current &&
-      perfectScoreAudioRef.current
-    ) {
-      hasPlayedPerfectScoreRef.current = true;
-
-      perfectScoreAudioRef.current.currentTime = 0;
-
-      perfectScoreAudioRef.current.play().catch(() => {});
-    }
-  }, [isPerfectScore]);
-
-  useEffect(() => {
-    perfectScoreAudioRef.current = new Audio("/sounds/perfect-score.mp3");
-
-    perfectScoreAudioRef.current.volume = 0.8;
-
+    })();
     return () => {
-      if (perfectScoreAudioRef.current) {
-        perfectScoreAudioRef.current.pause();
-        perfectScoreAudioRef.current = null;
-      }
+      cancelled = true;
     };
-  }, []);
-  useEffect(() => {
-    if (
-      !showResults ||
-      resultSavedRef.current ||
-      !subject ||
-      questions.length === 0 ||
-      stoppedTest
-    ) {
-      return;
-    }
+  }, [routeSubjectId, routeTopicId, retryOf, resumeId, isMistakes, isReview, isRandom, requestedLimit, attempt]);
 
-    const saveResult = async () => {
-      const submissionId = submissionIdRef.current;
+  /* submit to the server for marking */
+  const finishTest = useCallback(
+    async (stopped) => {
+      if (finishingRef.current || !sessionIdRef.current) return;
+      finishingRef.current = true;
+      const sessionId = sessionIdRef.current;
+      setSheet(null);
+      setGradeError("");
+      setPhase("grading");
       try {
-        resultSavedRef.current = true;
-        setResultSaveError("");
-        const timeUsed = Math.max(0, (subject.duration || 300) - timeLeft);
-
-        const response = await api.post(
-          "/api/results",
-          {
-            subjectId: subject._id,
-            topicId: isTopicMode ? topicId : null,
-            score,
-            total: questions.length,
-            timeTaken: timeUsed,
-            mode: isTopicMode ? "topic" : isRandomMode ? "random" : "subject",
-            submissionId,
-            answers: questions.map((q) => ({
-              questionId: q._id,
-              selectedAnswer: selectedAnswers[q._id] ?? null,
-            })),
-          },
+        const res = await api.post(
+          `/api/tests/${sessionId}/submit`,
+          { stopped, answers: questions.map((q) => ({ questionId: q._id, selectedAnswer: answers[q._id] ?? null })) },
           { _tokenType: "user" },
         );
-
-        if (submissionIdRef.current !== submissionId) return;
-        if (response.data?.submittedAt) {
-          setSavedResultId(response.data._id);
-        } else {
-          setTutorUnavailable(true);
+        if (sessionIdRef.current !== sessionId) return;
+        const data = res.data || {};
+        const byId = new Map((data.review || []).map((r) => [String(r.questionId), r]));
+        setQuestions((prev) =>
+          prev.map((q) => {
+            const r = byId.get(String(q._id));
+            return r ? { ...q, correctAnswer: r.correctAnswer, explanation: r.explanation } : q;
+          }),
+        );
+        if (!stopped && data.unlockedBadges?.length) {
+          try { sessionStorage.setItem("newBadge", JSON.stringify(data.unlockedBadges[0])); } catch { /* ignore */ }
         }
-        if (response.data?.unlockedBadges?.length) {
-          sessionStorage.setItem(
-            "newBadge",
-            JSON.stringify(response.data.unlockedBadges[0]),
-          );
-        }
-      } catch (error) {
-        if (submissionIdRef.current !== submissionId) return;
-        resultSavedRef.current = false;
-        setResultSaveError("Your result could not be saved. Retry saving to open your mistake tutor.");
-        console.error("Failed to save result:", error);
+        setResult({
+          score: Number(data.score || 0),
+          total: Number(data.total || questions.length),
+          timeTaken: Number(data.timeTaken || 0),
+          stopped: Boolean(data.stopped),
+          resultId: data.resultId || null,
+          previous: data.previous || null,
+          badges: data.unlockedBadges || [],
+        });
+        setPhase("results");
+        window.scrollTo({ top: 0 });
+      } catch (err) {
+        if (sessionIdRef.current !== sessionId) return;
+        finishingRef.current = false;
+        console.error("Failed to submit test:", err);
+        setGradeError(
+          (err?.status ?? err?.response?.status) === 404
+            ? "This test session has expired, so it can't be marked. Please start the test again."
+            : "We couldn't mark your test. Check your connection and try again. Your answers are still here.",
+        );
+        setPhase("gradeError");
       }
-    };
-
-    saveResult();
-  }, [
-    showResults,
-    subject,
-    questions,
-    selectedAnswers,
-    saveRetry,
-    score,
-    timeLeft,
-    isTopicMode,
-    isRandomMode,
-    topicId,
-    stoppedTest,
-  ]);
-
-  const currentQuestion = questions[currentQuestionIndex];
-  const currentQuestionImageSrc = currentQuestion
-    ? getDisplayImageSrc(currentQuestion)
-    : "";
-  const answeredCount = Object.keys(selectedAnswers).length;
-  const progressPercent = questions.length
-    ? ((currentQuestionIndex + 1) / questions.length) * 100
-    : 0;
-  const breadcrumb = isTopicMode
-    ? `${subject?.name} · ${topic?.name || ""}`
-    : isRandomMode
-      ? `${subject?.name || ""} · Randomized Practice`
-      : subject?.name || "";
-  const flaggedCount = flaggedQuestions.size;
-  const isFlaggedCurrentQuestion = flaggedQuestions.has(currentQuestion?._id);
-
-  const toggleFlag = () => {
-    setFlaggedQuestions((prev) => {
-      const next = new Set(prev);
-      if (next.has(currentQuestion._id)) {
-        next.delete(currentQuestion._id);
-      } else {
-        next.add(currentQuestion._id);
-      }
-      return next;
-    });
-  };
-
-  const handleSkipQuestion = () => {
-    // Move to next unanswered question or next question overall
-    const nextIndex = questions.findIndex(
-      (q, i) => i > currentQuestionIndex && !selectedAnswers[q._id],
-    );
-    if (nextIndex !== -1) {
-      setCurrentQuestionIndex(nextIndex);
-    } else {
-      // No unanswered questions ahead, go to next question
-      if (currentQuestionIndex < questions.length - 1) {
-        setCurrentQuestionIndex(currentQuestionIndex + 1);
-      }
-    }
-  };
-
-  const handleGoToFlagged = (questionIndex) => {
-    setCurrentQuestionIndex(questionIndex);
-  };
-
-  const getPerformanceMessage = () => {
-    if (!questions.length) return "";
-    const pct = score / questions.length;
-    if (pct === 1) return "Perfect score";
-    if (pct === 0) return "Keep studying";
-    if (pct >= 0.8) return "Excellent work";
-    if (pct >= 0.5) return "Good progress";
-    return "Keep practicing";
-  };
-
-  const handleRetakeTest = () => {
-    resultSavedRef.current = false;
-    submissionIdRef.current = crypto.randomUUID();
-    setSavedResultId(null);
-    setTutorUnavailable(false);
-    setResultSaveError("");
-    setStoppedTest(false);
-    hasPlayedPerfectScoreRef.current = false;
-    setReviewMode("all");
-    setQuestions(
-      shuffleArray(
-        questions.map((q) => ({ ...q, options: shuffleArray(q.options) })),
-      ),
-    );
-    setSelectedAnswers({});
-    setFlaggedQuestions(new Set());
-    setCurrentQuestionIndex(0);
-    setShowResults(false);
-    setTimeLeft(defaultDuration);
-  };
-
-  const handleStopTest = () => {
-    if (
-      window.confirm(
-        "Stop test? You'll see corrections for all questions you attempted.",
-      )
-    ) {
-      setStoppedTest(true);
-      setShowResults(true);
-    }
-  };
-
-  const handleSubmit = () => {
-    if (answeredCount !== questions.length) {
-      alert("Please answer all questions before submitting.");
-      return;
-    }
-    setShowResults(true);
-  };
-
-  /* ── shared page shell ── */
-  const page = (children) => (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: T.bg,
-        fontFamily: T.fontSans,
-        position: "relative",
-        overflow: "hidden",
-      }}
-    >
-      <BlobBackground amount="compact" orientation="compact" />
-      <div
-        style={{
-          maxWidth: "800px",
-          margin: "0 auto",
-          padding: "2rem 1.25rem 4rem",
-          position: "relative",
-          zIndex: 1,
-        }}
-      >
-        {children}
-      </div>
-    </div>
+    },
+    [questions, answers],
   );
 
-  /* ── Loading ── */
-  if (isLoading)
-    return page(
-      <div style={{ textAlign: "center", paddingTop: "5rem" }}>
-        <div
-          style={{
-            width: "40px",
-            height: "40px",
-            borderRadius: "50%",
-            border: `3px solid ${T.accentLight}`,
-            borderTop: `3px solid ${T.accent}`,
-            animation: "pulse 1s linear infinite",
-            margin: "0 auto 1rem",
-          }}
-        />
-        <p style={{ fontSize: "14px", color: T.inkFaint }}>
-          Loading questions…
-        </p>
-      </div>,
-    );
-
-  /* ── Error ── */
-  if (errorMessage)
-    return page(
-      <div
-        style={{
-          background: T.surface,
-          border: `1px solid ${T.dangerBorder}`,
-          borderRadius: T.radiusLg,
-          padding: "2rem",
-          boxShadow: T.shadow,
-        }}
-      >
-        <p style={{ marginBottom: "1rem", color: T.inkMid, fontSize: "14px" }}>
-          {errorMessage}
-        </p>
-        <Btn onClick={() => navigate("/user")}>← Back to subjects</Btn>
-      </div>,
-    );
-
-  if (!subject) return null;
-
-  /* ── Empty ── */
-  if (questions.length === 0)
-    return page(
-      <div
-        style={{
-          background: T.surface,
-          border: `1px solid ${T.border}`,
-          borderRadius: T.radiusLg,
-          padding: "2rem",
-          boxShadow: T.shadow,
-        }}
-      >
-        <p style={{ fontWeight: "600", marginBottom: "6px" }}>{breadcrumb}</p>
-        <p style={{ color: T.inkFaint, fontSize: "14px", margin: 0 }}>
-          No questions available for this test yet.
-        </p>
-      </div>,
-    );
-
-  /* ══════════════════════════════════════
-     RESULTS VIEW
-  ══════════════════════════════════════ */
-  if (showResults) {
-    const timeUsed = Math.max(0, defaultDuration - timeLeft);
-
-    // Show corrections view when test is stopped (no grading)
-    if (stoppedTest) {
-      return page(
-        <>
-          {/* Corrections header */}
-          <div
-            style={{
-              background: T.surface,
-              border: `1px solid ${T.border}`,
-              borderRadius: T.radiusLg,
-              padding: "2rem",
-              marginBottom: "1.5rem",
-              boxShadow: T.shadowMd,
-              animation: "fadeUp 0.4s ease",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "14px",
-                marginBottom: "0",
-              }}
-            >
-              <div
-                style={{
-                  width: "52px",
-                  height: "52px",
-                  borderRadius: T.radius,
-                  background: T.warningLight,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                  fontSize: "24px",
-                }}
-              >
-                📋
-              </div>
-              <div>
-                <p
-                  style={{
-                    fontSize: "12px",
-                    color: T.inkFaint,
-                    fontWeight: "600",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.08em",
-                    marginBottom: "4px",
-                  }}
-                >
-                  {breadcrumb}
-                </p>
-                <h2
-                  style={{
-                    fontSize: "22px",
-                    fontWeight: "700",
-                    color: T.ink,
-                    margin: 0,
-                  }}
-                >
-                  Review Your Answers
-                </h2>
-              </div>
-            </div>
-          </div>
-
-          {/* Summary stats */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
-              gap: "1rem",
-              marginBottom: "1.5rem",
-            }}
-          >
-            <StatCell value={answeredCount} label="Answered" />
-            <StatCell
-              value={questions.length - answeredCount}
-              label="Not Answered"
-            />
-            <StatCell value={flaggedCount} label="Flagged" />
-          </div>
-
-          {/* Review filter */}
-          <div
-            style={{
-              display: "flex",
-              gap: "8px",
-              flexWrap: "wrap",
-              marginBottom: "1.5rem",
-            }}
-          >
-            <Btn
-              variant={reviewMode === "all" ? "primary" : "ghost"}
-              onClick={() => setReviewMode("all")}
-            >
-              All questions ({questions.length})
-            </Btn>
-            <Btn
-              variant={reviewMode === "answered" ? "primary" : "ghost"}
-              onClick={() => setReviewMode("answered")}
-            >
-              Answered ({answeredCount})
-            </Btn>
-            {flaggedCount > 0 && (
-              <Btn
-                variant={reviewMode === "flagged" ? "primary" : "ghost"}
-                onClick={() => setReviewMode("flagged")}
-              >
-                <Icon.flag filled /> Flagged ({flaggedCount})
-              </Btn>
-            )}
-          </div>
-
-          {/* Questions review */}
-          {(reviewMode === "all"
-            ? questions
-            : reviewMode === "answered"
-              ? questions.filter((q) => selectedAnswers[q._id])
-              : questions.filter((q) => flaggedQuestions.has(q._id))
-          ).map((question) => (
-            <QuestionReviewCard
-              key={question._id}
-              question={question}
-              index={questions.findIndex((q) => q._id === question._id)}
-              userAnswer={selectedAnswers[question._id]}
-              imageSrc={getDisplayImageSrc(question)}
-              isFlagged={flaggedQuestions.has(question._id)}
-            />
-          ))}
-
-          {/* Footer actions */}
-          <div
-            style={{
-              display: "flex",
-              gap: "8px",
-              justifyContent: "center",
-              flexWrap: "wrap",
-              marginTop: "2rem",
-            }}
-          >
-            <Btn
-              variant="primary"
-              onClick={() => {
-                setStoppedTest(false);
-                setReviewMode("all");
-                setQuestions(
-                  shuffleArray(
-                    questions.map((q) => ({
-                      ...q,
-                      options: shuffleArray(q.options),
-                    })),
-                  ),
-                );
-                setSelectedAnswers({});
-                setFlaggedQuestions(new Set());
-                setCurrentQuestionIndex(0);
-                setShowResults(false);
-                setTimeLeft(defaultDuration);
-              }}
-            >
-              Retake Test
-            </Btn>
-            <Btn onClick={() => navigate(`/subject/${subject._id}/topics`)}>
-              ← Back to topics
-            </Btn>
-          </div>
-        </>,
-      );
+  /* autosave: answers, flags and position, a moment after each change */
+  const progressBody = useCallback(
+    () => ({
+      answers: Object.entries(answers).map(([questionId, selectedAnswer]) => ({ questionId, selectedAnswer })),
+      flagged: [...flagged],
+      index,
+    }),
+    [answers, flagged, index],
+  );
+  const firstSaveRef = useRef(true);
+  useEffect(() => {
+    if (phase !== "test" || !sessionIdRef.current) return undefined;
+    if (firstSaveRef.current) {
+      firstSaveRef.current = false; // nothing changed yet
+      return undefined;
     }
+    const sessionId = sessionIdRef.current;
+    const t = setTimeout(() => {
+      setSaveState("saving");
+      api
+        .put(`/api/tests/${sessionId}/progress`, progressBody(), { _tokenType: "user" })
+        .then(() => setSaveState("saved"))
+        .catch(() => setSaveState("failed"));
+    }, 1200);
+    return () => clearTimeout(t);
+  }, [phase, progressBody]);
+  // When the tab is hidden or closed, save straight away (keepalive survives the page closing).
+  useEffect(() => {
+    if (phase !== "test") return undefined;
+    const flush = () => {
+      if (!sessionIdRef.current || finishingRef.current) return;
+      try {
+        fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/tests/${sessionIdRef.current}/progress`, {
+          method: "PUT",
+          keepalive: true,
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("userToken") || ""}` },
+          body: JSON.stringify(progressBody()),
+        }).catch(() => {});
+      } catch { /* ignore */ }
+    };
+    const onVis = () => document.visibilityState === "hidden" && flush();
+    document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("pagehide", flush);
+    return () => {
+      document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("pagehide", flush);
+    };
+  }, [phase, progressBody]);
 
-    // Show normal graded results view
-    const percentage = Math.round((score / questions.length) * 100);
-    const wrongQuestions = questions.filter(
-      (question) => selectedAnswers[question._id] !== question.correctAnswer,
-    );
-    const reviewQuestions = reviewMode === "wrong" ? wrongQuestions : questions;
+  const saveAndLeave = async () => {
+    setSheet(null);
+    try {
+      await api.put(`/api/tests/${sessionIdRef.current}/progress`, progressBody(), { _tokenType: "user" });
+    } catch { /* the keepalive save on page hide is a second chance */ }
+    finishingRef.current = true; // stop the leave warning and further saves
+    navigate("/user-dashboard");
+  };
 
-    return page(
-      <>
-        {isPerfectScore && Fireworks && (
-          <div
-            style={{
-              position: "fixed",
-              inset: 0,
-              width: "100vw",
-              height: "100vh",
-              pointerEvents: "none",
-              zIndex: 9999,
-            }}
-          >
-            <Fireworks
-              key={`perfect-fireworks-${score}-${questions.length}`}
-              autorun={{ speed: 3 }}
-              style={{
-                width: "100%",
-                height: "100%",
-              }}
-            />
-          </div>
-        )}
+  /* timer: based on the end time, so it stays right if the phone sleeps */
+  useEffect(() => {
+    if (phase !== "test") return undefined;
+    const tick = () => {
+      const left = Math.round((endAtRef.current - Date.now()) / 1000);
+      setTimeLeft(left);
+      if (left <= 0) finishTest(false);
+    };
+    tick();
+    const t = setInterval(tick, 1000);
+    return () => clearInterval(t);
+  }, [phase, finishTest]);
 
-        {/* Score card */}
-        <div
-          style={{
-            background: T.surface,
-            border: `1px solid ${T.border}`,
-            borderRadius: T.radiusLg,
-            padding: "2rem",
-            marginBottom: "1.5rem",
-            boxShadow: T.shadowMd,
-            animation: "fadeUp 0.4s ease",
-          }}
-        >
-          {/* Header */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "14px",
-              marginBottom: "1.5rem",
-            }}
-          >
-            <div
-              style={{
-                width: "52px",
-                height: "52px",
-                borderRadius: T.radius,
-                background: T.accentLight,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
-              }}
-            >
-              <Icon.trophy />
-            </div>
-            <div>
-              <p
-                style={{
-                  fontSize: "12px",
-                  color: T.inkFaint,
-                  fontWeight: "600",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.08em",
-                  marginBottom: "4px",
-                }}
-              >
-                {breadcrumb}
-              </p>
-              <h2
-                style={{
-                  fontSize: "22px",
-                  fontWeight: "700",
-                  color: T.ink,
-                  margin: 0,
-                }}
-              >
-                {getPerformanceMessage()}
-              </h2>
-            </div>
-          </div>
+  /* warn before closing the tab mid-test */
+  useEffect(() => {
+    if (phase !== "test") return undefined;
+    const warn = (e) => {
+      if (finishingRef.current) return;
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [phase]);
 
-          {/* Stats */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(3, 1fr)",
-              gap: "1rem",
-              marginBottom: "1.5rem",
-            }}
-          >
-            <StatCell value={`${percentage}%`} label="Score" />
-            <StatCell value={`${score}/${questions.length}`} label="Correct" />
-            <StatCell value={formatTime(timeUsed)} label="Time used" />
-          </div>
+  const current = questions[index];
+  const answeredCount = useMemo(() => questions.filter((q) => answers[q._id] != null).length, [questions, answers]);
+  const unanswered = questions.length - answeredCount;
 
-          {/* Progress bar */}
-          <div>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                fontSize: "12px",
-                color: T.inkFaint,
-                marginBottom: "8px",
-                fontWeight: "500",
-              }}
-            >
-              <span>Performance</span>
-              <span style={{ color: percentage >= 50 ? T.success : T.danger }}>
-                {percentage}%
-              </span>
-            </div>
-            <div
-              style={{
-                height: "6px",
-                background: "#e2e8f0",
-                borderRadius: "999px",
-                overflow: "hidden",
-              }}
-            >
-              <div
-                style={{
-                  width: `${percentage}%`,
-                  height: "100%",
-                  background:
-                    percentage >= 50
-                      ? `linear-gradient(90deg, ${T.success} 0%, ${T.accent} 100%)`
-                      : T.danger,
-                  borderRadius: "999px",
-                  transition: "width 0.6s ease",
-                }}
-              />
+  const choose = useCallback((qid, option) => setAnswers((prev) => ({ ...prev, [qid]: option })), []);
+  const toggleFlag = () =>
+    setFlagged((prev) => {
+      const next = new Set(prev);
+      if (next.has(current._id)) next.delete(current._id);
+      else next.add(current._id);
+      return next;
+    });
+  const goNext = () => {
+    if (index < questions.length - 1) setIndex(index + 1);
+    else setSheet("finish");
+  };
+
+  /* keyboard: A–F or 1–6 to answer, arrows to move */
+  useEffect(() => {
+    if (phase !== "test" || sheet) return undefined;
+    const onKey = (e) => {
+      if (e.target instanceof HTMLElement && ["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName)) return;
+      if (e.metaKey || e.ctrlKey || e.altKey || !current) return;
+      const key = e.key.toUpperCase();
+      let i = LETTERS.indexOf(key);
+      if (i < 0 && /^[1-6]$/.test(key)) i = Number(key) - 1;
+      if (i >= 0 && i < current.options.length) {
+        choose(current._id, current.options[i]);
+        e.preventDefault();
+      } else if (e.key === "ArrowRight" && index < questions.length - 1) setIndex(index + 1);
+      else if (e.key === "ArrowLeft" && index > 0) setIndex(index - 1);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [phase, sheet, current, index, questions.length, choose]);
+
+  /* perfect score celebration */
+  const isPerfect = phase === "results" && result && !result.stopped && result.total > 0 && result.score === result.total;
+  useEffect(() => {
+    if (!isPerfect || celebratedRef.current) return;
+    celebratedRef.current = true;
+    try {
+      const audio = new Audio("/sounds/perfect-score.mp3");
+      audio.volume = 0.8;
+      audio.play().catch(() => {});
+    } catch { /* ignore */ }
+    if (!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+      confetti({ particleCount: 140, spread: 75, origin: { y: 0.35 } });
+    }
+  }, [isPerfect]);
+
+  /* labels */
+  const testName =
+    meta.mode === "review"
+      ? `Spaced review${meta.subjectName ? ` · ${meta.subjectName}` : ""}`
+      : meta.mode === "mistakes"
+      ? `Mistake practice${meta.subjectName ? ` · ${meta.subjectName}` : ""}`
+      : meta.mode === "retry"
+      ? `Retry: ${meta.topicName || meta.subjectName || "missed questions"}`
+      : meta.topicName || (meta.mode === "random" ? `Random mix · ${questions.length} questions` : "Full subject test");
+  const subLabel = meta.mode === "review" ? "Questions due for review" : meta.mode === "retry" || meta.mode === "mistakes" ? "Only questions you got wrong" : meta.subjectName;
+  const backToTopics = () => navigate(meta.subjectId ? `/subject/${meta.subjectId}/topics` : "/user");
+  const retake = () => {
+    if (resumeId) {
+      // A resumed test's URL points at the old session; start a brand-new one instead.
+      const q = meta.mode === "topic" && meta.topicId ? `/test/topic/${meta.topicId}` : meta.mode === "random" ? `/test/subject/${meta.subjectId}?mode=random&limit=${questions.length}` : meta.mode === "mistakes" ? `/test/subject/${meta.subjectId}?mode=mistakes` : meta.mode === "review" ? "/mistakes" : `/test/subject/${meta.subjectId}`;
+      navigate(q);
+      return;
+    }
+    if (meta.mode === "mistakes") {
+      navigate(`/test/subject/${meta.subjectId}?mode=mistakes&n=${Date.now()}`);
+      return;
+    }
+    if (meta.mode === "review") {
+      navigate("/mistakes");
+      return;
+    }
+    setPhase("loading");
+    setAttempt((v) => v + 1);
+  };
+
+  const isCorrect = (q) => answers[q._id] != null && answers[q._id] === q.correctAnswer;
+  const mistakes = questions.filter((q) => !isCorrect(q));
+  const openReview = (kind, startId) => {
+    const list = kind === "mistakes" ? mistakes : questions;
+    const pos = Math.max(0, startId ? list.findIndex((q) => q._id === startId) : 0);
+    setReview({ list, pos, kind });
+    setPhase("review");
+    window.scrollTo({ top: 0 });
+  };
+
+  /* ── loading / errors ── */
+  if (phase === "loading") return <BamboLoader message="Getting your questions ready" />;
+  if (phase === "grading")
+    return <BamboLoader message="Marking your answers" tip="Your answers are checked on our server, so every score is fair." />;
+
+  if (phase === "error" || phase === "gradeError") {
+    const expired = gradeError.includes("expired");
+    return (
+      <div className="tt">
+        <div className="tt-body" style={{ paddingTop: 48 }}>
+          <div className="rs-card" role="alert">
+            <h2 style={{ margin: 0, fontSize: 18 }}>{phase === "error" ? "This test couldn't start" : "Your test wasn't marked yet"}</h2>
+            <p style={{ margin: 0, color: "var(--text-secondary)", lineHeight: 1.6 }}>{phase === "error" ? loadError : gradeError}</p>
+            <div className="rs-stack">
+              {phase === "gradeError" && !expired && (
+                <button type="button" className="st-btn st-btn-lg" onClick={() => finishTest(false)}>Try marking again</button>
+              )}
+              {(phase === "error" || expired) && (
+                <button type="button" className="st-btn st-btn-lg" onClick={retake}>Start again</button>
+              )}
+              <button type="button" className="st-btn st-btn-outline st-btn-lg" onClick={backToTopics}>Back to topics</button>
             </div>
           </div>
         </div>
-
-        {/* Question map */}
-        <div
-          style={{
-            background: T.surface,
-            border: `1px solid ${T.border}`,
-            borderRadius: T.radius,
-            padding: "1.25rem",
-            marginBottom: "1.5rem",
-            boxShadow: T.shadow,
-          }}
-        >
-          <p
-            style={{
-              fontSize: "12px",
-              color: T.inkFaint,
-              fontWeight: "600",
-              textTransform: "uppercase",
-              letterSpacing: "0.08em",
-              marginBottom: "1rem",
-              margin: "0 0 1rem",
-            }}
-          >
-            Question overview
-          </p>
-          <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
-            {questions.map((q, i) => {
-              const correct = selectedAnswers[q._id] === q.correctAnswer;
-              const isFlagged = flaggedQuestions.has(q._id);
-              return (
-                <span
-                  key={q._id}
-                  style={{
-                    width: "32px",
-                    height: "32px",
-                    borderRadius: "6px",
-                    background: isFlagged
-                      ? T.flagLight
-                      : correct
-                        ? T.successLight
-                        : T.dangerLight,
-                    color: isFlagged ? T.flag : correct ? T.success : T.danger,
-                    fontSize: "12px",
-                    fontWeight: "600",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    border: `1px solid ${
-                      isFlagged ? T.flag : correct ? "#86efac" : T.dangerBorder
-                    }`,
-                    position: "relative",
-                  }}
-                >
-                  {isFlagged && (
-                    <Icon.flag
-                      filled
-                      style={{
-                        position: "absolute",
-                        fontSize: "10px",
-                      }}
-                    />
-                  )}
-                  {!isFlagged && i + 1}
-                </span>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Review filter */}
-        <div
-          style={{
-            display: "flex",
-            gap: "8px",
-            flexWrap: "wrap",
-            marginBottom: "1.5rem",
-          }}
-        >
-          <Btn
-            variant={reviewMode === "all" ? "primary" : "ghost"}
-            onClick={() => setReviewMode("all")}
-          >
-            All questions
-          </Btn>
-          <Btn
-            variant={reviewMode === "wrong" ? "primary" : "ghost"}
-            onClick={() => setReviewMode("wrong")}
-          >
-            Incorrect ({wrongQuestions.length})
-          </Btn>
-          {flaggedCount > 0 && (
-            <Btn
-              variant={reviewMode === "flagged" ? "primary" : "ghost"}
-              onClick={() => setReviewMode("flagged")}
-            >
-              <Icon.flag filled /> Flagged ({flaggedCount})
-            </Btn>
-          )}
-        </div>
-
-        {/* Perfect score message */}
-        {!savedResultId && (
-          <div role={resultSaveError ? "alert" : "status"} style={{ marginBottom: "1rem", color: T.inkMid }}>
-            {resultSaveError || (tutorUnavailable
-              ? "Your result is saved. Guided mistake review is not available for this test yet."
-              : "Saving your result to prepare your mistake tutor…")}
-            {resultSaveError && (
-              <Btn onClick={() => setSaveRetry((value) => value + 1)}>Retry saving</Btn>
-            )}
-          </div>
-        )}
-        {reviewMode === "wrong" && wrongQuestions.length === 0 ? (
-          <div
-            style={{
-              background: T.successLight,
-              border: `1px solid #86efac`,
-              borderRadius: T.radiusLg,
-              padding: "1.25rem",
-              color: T.success,
-              marginBottom: "1rem",
-              fontSize: "14px",
-              fontWeight: "500",
-            }}
-          >
-            🎉 Perfect score! No incorrect answers to review.
-          </div>
-        ) : (
-          (reviewMode === "flagged"
-            ? questions.filter((q) => flaggedQuestions.has(q._id))
-            : reviewQuestions
-          ).map((question) => (
-            <QuestionReviewCard
-              key={question._id}
-              question={question}
-              index={questions.findIndex((q) => q._id === question._id)}
-              userAnswer={selectedAnswers[question._id]}
-              imageSrc={getDisplayImageSrc(question)}
-              isFlagged={flaggedQuestions.has(question._id)}
-              resultId={savedResultId}
-            />
-          ))
-        )}
-
-        {/* Footer actions */}
-        <div
-          style={{
-            display: "flex",
-            gap: "8px",
-            justifyContent: "center",
-            flexWrap: "wrap",
-            marginTop: "2rem",
-          }}
-        >
-          <Btn variant="primary" onClick={handleRetakeTest}>
-            Retake test
-          </Btn>
-          <Btn onClick={() => navigate(`/subject/${subject._id}/topics`)}>
-            ← Back to topics
-          </Btn>
-        </div>
-      </>,
+      </div>
     );
   }
 
-  /* ══════════════════════════════════════
-     TEST VIEW
-  ══════════════════════════════════════ */
-  const timeWarn = timeLeft <= 60;
-
-  return page(
-    <>
-      {/* Top bar */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "flex-start",
-          justifyContent: "space-between",
-          gap: "1rem",
-          flexWrap: "wrap",
-          marginBottom: "1.5rem",
-          animation: "fadeUp 0.3s ease",
-        }}
-      >
-        <div>
-          <p
-            style={{
-              fontSize: "12px",
-              color: T.inkFaint,
-              fontWeight: "600",
-              textTransform: "uppercase",
-              letterSpacing: "0.08em",
-              marginBottom: "4px",
-            }}
-          >
-            {breadcrumb}
-          </p>
-          <h2
-            style={{
-              fontSize: "24px",
-              fontWeight: "700",
-              color: T.ink,
-              margin: 0,
-            }}
-          >
-            Start the test
-          </h2>
-        </div>
-        <div
-          style={{
-            display: "flex",
-            gap: "8px",
-            alignItems: "center",
-            flexWrap: "wrap",
-          }}
-        >
-          {flaggedCount > 0 && (
-            <FlaggedBadge
-              count={flaggedCount}
-              questions={questions}
-              selectedAnswers={selectedAnswers}
-              currentQuestionIndex={currentQuestionIndex}
-              onSelectFlagged={handleGoToFlagged}
-              flaggedQuestions={flaggedQuestions}
-            />
+  /* ── results ── */
+  if (phase === "results" && result) {
+    const p = pct(result.score, result.total);
+    const change = result.previous ? p - pct(result.previous.score, result.previous.total) : null;
+    const countsForBoard = !result.stopped && !["retry", "mistakes", "review"].includes(meta.mode) && result.total >= (meta.mode === "random" ? 20 : 5);
+    return (
+      <div className="tt">
+        <header className="tt-plain-top">
+          <div className="tt-top-inner">
+            <button type="button" className="tt-icon-btn" aria-label="Back to topics" onClick={backToTopics}><Svg size={22}>{I.back}</Svg></button>
+            <h1 style={{ flex: 1 }}>{result.stopped ? "Corrections" : "Results"}</h1>
+            <button type="button" className="st-btn st-btn-text" onClick={() => navigate("/user-dashboard")}>Home</button>
+          </div>
+        </header>
+        <main className="tt-body" style={{ paddingBottom: 40 }}>
+          {result.stopped && (
+            <div className="rs-banner">You stopped this test, so it wasn't saved and doesn't count. Here are the corrections for the questions you answered.</div>
           )}
-          <div
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "8px",
-              padding: "9px 14px",
-              borderRadius: T.radiusSm,
-              background: timeWarn ? T.dangerLight : T.surface,
-              border: `1px solid ${timeWarn ? T.dangerBorder : T.border}`,
-              fontSize: "14px",
-              fontWeight: "600",
-              color: timeWarn ? T.danger : T.ink,
-              transition: "all 0.3s",
-            }}
-          >
-            <Icon.clock warn={timeWarn} />
-            {formatTime(timeLeft)}
-          </div>
-          <Btn variant="danger" onClick={handleStopTest}>
-            Stop
-          </Btn>
-        </div>
-      </div>
 
-      {/* Progress */}
-      <div style={{ marginBottom: "1.5rem", animation: "fadeUp 0.35s ease" }}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            fontSize: "13px",
-            color: T.inkFaint,
-            marginBottom: "8px",
-            fontWeight: "500",
-          }}
-        >
-          <span>
-            Question{" "}
-            <span style={{ color: T.ink, fontWeight: "700" }}>
-              {currentQuestionIndex + 1}
-            </span>{" "}
-            of {questions.length}
-          </span>
-          <span>
-            Answered{" "}
-            <span style={{ color: T.ink, fontWeight: "700" }}>
-              {answeredCount}
-            </span>
-            /{questions.length}
-          </span>
-        </div>
-        <div
-          style={{
-            height: "6px",
-            background: "#e2e8f0",
-            borderRadius: "999px",
-            overflow: "hidden",
-          }}
-        >
-          <div
-            style={{
-              width: `${progressPercent}%`,
-              height: "100%",
-              background: T.accent,
-              borderRadius: "999px",
-              transition: "width 0.4s cubic-bezier(0.4,0,0.2,1)",
-            }}
-          />
-        </div>
-      </div>
+          <section className="rs-card rs-score">
+            <ScoreRing value={p} />
+            <div className="rs-meta">
+              <p>{testName}</p>
+              <h2>{result.score} of {result.total} correct</h2>
+              {change !== null && change !== 0 && (
+                <p className={change > 0 ? "rs-up" : "rs-down"}>
+                  {change > 0 ? "↑" : "↓"} {Math.abs(change)} point{Math.abs(change) === 1 ? "" : "s"} on your last try
+                </p>
+              )}
+              {change === 0 && <p>Same as your last try</p>}
+              {!result.stopped && <p>Finished in {fmtDuration(result.timeTaken)}</p>}
+            </div>
+          </section>
 
-      {/* Question card */}
-      <div
-        key={currentQuestionIndex}
-        style={{
-          background: T.surface,
-          border: `1px solid ${isFlaggedCurrentQuestion ? T.flag : T.border}`,
-          borderRadius: T.radiusLg,
-          padding: "2rem",
-          boxShadow: isFlaggedCurrentQuestion
-            ? `0 0 0 2px ${T.flagLight}, ${T.shadowMd}`
-            : T.shadowMd,
-          animation: `fadeUp 0.3s ease`,
-          marginBottom: "1.5rem",
-          transition: "all 0.2s",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: "1rem",
-            gap: "12px",
-            flexWrap: "wrap",
-          }}
-        >
-          <Badge variant={isFlaggedCurrentQuestion ? "flagged" : "neutral"}>
-            {isFlaggedCurrentQuestion && <Icon.flag filled />}Q
-            {String(currentQuestionIndex + 1).padStart(2, "0")}
-          </Badge>
-          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-            <Btn
-              onClick={handleSkipQuestion}
-              isIconOnly
-              title="Skip this question"
-            >
-              <Icon.skip />
-            </Btn>
-            <Btn
-              variant={isFlaggedCurrentQuestion ? "flagActive" : "flag"}
-              onClick={toggleFlag}
-              isIconOnly
-            >
-              <Icon.flag filled={isFlaggedCurrentQuestion} />
-            </Btn>
-          </div>
-        </div>
-
-        <p
-          style={{
-            fontSize: "16px",
-            lineHeight: "1.75",
-            color: T.ink,
-            marginBottom: "1.5rem",
-          }}
-        >
-          {currentQuestion.questionText}
-        </p>
-
-        {currentQuestionImageSrc && (
-          <div
-            style={{
-              margin: "0 0 1.5rem",
-              padding: "10px",
-              background: T.surfaceAlt,
-              border: `1px solid ${T.border}`,
-              borderRadius: T.radius,
-              animation: "fadeIn 0.25s ease",
-            }}
-          >
-            <img
-              src={currentQuestionImageSrc}
-              alt="Question"
-              style={{
-                display: "block",
-                width: "100%",
-                maxWidth: "600px",
-                maxHeight: "380px",
-                objectFit: "contain",
-                borderRadius: T.radiusSm,
-                margin: "0 auto",
-              }}
-              onError={(e) => {
-                e.currentTarget.style.display = "none";
-              }}
-            />
-          </div>
-        )}
-
-        {!currentQuestionImageSrc &&
-          (Boolean(currentQuestion?.hasImage) ||
-            Boolean(currentQuestion?.imageContentType) ||
-            Boolean(currentQuestion?.imageSize)) && (
-            <div
-              style={{
-                margin: "-0.5rem 0 1.5rem",
-                padding: "14px",
-                background: T.surfaceAlt,
-                border: `1px dashed ${T.borderStrong}`,
-                borderRadius: T.radius,
-                color: T.inkMid,
-                fontSize: "13px",
-                fontFamily: T.fontSans,
-                textAlign: "center",
-                animation: "pulse 1.2s ease-in-out infinite",
-              }}
-            >
-              Loading image...
+          {isPerfect && (
+            <div className="rs-perfect">
+              <span aria-hidden="true" style={{ fontSize: 22 }}>🎯</span>
+              <span>Perfect score!{countsForBoard ? " This counts towards your leaderboard position." : ""}</span>
             </div>
           )}
 
-        <div>
-          {currentQuestion.options.map((option, i) => {
-            const isSelected = selectedAnswers[currentQuestion._id] === option;
-            return (
-              <label
-                key={i}
-                className="quiz-option"
-                onClick={() =>
-                  setSelectedAnswers((prev) => ({
-                    ...prev,
-                    [currentQuestion._id]: option,
-                  }))
-                }
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "12px",
-                  padding: "12px 14px",
-                  borderRadius: T.radius,
-                  cursor: "pointer",
-                  fontSize: "14px",
-                  marginBottom: "8px",
-                  border: `1px solid ${isSelected ? T.accent : T.border}`,
-                  background: isSelected ? T.accentLight : "transparent",
-                  color: isSelected ? T.accentDark : T.ink,
-                  transition: "all 0.2s ease",
+          {result.badges.map((b) => (
+            <div className="rs-card" key={b.key || b.title} style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+              <span aria-hidden="true" style={{ fontSize: 28 }}>{b.icon}</span>
+              <div><strong style={{ display: "block" }}>New badge: {b.title}</strong><span className="db-small">{b.description}</span></div>
+            </div>
+          ))}
+
+          {!result.stopped && !result.resultId && (
+            <div className="rs-banner">Your score was marked, but the tutor isn't available for this attempt.</div>
+          )}
+
+          <section className="rs-card">
+            <div className="rs-head">
+              <h2>Every question</h2>
+              <span>✓ right · ✕ wrong · – skipped · orange ring = flagged</span>
+            </div>
+            <div className="rs-grid">
+              {questions.map((q, i) => {
+                const ok = isCorrect(q);
+                const skipped = answers[q._id] == null;
+                return (
+                  <button
+                    key={q._id}
+                    type="button"
+                    className={`rs-cell ${ok ? "ok" : skipped ? "skip" : "bad"}${flagged.has(q._id) ? " flagged" : ""}`}
+                    aria-label={`Question ${i + 1}: ${ok ? "right" : skipped ? "skipped" : "wrong"}${flagged.has(q._id) ? ", flagged" : ""}`}
+                    onClick={() => openReview("all", q._id)}
+                  >
+                    {i + 1} {ok ? "✓" : skipped ? "–" : "✕"}
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
+          <section className="rs-stack">
+            {mistakes.length > 0 ? (
+              <button type="button" className="st-btn st-btn-lg" onClick={() => openReview("mistakes")}>
+                Review {mistakes.length} mistake{mistakes.length === 1 ? "" : "s"}{result.resultId ? " with the tutor" : ""}
+              </button>
+            ) : (
+              <button type="button" className="st-btn st-btn-lg" onClick={() => openReview("all")}>Read the explanations</button>
+            )}
+            {result.resultId && mistakes.length > 0 && (
+              <button type="button" className="st-btn st-btn-outline st-btn-lg" onClick={() => navigate(`/test/subject/${meta.subjectId}?retry=${result.resultId}`)}>
+                Retry only the {mistakes.length} I missed
+              </button>
+            )}
+            <button type="button" className="st-btn st-btn-outline st-btn-lg" onClick={retake}>
+              {meta.mode === "random" ? "New random mix" : meta.mode === "mistakes" ? "Practise my remaining mistakes" : meta.mode === "review" ? "Back to my review" : "Retake the whole test"}
+            </button>
+            <button type="button" className="st-btn st-btn-text st-btn-lg" onClick={backToTopics}>Back to topics</button>
+          </section>
+        </main>
+      </div>
+    );
+  }
+
+  /* ── review, one question at a time ── */
+  if (phase === "review") {
+    const q = review.list[review.pos];
+    if (!q) return null;
+    const qNumber = questions.findIndex((x) => x._id === q._id) + 1;
+    const mine = answers[q._id] ?? null;
+    const wrong = mine !== q.correctAnswer;
+    const label = review.kind === "mistakes" ? `Mistake ${review.pos + 1} of ${review.list.length}` : `Question ${review.pos + 1} of ${review.list.length}`;
+    const move = (d) => {
+      setReview((r) => ({ ...r, pos: r.pos + d }));
+      window.scrollTo({ top: 0 });
+    };
+    return (
+      <div className="tt">
+        <header className="tt-plain-top">
+          <div className="tt-top-inner">
+            <button type="button" className="tt-icon-btn" aria-label="Back to results" onClick={() => setPhase("results")}><Svg size={22}>{I.back}</Svg></button>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <h1>{label}</h1>
+              <p>Question {qNumber}{mine == null ? " · skipped" : ""}</p>
+            </div>
+            {review.pos < review.list.length - 1 && (
+              <button type="button" className="st-btn st-btn-text" onClick={() => move(1)}>Next</button>
+            )}
+          </div>
+        </header>
+        <main className="tt-body" style={{ paddingBottom: 40 }}>
+          <p className="tt-q" style={{ fontSize: 16 }}>{q.questionText}</p>
+          {q.hasImage && (images[q._id] ? <img className="tt-img" src={images[q._id]} alt={`Picture for question ${qNumber}`} /> : <div className="tt-img-wait">Loading picture…</div>)}
+          <div className="rs-stack" style={{ gap: 8 }}>
+            {q.options.map((opt, i) => {
+              const isRight = opt === q.correctAnswer;
+              const isMine = opt === mine;
+              const cls = isRight ? "right" : isMine ? "wrong" : "";
+              return (
+                <div key={`${i}-${opt}`} className={`rv-opt ${cls}`}>
+                  <div className="rv-opt-line">
+                    <span className="rv-dot" aria-hidden="true">{isRight ? "✓" : isMine ? "✕" : LETTERS[i]}</span>
+                    <span style={{ fontWeight: isRight || isMine ? 600 : 500 }}>
+                      {opt}
+                      {isRight && <span className="rv-who"> · correct</span>}
+                      {isMine && !isRight && <span className="rv-who"> · your answer</span>}
+                      {isMine && isRight && <span className="rv-who"> (your answer)</span>}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          {q.explanation && (
+            <div className="rv-expl">
+              <strong>Explanation</strong>
+              {q.explanation}
+            </div>
+          )}
+          <div className="rv-report">
+            {reported.has(q._id) ? (
+              <span>✓ Thanks, you reported this question. We'll check it.</span>
+            ) : (
+              <button type="button" className="st-btn st-btn-text" onClick={() => setReportFor(q)}>
+                Something wrong with this question? Report it
+              </button>
+            )}
+          </div>
+          {wrong && !result?.stopped && result?.resultId && <MistakeTutor key={q._id} resultId={result.resultId} questionId={q._id} />}
+          {reportFor && (
+            <ReportSheet
+              question={reportFor}
+              onClose={() => setReportFor(null)}
+              onSent={(id) => {
+                setReported((prev) => new Set(prev).add(id));
+                setReportFor(null);
+              }}
+            />
+          )}
+          <div className="rv-nav">
+            <button type="button" className="st-btn st-btn-outline" disabled={review.pos === 0} onClick={() => move(-1)}>Previous</button>
+            {review.pos < review.list.length - 1 ? (
+              <button type="button" className="st-btn" onClick={() => move(1)}>Next</button>
+            ) : (
+              <button type="button" className="st-btn" onClick={() => setPhase("results")}>Back to results</button>
+            )}
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  /* ── taking the test ── */
+  if (!current) return null;
+  const picked = answers[current._id] ?? null;
+  const isFlagged = flagged.has(current._id);
+  const low = timeLeft <= 60;
+  const isLast = index === questions.length - 1;
+
+  return (
+    <div className="tt">
+      <header className="tt-top">
+        <div className="tt-top-inner">
+          <div className="tt-row">
+            <button type="button" className="tt-icon-btn" aria-label="Leave test" onClick={() => setSheet("exit")}><Svg size={22}>{I.close}</Svg></button>
+            <div className="tt-title">
+              <p>{testName}{subLabel && meta.mode !== "retry" && meta.topicName ? ` · ${subLabel}` : ""}</p>
+              <h1>Question {index + 1} of {questions.length}</h1>
+            </div>
+            <div className={`tt-timer${low ? " low" : ""}`} role="timer" aria-label={`${Math.floor(Math.max(0, timeLeft) / 60)} minutes ${Math.max(0, timeLeft) % 60} seconds left`}>
+              <Svg size={16} stroke={2.2}>{I.clock}</Svg>
+              {fmtClock(timeLeft)}
+            </div>
+          </div>
+          <div className="tt-progress" role="progressbar" aria-valuenow={answeredCount} aria-valuemin={0} aria-valuemax={questions.length} aria-label={`${answeredCount} of ${questions.length} answered`}>
+            <div style={{ width: `${(answeredCount / questions.length) * 100}%` }} />
+          </div>
+        </div>
+      </header>
+
+      <main className="tt-body">
+        <div className="tt-tags">
+          <span className="tt-tag">{answeredCount} of {questions.length} answered</span>
+          {isFlagged && <span className="tt-tag flag">Flagged for review</span>}
+          {resumed && saveState === "idle" && <span className="tt-tag ok">Welcome back, your answers are here</span>}
+          {saveState === "saved" && <span className="tt-save">✓ Saved</span>}
+          {saveState === "saving" && <span className="tt-save">Saving…</span>}
+          {saveState === "failed" && <span className="tt-save bad">Not saved, check your connection</span>}
+        </div>
+        <p className="tt-q">{current.questionText}</p>
+        {current.hasImage && (images[current._id] ? <img className="tt-img" src={images[current._id]} alt={`Picture for question ${index + 1}`} /> : <div className="tt-img-wait">Loading picture…</div>)}
+        <fieldset className="tt-options">
+          <legend style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0 0 0 0)" }}>Choose one answer</legend>
+          {current.options.map((opt, i) => (
+            <button key={`${i}-${opt}`} type="button" className="tt-opt" aria-pressed={picked === opt} onClick={() => choose(current._id, opt)}>
+              <span className="tt-letter">{LETTERS[i]}</span>
+              <span style={{ flex: 1 }}>{opt}</span>
+            </button>
+          ))}
+        </fieldset>
+        <p className="tt-hint">Your answers save automatically. If you close the app, finish from your dashboard. Tip: press A–D to answer and the arrow keys to move.</p>
+      </main>
+
+      <footer className="tt-foot">
+        <div className="tt-foot-inner">
+          <button type="button" className="tt-sq" aria-pressed={isFlagged} aria-label={isFlagged ? "Remove flag" : "Flag question for review"} onClick={toggleFlag}><Svg>{I.flag}</Svg></button>
+          <button type="button" className="tt-sq" aria-label="Show all questions" onClick={() => setSheet("grid")}><Svg>{I.grid}</Svg></button>
+          <button type="button" className="tt-sq" aria-label="Previous question" disabled={index === 0} onClick={() => setIndex(index - 1)}><Svg>{I.back}</Svg></button>
+          <button type="button" className={`tt-next${isLast ? " finish" : ""}`} onClick={goNext}>
+            {isLast ? "Finish test" : "Next"}
+            <Svg size={18} stroke={2.2}>{isLast ? I.check : I.next}</Svg>
+          </button>
+        </div>
+      </footer>
+
+      {sheet === "grid" && (
+        <Sheet title="All questions" onClose={() => setSheet(null)}>
+          <div className="tt-legend"><span className="l-ans">Answered</span><span className="l-flag">Flagged</span><span className="l-open">Not answered</span></div>
+          <div className="tt-grid">
+            {questions.map((q, i) => (
+              <button
+                key={q._id}
+                type="button"
+                className={`tt-cell${answers[q._id] != null ? " ans" : ""}${flagged.has(q._id) ? " flag" : ""}${i === index ? " current" : ""}`}
+                aria-label={`Go to question ${i + 1}`}
+                onClick={() => {
+                  setIndex(i);
+                  setSheet(null);
                 }}
               >
-                <div
-                  style={{
-                    width: "18px",
-                    height: "18px",
-                    borderRadius: "50%",
-                    flexShrink: 0,
-                    border: `1.5px solid ${isSelected ? T.accent : T.borderStrong}`,
-                    background: isSelected ? T.accent : "transparent",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    transition: "all 0.15s",
-                  }}
-                >
-                  {isSelected && (
-                    <div
-                      style={{
-                        width: "6px",
-                        height: "6px",
-                        background: "#fff",
-                        borderRadius: "50%",
-                      }}
-                    />
-                  )}
-                </div>
-                <span style={{ flex: 1 }}>{option}</span>
-                {isSelected && (
-                  <span
-                    style={{
-                      fontSize: "11px",
-                      color: T.accent,
-                      fontWeight: "600",
-                    }}
-                  >
-                    Selected
-                  </span>
-                )}
-              </label>
-            );
-          })}
-        </div>
-      </div>
+                {i + 1}
+              </button>
+            ))}
+          </div>
+          <div className="tt-sheet-actions">
+            <button type="button" className="st-btn st-btn-lg" onClick={() => setSheet("finish")}>Finish test</button>
+          </div>
+        </Sheet>
+      )}
 
-      {/* Navigation */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "auto 1fr auto",
-          gridTemplateRows: "auto auto",
-          alignItems: "center",
-          gap: "1rem",
-          marginTop: "1.5rem",
-        }}
-      >
-        {/* Back button - top left */}
-        <Btn
-          onClick={() => setCurrentQuestionIndex((p) => p - 1)}
-          disabled={currentQuestionIndex === 0}
-        >
-          <Icon.left /> Back
-        </Btn>
-
-        {/* Dot nav - spans middle columns */}
-        <div
-          style={{
-            display: "flex",
-            gap: "6px",
-            alignItems: "center",
-            justifyContent: "center",
-            flexWrap: "wrap",
-            gridColumn: "2",
-            gridRow: "1",
-            minWidth: 0,
-            overflowX: "auto",
-            paddingBottom: "4px",
-          }}
-        >
-          {questions.slice(0, Math.min(questions.length, 12)).map((q, i) => {
-            const isActive = i === currentQuestionIndex;
-            const isAnswered = Boolean(selectedAnswers[q._id]);
-            const isFlagged = flaggedQuestions.has(q._id);
-            return (
-              <div
-                key={i}
-                className="dot-nav"
-                onClick={() => setCurrentQuestionIndex(i)}
-                style={{
-                  width: isActive ? "22px" : "8px",
-                  height: "8px",
-                  borderRadius: "999px",
-                  background: isFlagged
-                    ? T.flag
-                    : isActive
-                      ? T.accent
-                      : isAnswered
-                        ? `${T.accent}66`
-                        : "var(--border-strong)",
-                  cursor: "pointer",
-                  transition: "all 0.25s cubic-bezier(0.4,0,0.2,1)",
-                  border: isFlagged ? `1px solid ${T.flag}` : "none",
-                  flexShrink: 0,
+      {sheet === "finish" && (
+        <Sheet title="Finish the test?" onClose={() => setSheet(null)}>
+          {unanswered > 0 ? (
+            <p>You have <strong>{unanswered}</strong> unanswered question{unanswered === 1 ? "" : "s"}. They will be marked as wrong.{flagged.size ? ` You also flagged ${flagged.size}.` : ""}</p>
+          ) : (
+            <p>All {questions.length} questions answered.{flagged.size ? ` You flagged ${flagged.size} to check.` : ""} Ready to see your score?</p>
+          )}
+          <div className="tt-sheet-actions">
+            <button type="button" className="st-btn st-btn-lg" onClick={() => finishTest(false)}>Submit and see my score</button>
+            {unanswered > 0 && (
+              <button
+                type="button"
+                className="st-btn st-btn-outline st-btn-lg"
+                onClick={() => {
+                  const first = questions.findIndex((q) => answers[q._id] == null);
+                  if (first >= 0) setIndex(first);
+                  setSheet(null);
                 }}
-              />
-            );
-          })}
-        </div>
+              >
+                Go to the first unanswered
+              </button>
+            )}
+            <button type="button" className="st-btn st-btn-text st-btn-lg" onClick={() => setSheet(null)}>Keep going</button>
+          </div>
+        </Sheet>
+      )}
 
-        {/* Next/Submit button - top right */}
-        {currentQuestionIndex < questions.length - 1 ? (
-          <Btn
-            variant="primary"
-            onClick={() => setCurrentQuestionIndex((p) => p + 1)}
-            disabled={!selectedAnswers[currentQuestion._id]}
-          >
-            Next <Icon.right />
-          </Btn>
-        ) : (
-          <Btn
-            variant="primary"
-            onClick={handleSubmit}
-            disabled={!selectedAnswers[currentQuestion._id]}
-          >
-            Submit
-          </Btn>
-        )}
-      </div>
-    </>,
+      {sheet === "exit" && (
+        <Sheet title="Leave this test?" onClose={() => setSheet(null)}>
+          <p>Your answers are saved. You can come back and finish from your dashboard, but the timer keeps running ({fmtClock(timeLeft)} left).</p>
+          <div className="tt-sheet-actions">
+            <button type="button" className="st-btn st-btn-lg" onClick={() => setSheet(null)}>Keep going</button>
+            <button type="button" className="st-btn st-btn-outline st-btn-lg" onClick={saveAndLeave}>Leave and finish later</button>
+            <button type="button" className="st-btn st-btn-text st-btn-lg" onClick={() => finishTest(true)}>Stop now and see corrections</button>
+          </div>
+        </Sheet>
+      )}
+    </div>
   );
 }
 
-export default SubjectTestPage;
+/* A new URL (for example "retry missed" from the results) starts a fresh page. */
+export default function SubjectTestRoute() {
+  const location = useLocation();
+  return <SubjectTestPage key={location.pathname + location.search} />;
+}
