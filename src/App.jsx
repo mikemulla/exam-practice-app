@@ -3,12 +3,7 @@ import RouteMetadata from "./components/RouteMetadata";
 import HomePage from "./pages/HomePage";
 import AdminPage from "./pages/AdminPage";
 import UserPage from "./pages/UserPage";
-import AddSubjectPage from "./pages/AddSubjectPage";
 import AddQuestionPage from "./pages/AddQuestionPage";
-import AddTopicPage from "./pages/AddTopicPage";
-import ManageTopicsPage from "./pages/ManageTopicsPage";
-import BulkImportQuestionsPage from "./pages/BulkImportQuestionsPage";
-import ManageSubjectsPage from "./pages/ManageSubjectsPage";
 import ManageQuestionsPage from "./pages/ManageQuestionsPage";
 import SubjectTestPage from "./pages/SubjectTestPage";
 import SubjectRequestPage from "./pages/SubjectRequestPage";
@@ -28,7 +23,6 @@ import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import ProtectedUserRoute from "./components/ProtectedUserRoute";
 import UserDashboardPage from "./pages/UserDashboardPage";
-import AdminUserManagementPage from "./pages/AdminUserManagementPage";
 import AdminCoursesPage from "./pages/AdminCoursesPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import AccessDeniedPage from "./pages/AccessDeniedPage";
@@ -164,14 +158,7 @@ export function AppRoutes() {
             </ProtectedAdminRoute>
           }
         />
-        <Route
-          path="/add-subject"
-          element={
-            <ProtectedAdminRoute>
-              <AddSubjectPage />
-            </ProtectedAdminRoute>
-          }
-        />
+        <Route path="/add-subject" element={<Navigate to="/admin-courses" replace />} />
         <Route
           path="/admin-quick-reviews"
           element={
@@ -180,14 +167,7 @@ export function AppRoutes() {
             </ProtectedAdminRoute>
           }
         />
-        <Route
-          path="/add-topic"
-          element={
-            <ProtectedAdminRoute>
-              <AddTopicPage />
-            </ProtectedAdminRoute>
-          }
-        />
+        <Route path="/add-topic" element={<Navigate to="/admin-courses" replace />} />
         <Route
           path="/add-question"
           element={
@@ -196,30 +176,9 @@ export function AppRoutes() {
             </ProtectedAdminRoute>
           }
         />
-        <Route
-          path="/bulk-import"
-          element={
-            <ProtectedAdminRoute>
-              <BulkImportQuestionsPage />
-            </ProtectedAdminRoute>
-          }
-        />
-        <Route
-          path="/manage-subjects"
-          element={
-            <ProtectedAdminRoute>
-              <ManageSubjectsPage />
-            </ProtectedAdminRoute>
-          }
-        />
-        <Route
-          path="/manage-topics"
-          element={
-            <ProtectedAdminRoute>
-              <ManageTopicsPage />
-            </ProtectedAdminRoute>
-          }
-        />
+        <Route path="/bulk-import" element={<Navigate to="/add-question?tab=bulk" replace />} />
+        <Route path="/manage-subjects" element={<Navigate to="/admin-courses" replace />} />
+        <Route path="/manage-topics" element={<Navigate to="/admin-courses" replace />} />
         <Route
           path="/admin-digest"
           element={
@@ -252,14 +211,7 @@ export function AppRoutes() {
             </ProtectedAdminRoute>
           }
         />
-        <Route
-          path="/admin-user-management"
-          element={
-            <ProtectedAdminRoute>
-              <AdminUserManagementPage />
-            </ProtectedAdminRoute>
-          }
-        />
+        <Route path="/admin-user-management" element={<Navigate to="/admin-users" replace />} />
         <Route
           path="/admin-notifications"
           element={

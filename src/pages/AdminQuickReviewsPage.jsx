@@ -1,932 +1,232 @@
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import api from "../lib/api";
+import AdminLayout from "../components/AdminLayout";
+import { useToast } from "../lib/useToast";
+import { useSubjectPicker } from "../lib/useSubjectPicker";
+import { ADMIN, LEVELS, errorText, listOf } from "../lib/adminKit";
 
-const LEVELS = [100, 200, 300, 400, 500, 600];
-
-const emptyForm = {
-  subjectId: "",
-  topicId: "",
-  summary: "",
-  sectionsText: "",
-  extraNotes: "",
-  isPublished: true,
+const blankSection = () => ({ heading: "", points: [""] });
+const STATUS = {
+  published: { label: "Published", dot: "#16a34a", color: "#15803d" },
+  draft: { label: "Draft", dot: "#f59e0b", color: "#a16207" },
+  missing: { label: "Missing", dot: "#ef4444", color: "#b91c1c" },
 };
 
-const sampleJson = `{
-  "summary": "Short overview of the selected topic.",
-  "sections": [
-    {
-      "heading": "Key Points",
-      "points": [
-        "Point one",
-        "Point two"
-      ]
-    },
-    {
-      "heading": "Exam Tips",
-      "points": [
-        "Tip one",
-        "Tip two"
-      ]
-    }
-  ],
-  "extraNotes": "Optional extra note",
-  "isPublished": true
-}`;
+function ReviewEditor({ subjectId, topic, onChanged, toast }) {
+  const [review, setReview] = useState(undefined);
+  const [summary, setSummary] = useState("");
+  const [sections, setSections] = useState([blankSection()]);
+  const [extra, setExtra] = useState("");
+  const [published, setPublished] = useState(true);
+  const [importText, setImportText] = useState("");
+  const [showImport, setShowImport] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
-function apiArray(payload, key) {
-  if (Array.isArray(payload)) return payload;
-  if (key && Array.isArray(payload?.[key])) return payload[key];
-  if (Array.isArray(payload?.data)) return payload.data;
-  return [];
-}
-
-async function fetchAllPages(url, key, config = {}) {
-  let page = 1;
-  let totalPages = 1;
-  const allItems = [];
-
-  do {
-    const separator = url.includes("?") ? "&" : "?";
-
-    const response = await api.get(
-      `${url}${separator}page=${page}&limit=100`,
-      config,
-    );
-
-    const items = apiArray(response.data, key);
-
-    allItems.push(...items);
-    totalPages = Number(response.data?.totalPages || 1);
-    page += 1;
-  } while (page <= totalPages);
-
-  return allItems;
-}
-
-function getCourseId(subject) {
-  return typeof subject?.courseId === "object"
-    ? subject.courseId?._id
-    : subject?.courseId;
-}
-
-function getCourseName(subject) {
-  return typeof subject?.courseId === "object"
-    ? subject.courseId?.name
-    : "Not available";
-}
-
-function parseSectionsText(value) {
-  return String(value || "")
-    .split(/\n\s*\n/)
-    .map((block) => {
-      const lines = block
-        .split("\n")
-        .map((line) => line.trim())
-        .filter(Boolean);
-
-      if (lines.length === 0) return null;
-
-      return {
-        heading: lines[0],
-        points: lines.slice(1),
-      };
-    })
-    .filter((section) => section && section.heading && section.points.length > 0);
-}
-
-function sectionsToText(sections) {
-  if (!Array.isArray(sections)) return "";
-
-  return sections
-    .map((section) => {
-      const heading = section.heading || "";
-      const points = Array.isArray(section.points) ? section.points : [];
-
-      return [heading, ...points].filter(Boolean).join("\n");
-    })
-    .join("\n\n");
-}
-
-function AdminQuickReviewsPage() {
-  const navigate = useNavigate();
-
-  const [courses, setCourses] = useState([]);
-  const [subjects, setSubjects] = useState([]);
-  const [topics, setTopics] = useState([]);
-  const [reviews, setReviews] = useState([]);
-
-  const [courseFilter, setCourseFilter] = useState("");
-  const [levelFilter, setLevelFilter] = useState("");
-  const [subjectFilter, setSubjectFilter] = useState("");
-
-  const [form, setForm] = useState(emptyForm);
-  const [editingId, setEditingId] = useState("");
-  const [bulkJson, setBulkJson] = useState(sampleJson);
-
-  const [isLoadingSetup, setIsLoadingSetup] = useState(true);
-  const [isLoadingReviews, setIsLoadingReviews] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState("single");
-
-  const filteredSubjects = useMemo(() => {
-    return subjects.filter((subject) => {
-      const matchesCourse = courseFilter
-        ? getCourseId(subject) === courseFilter
-        : true;
-      const matchesLevel = levelFilter
-        ? Number(subject.level) === Number(levelFilter)
-        : true;
-
-      return matchesCourse && matchesLevel;
-    });
-  }, [subjects, courseFilter, levelFilter]);
+  const fill = (r) => {
+    setSummary(r?.summary || "");
+    setSections(r?.sections?.length ? r.sections.map((s) => ({ heading: s.heading || "", points: s.points?.length ? [...s.points] : [""] })) : [blankSection()]);
+    setExtra(r?.extraNotes || "");
+    setPublished(r ? r.isPublished !== false : true);
+  };
 
   useEffect(() => {
-    const fetchSetup = async () => {
-      try {
-        setIsLoadingSetup(true);
-
-        const [coursesRes, allSubjects] = await Promise.all([
-          api.get("/api/courses?limit=100", { _tokenType: "admin" }),
-          fetchAllPages("/api/subjects/admin/all", "subjects", {
-            _tokenType: "admin",
-          }),
-        ]);
-
-        setCourses(apiArray(coursesRes.data, "courses"));
-        setSubjects(allSubjects);
-      } catch (error) {
-        console.error("Quick review setup error:", error);
-        alert(error.message || "Unable to load setup data.");
-      } finally {
-        setIsLoadingSetup(false);
-      }
+    let alive = true;
+    api
+      .get(`/api/quick-reviews/admin/all?subjectId=${subjectId}&topicId=${topic.id}`, ADMIN)
+      .then((r) => {
+        if (!alive) return;
+        const found = listOf(r.data, "reviews")[0] || null;
+        setReview(found);
+        fill(found);
+      })
+      .catch((err) => alive && setError(errorText(err)));
+    return () => {
+      alive = false;
     };
+  }, [subjectId, topic.id]);
 
-    fetchSetup();
-  }, []);
+  const setSection = (i, patch) => setSections((list) => list.map((s, j) => (j === i ? { ...s, ...patch } : s)));
+  const setPoint = (i, k, value) => setSection(i, { points: sections[i].points.map((p, j) => (j === k ? value : p)) });
+  const move = (i, d) => setSections((list) => {
+    const next = [...list];
+    const j = i + d;
+    if (j < 0 || j >= next.length) return list;
+    [next[i], next[j]] = [next[j], next[i]];
+    return next;
+  });
 
-  useEffect(() => {
-    setSubjectFilter("");
-    setTopics([]);
-    setReviews([]);
-    setForm((previous) => ({
-      ...previous,
-      subjectId: "",
-      topicId: "",
-    }));
-  }, [courseFilter, levelFilter]);
-
-  useEffect(() => {
-    if (!subjectFilter) {
-      setTopics([]);
-      setReviews([]);
-      setForm((previous) => ({
-        ...previous,
-        subjectId: "",
-        topicId: "",
-      }));
-      return;
-    }
-
-    const loadSubjectData = async () => {
-      try {
-        setIsLoadingReviews(true);
-
-        const [topicsRes, reviewsRes] = await Promise.all([
-          api.get(`/api/quick-reviews/admin/topics/${subjectFilter}`, {
-            _tokenType: "admin",
-          }),
-          api.get(`/api/quick-reviews/admin/all?subjectId=${subjectFilter}`, {
-            _tokenType: "admin",
-          }),
-        ]);
-
-        setTopics(topicsRes.data?.topics || topicsRes.data?.data || []);
-        setReviews(reviewsRes.data?.reviews || reviewsRes.data?.data || []);
-        setForm((previous) => ({
-          ...previous,
-          subjectId: subjectFilter,
-          topicId: "",
-        }));
-      } catch (error) {
-        console.error("Quick review subject data error:", error);
-        alert(error.message || "Unable to load subject data.");
-      } finally {
-        setIsLoadingReviews(false);
-      }
-    };
-
-    loadSubjectData();
-  }, [subjectFilter]);
-
-  const resetForm = () => {
-    setEditingId("");
-    setForm({
-      ...emptyForm,
-      subjectId: subjectFilter || "",
-    });
-    setBulkJson(sampleJson);
-  };
-
-  const reloadReviews = async () => {
-    if (!subjectFilter) return;
-
-    const response = await api.get(
-      `/api/quick-reviews/admin/all?subjectId=${subjectFilter}`,
-      { _tokenType: "admin" },
-    );
-
-    setReviews(response.data?.reviews || response.data?.data || []);
-  };
-
-  const updateForm = (field, value) => {
-    setForm((previous) => ({
-      ...previous,
-      [field]: value,
-    }));
-  };
-
-  const editReview = (review) => {
-    setEditingId(review._id);
-    setActiveTab("single");
-
-    const topicId = review.topicId?._id || review.topicId;
-    const subjectId = review.subjectId?._id || review.subjectId;
-
-    setForm({
-      subjectId,
-      topicId,
-      summary: review.summary || "",
-      sectionsText: sectionsToText(review.sections),
-      extraNotes: review.extraNotes || "",
-      isPublished: Boolean(review.isPublished),
-    });
-
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  const selectedTopic = topics.find((topic) => String(topic._id) === String(form.topicId));
-
-  const saveReview = async (e) => {
-    e.preventDefault();
-
-    if (!form.subjectId || !form.topicId) {
-      alert("Please select subject and existing topic.");
-      return;
-    }
-
-    const payload = {
-      subjectId: form.subjectId,
-      topicId: form.topicId,
-      summary: form.summary.trim(),
-      sections: parseSectionsText(form.sectionsText),
-      extraNotes: form.extraNotes.trim(),
-      isPublished: form.isPublished,
-    };
-
+  const applyImport = () => {
     try {
-      setIsSaving(true);
+      const data = JSON.parse(importText);
+      const item = data.item || data.review || data;
+      if (!item || typeof item !== "object" || !Array.isArray(item.sections)) throw new Error("It needs a sections list.");
+      fill({ ...item, isPublished: published });
+      setShowImport(false);
+      setImportText("");
+      setError("");
+      toast("Filled in from JSON. Check it, then save.");
+    } catch (e) {
+      setError(`Couldn't read that JSON: ${e.message}`);
+    }
+  };
 
-      if (editingId) {
-        await api.put(`/api/quick-reviews/${editingId}`, payload, {
-          _tokenType: "admin",
-        });
-      } else {
-        await api.post("/api/quick-reviews", payload, {
-          _tokenType: "admin",
-        });
-      }
-
-      resetForm();
-      await reloadReviews();
-      alert("Quick review saved successfully.");
-    } catch (error) {
-      console.error("Save quick review error:", error);
-      alert(error.message || "Unable to save quick review.");
+  const save = async () => {
+    const clean = sections
+      .map((s) => ({ heading: s.heading.trim(), points: s.points.map((p) => p.trim()).filter(Boolean) }))
+      .filter((s) => s.heading || s.points.length);
+    if (!summary.trim()) return setError("Write a short summary.");
+    if (!clean.length) return setError("Add at least one section with a heading and a point.");
+    const bad = clean.findIndex((s) => !s.heading || !s.points.length);
+    if (bad >= 0) return setError(`Section ${bad + 1} needs both a heading and at least one point.`);
+    setSaving(true);
+    setError("");
+    const body = { subjectId, topicId: topic.id, summary: summary.trim(), sections: clean, extraNotes: extra.trim(), isPublished: published };
+    try {
+      const r = review?._id ? await api.put(`/api/quick-reviews/${review._id}`, body, ADMIN) : await api.post("/api/quick-reviews", body, ADMIN);
+      const saved = r.data?.review || r.data?.data || { ...body, _id: review?._id };
+      setReview(saved);
+      toast(published ? "Review saved and visible to students" : "Saved as a draft");
+      onChanged();
+    } catch (err) {
+      setError(errorText(err, "Couldn't save the review."));
     } finally {
-      setIsSaving(false);
+      setSaving(false);
     }
   };
 
-  const bulkImport = async () => {
-    if (!subjectFilter) {
-      alert("Please select a subject first.");
-      return;
-    }
-
-    if (!form.topicId) {
-      alert("Please select the existing topic for this import.");
-      return;
-    }
-
-    let parsed;
-
+  const remove = async () => {
+    if (!review?._id || !window.confirm(`Delete the quick review for "${topic.name}"?`)) return;
     try {
-      parsed = JSON.parse(bulkJson);
-    } catch (error) {
-      alert("Invalid JSON. Please check the format.");
-      return;
-    }
-
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-      alert("Topic-based bulk import JSON must be one object, not an array.");
-      return;
-    }
-
-    if (
-      !window.confirm(
-        `Import quick review for "${selectedTopic?.name || "selected topic"}"? Existing review for this topic will be updated.`,
-      )
-    ) {
-      return;
-    }
-
-    try {
-      setIsSaving(true);
-
-      const response = await api.post(
-        "/api/quick-reviews/admin/bulk-import",
-        {
-          subjectId: subjectFilter,
-          topicId: form.topicId,
-          item: parsed,
-        },
-        { _tokenType: "admin" },
-      );
-
-      await reloadReviews();
-
-      alert(
-        response.data?.message ||
-          "Quick review imported successfully.",
-      );
-    } catch (error) {
-      console.error("Bulk import quick review error:", error);
-      alert(error.message || "Unable to import quick review.");
-    } finally {
-      setIsSaving(false);
+      await api.delete(`/api/quick-reviews/${review._id}`, ADMIN);
+      setReview(null);
+      fill(null);
+      toast("Review deleted");
+      onChanged();
+    } catch (err) {
+      setError(errorText(err));
     }
   };
 
-  const deleteReview = async (reviewId) => {
-    if (!window.confirm("Delete this quick review?")) return;
-
-    try {
-      await api.delete(`/api/quick-reviews/${reviewId}`, {
-        _tokenType: "admin",
-      });
-
-      setReviews((previous) =>
-        previous.filter((review) => review._id !== reviewId),
-      );
-
-      if (editingId === reviewId) resetForm();
-    } catch (error) {
-      console.error("Delete quick review error:", error);
-      alert(error.message || "Unable to delete quick review.");
-    }
-  };
+  if (review === undefined && !error) return <section className="adm-card adm-empty" style={{ flex: "999 1 520px" }}>Loading review…</section>;
 
   return (
-    <>
-      <style>{`
-        @media (max-width: 720px) {
-          .qr-admin-page {
-            padding: 24px 14px 80px !important;
-          }
-          .qr-admin-card {
-            padding: 18px !important;
-          }
-          .qr-admin-grid {
-            grid-template-columns: 1fr !important;
-          }
-          .qr-review-item {
-            flex-direction: column !important;
-            align-items: flex-start !important;
-          }
-        }
-      `}</style>
-
-      <div className="qr-admin-page" style={S.page}>
-        <div style={S.wrap}>
-          <button style={S.backButton} onClick={() => navigate("/admin")}>
-            ← Back to Admin
-          </button>
-
-          <section style={S.header}>
-            <p style={S.eyebrow}>Admin Content</p>
-            <h1 style={S.title}>Manage Quick Reviews</h1>
-            <p style={S.subtitle}>
-              Select an existing topic, then add flexible review sections. Use
-              any heading that fits the course, such as Key Points, Definitions,
-              Risk Factors, Formulae, Mnemonics, Exam Tips, or Common Mistakes.
-            </p>
-          </section>
-
-          <section className="qr-admin-card" style={S.card}>
-            <div className="qr-admin-grid" style={S.filterGrid}>
-              <SelectField
-                label="Course"
-                value={courseFilter}
-                onChange={setCourseFilter}
-                disabled={isLoadingSetup || isSaving}
-              >
-                <option value="">All courses</option>
-                {courses.map((course) => (
-                  <option key={course._id} value={course._id}>
-                    {course.name}
-                  </option>
-                ))}
-              </SelectField>
-
-              <SelectField
-                label="Level"
-                value={levelFilter}
-                onChange={setLevelFilter}
-                disabled={isLoadingSetup || isSaving}
-              >
-                <option value="">All levels</option>
-                {LEVELS.map((level) => (
-                  <option key={level} value={level}>
-                    {level} Level
-                  </option>
-                ))}
-              </SelectField>
-
-              <SelectField
-                label="Subject"
-                value={subjectFilter}
-                onChange={setSubjectFilter}
-                disabled={isLoadingSetup || isSaving}
-              >
-                <option value="">Select subject</option>
-                {filteredSubjects.map((subject) => (
-                  <option key={subject._id} value={subject._id}>
-                    {subject.name} · {getCourseName(subject)} · L{subject.level}
-                  </option>
-                ))}
-              </SelectField>
-            </div>
-          </section>
-
-          <section className="qr-admin-card" style={S.card}>
-            <Field label="Existing Topic">
-              <select
-                style={S.input}
-                value={form.topicId}
-                onChange={(e) => updateForm("topicId", e.target.value)}
-                disabled={!subjectFilter || isSaving}
-              >
-                <option value="">Select existing topic</option>
-                {topics.map((topic) => (
-                  <option key={topic._id} value={topic._id}>
-                    {topic.name}
-                  </option>
-                ))}
-              </select>
-            </Field>
-
-            {selectedTopic && (
-              <div style={S.selectedTopicBox}>
-                Selected topic: <strong>{selectedTopic.name}</strong>
-              </div>
-            )}
-
-            <div style={S.tabs}>
-              <button
-                type="button"
-                style={{
-                  ...S.tabButton,
-                  ...(activeTab === "single" ? S.tabButtonActive : {}),
-                }}
-                onClick={() => setActiveTab("single")}
-              >
-                Single Review
-              </button>
-
-              <button
-                type="button"
-                style={{
-                  ...S.tabButton,
-                  ...(activeTab === "bulk" ? S.tabButtonActive : {}),
-                }}
-                onClick={() => setActiveTab("bulk")}
-              >
-                Topic Bulk Import JSON
-              </button>
-            </div>
-
-            {activeTab === "single" ? (
-              <>
-                <h2 style={S.sectionTitle}>
-                  {editingId ? "Edit Quick Review" : "Create Quick Review"}
-                </h2>
-
-                <form onSubmit={saveReview}>
-                  <Field label="Summary">
-                    <textarea
-                      style={S.textarea}
-                      value={form.summary}
-                      onChange={(e) => updateForm("summary", e.target.value)}
-                      placeholder="Short overview of the selected topic"
-                      rows={3}
-                      disabled={isSaving}
-                    />
-                  </Field>
-
-                  <Field label="Flexible Review Sections">
-                    <p style={S.helperText}>
-                      Use one heading, then points under it. Leave a blank line
-                      before the next heading.
-                    </p>
-
-                    <textarea
-                      style={S.largeTextarea}
-                      value={form.sectionsText}
-                      onChange={(e) => updateForm("sectionsText", e.target.value)}
-                      placeholder={`Key Points
-Most important point
-Another important point
-
-Risk Factors
-First risk factor
-Second risk factor
-
-Exam Tips
-Common exam trap
-High-yield reminder`}
-                      rows={14}
-                      disabled={isSaving}
-                    />
-                  </Field>
-
-                  <Field label="Extra Notes">
-                    <textarea
-                      style={S.textarea}
-                      value={form.extraNotes}
-                      onChange={(e) => updateForm("extraNotes", e.target.value)}
-                      placeholder="Any extra explanation, mnemonic, or clarification"
-                      rows={5}
-                      disabled={isSaving}
-                    />
-                  </Field>
-
-                  <label style={S.checkboxRow}>
-                    <input
-                      type="checkbox"
-                      checked={form.isPublished}
-                      onChange={(e) => updateForm("isPublished", e.target.checked)}
-                      disabled={isSaving}
-                    />
-                    Publish for users
-                  </label>
-
-                  <div style={S.actions}>
-                    <button type="submit" style={S.primaryButton} disabled={isSaving}>
-                      {isSaving
-                        ? "Saving..."
-                        : editingId
-                          ? "Update Review"
-                          : "Create Review"}
-                    </button>
-
-                    {editingId && (
-                      <button type="button" style={S.secondaryButton} onClick={resetForm}>
-                        Cancel Edit
-                      </button>
-                    )}
-                  </div>
-                </form>
-              </>
-            ) : (
-              <>
-                <h2 style={S.sectionTitle}>Topic Bulk Import</h2>
-
-                <p style={S.helperText}>
-                  Select one existing topic above, then paste one JSON object
-                  for that topic. Do not include topic name in the JSON. Existing
-                  review content for the selected topic will be updated.
-                </p>
-
-                <textarea
-                  style={S.bulkTextarea}
-                  value={bulkJson}
-                  onChange={(e) => setBulkJson(e.target.value)}
-                  rows={22}
-                  disabled={isSaving}
-                />
-
-                <div style={S.actions}>
-                  <button
-                    type="button"
-                    style={S.primaryButton}
-                    onClick={bulkImport}
-                    disabled={isSaving || !subjectFilter || !form.topicId}
-                  >
-                    {isSaving ? "Importing..." : "Import for Selected Topic"}
-                  </button>
-                </div>
-              </>
-            )}
-          </section>
-
-          <section className="qr-admin-card" style={S.card}>
-            <h2 style={S.sectionTitle}>Existing Reviews</h2>
-
-            {!subjectFilter ? (
-              <p style={S.emptyText}>Select a subject to view reviews.</p>
-            ) : isLoadingReviews ? (
-              <p style={S.emptyText}>Loading reviews...</p>
-            ) : reviews.length === 0 ? (
-              <p style={S.emptyText}>No quick reviews for this subject yet.</p>
-            ) : (
-              <div style={S.reviewList}>
-                {reviews.map((review) => (
-                  <div key={review._id} className="qr-review-item" style={S.reviewItem}>
-                    <div>
-                      <h3 style={S.reviewTitle}>
-                        {review.topicId?.name || "Unknown Topic"}
-                      </h3>
-                      <p style={S.reviewMeta}>
-                        {review.sections?.length || 0} section
-                        {review.sections?.length === 1 ? "" : "s"} ·{" "}
-                        {review.isPublished ? "Published" : "Draft"}
-                      </p>
-                    </div>
-
-                    <div style={S.reviewActions}>
-                      <button style={S.secondaryButton} onClick={() => editReview(review)}>
-                        Edit
-                      </button>
-                      <button style={S.dangerButton} onClick={() => deleteReview(review._id)}>
-                        Delete
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
+    <section className="adm-card" aria-label="Edit review" style={{ flex: "999 1 520px" }}>
+      <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
+        <div>
+          <h2>{topic.name}</h2>
+          <p className="adm-sub">{review ? `${review.isPublished === false ? "Draft" : "Published"} · ${review.sections?.length || 0} sections` : "No review yet · write one below or fill it from JSON"}</p>
+        </div>
+        <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+          <button type="button" className="adm-btn sm" onClick={() => setShowImport((v) => !v)}>{showImport ? "Close JSON" : "Fill from JSON"}</button>
+          <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, fontWeight: 600 }}>
+            <input type="checkbox" className="adm-check" checked={published} onChange={(e) => setPublished(e.target.checked)} />Visible to students
+          </label>
         </div>
       </div>
-    </>
+      {showImport && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 12 }}>
+          <label className="adm-field">Paste a review as JSON ({"{"} summary, sections: [{"{"} heading, points {"}"}], extraNotes {"}"})
+            <textarea className="adm-in" rows={6} value={importText} onChange={(e) => setImportText(e.target.value)} spellCheck={false} style={{ fontFamily: "ui-monospace, Menlo, Consolas, monospace", fontSize: 13 }} />
+          </label>
+          <button type="button" className="adm-btn" style={{ alignSelf: "flex-start" }} onClick={applyImport} disabled={!importText.trim()}>Fill the form</button>
+        </div>
+      )}
+      <form onSubmit={(e) => { e.preventDefault(); save(); }} style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 14 }}>
+        <label className="adm-field">Summary<textarea className="adm-in" rows={4} value={summary} onChange={(e) => setSummary(e.target.value)} placeholder="A short overview of the topic" /></label>
+        {sections.map((s, i) => (
+          <fieldset key={i} style={{ border: "1px solid #e4e8ee", borderRadius: 12, padding: 14, margin: 0, display: "flex", flexDirection: "column", gap: 8 }}>
+            <legend style={{ fontSize: 12, fontWeight: 700, color: "#5b6577", padding: "0 6px" }}>SECTION {i + 1}</legend>
+            <div style={{ display: "flex", gap: 8 }}>
+              <label className="adm-sr" htmlFor={`h-${i}`}>Section {i + 1} heading</label>
+              <input id={`h-${i}`} className="adm-in" style={{ fontWeight: 700 }} value={s.heading} placeholder="Heading" onChange={(e) => setSection(i, { heading: e.target.value })} />
+              <button type="button" className="adm-btn sm ghost" aria-label={`Move section ${i + 1} up`} disabled={i === 0} onClick={() => move(i, -1)}>↑</button>
+              <button type="button" className="adm-btn sm ghost" aria-label={`Move section ${i + 1} down`} disabled={i === sections.length - 1} onClick={() => move(i, 1)}>↓</button>
+              <button type="button" className="adm-btn sm ghost" aria-label={`Remove section ${i + 1}`} disabled={sections.length === 1} onClick={() => setSections((l) => l.filter((_, j) => j !== i))}>✕</button>
+            </div>
+            {s.points.map((p, k) => (
+              <div key={k} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                <span aria-hidden="true" style={{ color: "#93c5fd", paddingTop: 10 }}>•</span>
+                <textarea className="adm-in" rows={2} style={{ minHeight: 0 }} value={p} aria-label={`Section ${i + 1}, point ${k + 1}`} onChange={(e) => setPoint(i, k, e.target.value)} />
+                <button type="button" className="adm-btn sm ghost" aria-label={`Remove point ${k + 1}`} disabled={s.points.length === 1} onClick={() => setSection(i, { points: s.points.filter((_, j) => j !== k) })}>✕</button>
+              </div>
+            ))}
+            <button type="button" className="adm-btn sm" style={{ alignSelf: "flex-start" }} onClick={() => setSection(i, { points: [...s.points, ""] })}>+ Add point</button>
+          </fieldset>
+        ))}
+        <button type="button" className="adm-btn" style={{ alignSelf: "flex-start" }} onClick={() => setSections((l) => [...l, blankSection()])}>+ Add section</button>
+        <label className="adm-field">Extra notes · exam traps (optional)<textarea className="adm-in" rows={4} value={extra} onChange={(e) => setExtra(e.target.value)} placeholder="Common mix-ups, mnemonics, things examiners like" /></label>
+        {error && <div className="adm-note bad" role="alert">{error}</div>}
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          {review?._id && <button type="button" className="adm-btn danger" onClick={remove}>Delete review</button>}
+          <button className="adm-btn pri" style={{ marginLeft: "auto" }} disabled={saving}>{saving ? "Saving…" : "Save review"}</button>
+        </div>
+      </form>
+    </section>
   );
 }
 
-function Field({ label, children }) {
+export default function AdminQuickReviewsPage() {
+  const [params, setParams] = useSearchParams();
+  const picker = useSubjectPicker(params, setParams);
+  const { courses, subjectChoices, topics, courseId, level, subjectId, topicId, set, reloadTopics } = picker;
+  const [show, setShow] = useState("all");
+  const [toastNode, toast] = useToast();
+  const topic = topics.find((t) => t.id === topicId);
+  const counts = { all: topics.length, missing: topics.filter((t) => t.review === "missing").length, draft: topics.filter((t) => t.review === "draft").length };
+  const list = topics.filter((t) => show === "all" || t.review === show);
+
   return (
-    <div style={S.field}>
-      <label style={S.label}>{label}</label>
-      {children}
-    </div>
+    <AdminLayout title="Quick reviews" subtitle="Short revision notes students read before a test">
+      {toastNode}
+      <section className="adm-card adm-grid c3" aria-label="Choose subject" style={{ alignItems: "end" }}>
+        <label className="adm-field">Course
+          <select className="adm-in" value={courseId} onChange={(e) => set({ courseId: e.target.value })}>
+            <option value="">All courses</option>
+            {courses.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
+          </select>
+        </label>
+        <label className="adm-field">Level
+          <select className="adm-in" value={level} onChange={(e) => set({ level: e.target.value })}>
+            <option value="">All levels</option>
+            {LEVELS.map((l) => <option key={l} value={l}>{l}</option>)}
+          </select>
+        </label>
+        <label className="adm-field">Subject
+          <select className="adm-in" value={subjectId} onChange={(e) => set({ subjectId: e.target.value })}>
+            <option value="">Choose a subject</option>
+            {subjectChoices.map((s) => <option key={s.id} value={s.id}>{s.name} · {s.level}L</option>)}
+          </select>
+        </label>
+      </section>
+      {!subjectId ? (
+        <div className="adm-card adm-empty">Choose a subject to see its topics and reviews.</div>
+      ) : (
+        <div className="adm-row">
+          <section className="adm-card" aria-label="Topics" style={{ flex: "1 1 280px", maxWidth: 360, padding: 12 }}>
+            <div className="adm-chips" role="group" aria-label="Show" style={{ padding: "4px 4px 10px" }}>
+              <button type="button" className="adm-chip" aria-pressed={show === "all"} onClick={() => setShow("all")}>All <small>{counts.all}</small></button>
+              <button type="button" className="adm-chip" aria-pressed={show === "missing"} onClick={() => setShow("missing")}>Missing <small>{counts.missing}</small></button>
+              <button type="button" className="adm-chip" aria-pressed={show === "draft"} onClick={() => setShow("draft")}>Draft <small>{counts.draft}</small></button>
+            </div>
+            {list.length === 0 && <p className="adm-empty">Nothing here.</p>}
+            {list.map((t) => (
+              <button key={t.id} type="button" onClick={() => set({ topicId: t.id })} aria-current={t.id === topicId ? "true" : undefined}
+                style={{ display: "flex", width: "100%", alignItems: "center", gap: 10, minHeight: 44, padding: "0 10px", borderRadius: 10, border: 0, cursor: "pointer", textAlign: "left", background: t.id === topicId ? "#e8f1fb" : "transparent", color: "#0f172a", fontSize: 14, fontWeight: t.id === topicId ? 700 : 500 }}>
+                <span className="adm-dot" style={{ background: STATUS[t.review].dot }} />
+                <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.name}</span>
+                <small style={{ color: STATUS[t.review].color, fontWeight: 600 }}>{STATUS[t.review].label}</small>
+              </button>
+            ))}
+          </section>
+          {topic ? (
+            <ReviewEditor key={topic.id} subjectId={subjectId} topic={topic} onChanged={reloadTopics} toast={toast} />
+          ) : (
+            <section className="adm-card adm-empty" style={{ flex: "999 1 520px" }}>Pick a topic on the left to write or edit its review.</section>
+          )}
+        </div>
+      )}
+    </AdminLayout>
   );
 }
-
-function SelectField({ label, value, onChange, disabled, children }) {
-  return (
-    <Field label={label}>
-      <select
-        style={S.input}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        disabled={disabled}
-      >
-        {children}
-      </select>
-    </Field>
-  );
-}
-
-const S = {
-  page: {
-    minHeight: "100vh",
-    background: "#f8f9fb",
-    padding: "34px 18px 80px",
-  },
-  wrap: {
-    maxWidth: "1100px",
-    margin: "0 auto",
-  },
-  backButton: {
-    border: "1px solid #e2e8f0",
-    borderRadius: "10px",
-    padding: "9px 14px",
-    background: "#fff",
-    color: "#334155",
-    fontWeight: 700,
-    cursor: "pointer",
-    marginBottom: "18px",
-  },
-  header: {
-    marginBottom: "18px",
-  },
-  eyebrow: {
-    margin: "0 0 8px",
-    color: "#185FA5",
-    fontSize: "12px",
-    fontWeight: 900,
-    letterSpacing: "0.08em",
-    textTransform: "uppercase",
-  },
-  title: {
-    margin: 0,
-    fontSize: "clamp(30px, 5vw, 46px)",
-    color: "#0f172a",
-    lineHeight: 1.08,
-  },
-  subtitle: {
-    margin: "12px 0 0",
-    color: "#64748b",
-    lineHeight: 1.7,
-  },
-  card: {
-    background: "#fff",
-    border: "1px solid #e2e8f0",
-    borderRadius: "18px",
-    padding: "24px",
-    marginBottom: "18px",
-    boxShadow: "0 10px 30px rgba(15,23,42,0.06)",
-  },
-  filterGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-    gap: "14px",
-  },
-  tabs: {
-    display: "flex",
-    gap: "10px",
-    flexWrap: "wrap",
-    marginBottom: "22px",
-  },
-  tabButton: {
-    border: "1px solid #cbd5e1",
-    borderRadius: "999px",
-    padding: "10px 16px",
-    background: "#fff",
-    color: "#334155",
-    fontWeight: 800,
-    cursor: "pointer",
-  },
-  tabButtonActive: {
-    background: "#185FA5",
-    color: "#fff",
-    borderColor: "#185FA5",
-  },
-  selectedTopicBox: {
-    background: "#eff6ff",
-    border: "1px solid #bfdbfe",
-    color: "#185FA5",
-    borderRadius: "12px",
-    padding: "12px 14px",
-    fontSize: "14px",
-    marginBottom: "18px",
-  },
-  sectionTitle: {
-    margin: "0 0 18px",
-    color: "#0f172a",
-    fontSize: "20px",
-  },
-  field: {
-    marginBottom: "14px",
-  },
-  label: {
-    display: "block",
-    marginBottom: "6px",
-    color: "#334155",
-    fontWeight: 700,
-    fontSize: "13px",
-  },
-  helperText: {
-    color: "#64748b",
-    fontSize: "13px",
-    lineHeight: 1.6,
-    margin: "0 0 10px",
-  },
-  input: {
-    width: "100%",
-    boxSizing: "border-box",
-    border: "1px solid #cbd5e1",
-    borderRadius: "10px",
-    padding: "11px 12px",
-    background: "#fff",
-    color: "#0f172a",
-    fontSize: "14px",
-  },
-  textarea: {
-    width: "100%",
-    boxSizing: "border-box",
-    border: "1px solid #cbd5e1",
-    borderRadius: "10px",
-    padding: "11px 12px",
-    background: "#fff",
-    color: "#0f172a",
-    fontSize: "14px",
-    resize: "vertical",
-    fontFamily: "inherit",
-    lineHeight: 1.6,
-  },
-  largeTextarea: {
-    width: "100%",
-    boxSizing: "border-box",
-    border: "1px solid #cbd5e1",
-    borderRadius: "10px",
-    padding: "13px",
-    background: "#fff",
-    color: "#0f172a",
-    fontSize: "14px",
-    resize: "vertical",
-    fontFamily: "inherit",
-    lineHeight: 1.6,
-  },
-  bulkTextarea: {
-    width: "100%",
-    boxSizing: "border-box",
-    border: "1px solid #cbd5e1",
-    borderRadius: "10px",
-    padding: "13px",
-    background: "#0f172a",
-    color: "#e2e8f0",
-    fontSize: "13px",
-    resize: "vertical",
-    fontFamily: "Consolas, Monaco, monospace",
-    lineHeight: 1.55,
-    marginBottom: "14px",
-  },
-  checkboxRow: {
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-    color: "#334155",
-    fontWeight: 700,
-    marginBottom: "16px",
-  },
-  actions: {
-    display: "flex",
-    gap: "10px",
-    flexWrap: "wrap",
-  },
-  primaryButton: {
-    border: "none",
-    borderRadius: "10px",
-    padding: "11px 16px",
-    background: "#185FA5",
-    color: "#fff",
-    fontWeight: 800,
-    cursor: "pointer",
-  },
-  secondaryButton: {
-    border: "1px solid #cbd5e1",
-    borderRadius: "10px",
-    padding: "10px 14px",
-    background: "#fff",
-    color: "#334155",
-    fontWeight: 800,
-    cursor: "pointer",
-  },
-  dangerButton: {
-    border: "1px solid #fecaca",
-    borderRadius: "10px",
-    padding: "10px 14px",
-    background: "#fee2e2",
-    color: "#dc2626",
-    fontWeight: 800,
-    cursor: "pointer",
-  },
-  emptyText: {
-    color: "#64748b",
-    margin: 0,
-  },
-  reviewList: {
-    display: "grid",
-    gap: "10px",
-  },
-  reviewItem: {
-    display: "flex",
-    justifyContent: "space-between",
-    gap: "12px",
-    alignItems: "center",
-    border: "1px solid #e2e8f0",
-    borderRadius: "14px",
-    padding: "14px",
-  },
-  reviewTitle: {
-    margin: "0 0 4px",
-    color: "#0f172a",
-    fontSize: "15px",
-  },
-  reviewMeta: {
-    margin: 0,
-    color: "#64748b",
-    fontSize: "13px",
-  },
-  reviewActions: {
-    display: "flex",
-    gap: "8px",
-    flexWrap: "wrap",
-  },
-};
-
-export default AdminQuickReviewsPage;

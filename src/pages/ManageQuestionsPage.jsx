@@ -1,1552 +1,281 @@
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import api from "../lib/api";
+import AdminLayout from "../components/AdminLayout";
+import { useToast } from "../lib/useToast";
+import { ADMIN, errorText, idOf, listOf, num } from "../lib/adminKit";
+import { useSubjectPicker } from "../lib/useSubjectPicker";
+import PickerFields from "../components/PickerFields";
 
-const LEVELS = [100, 200, 300, 400, 500, 600];
+const PAGE = 50;
+const imageSrc = (data, type) => (!data || !type ? "" : String(data).startsWith("data:") ? data : `data:${type};base64,${data}`);
 
-const apiArray = (payload, key) => {
-  if (Array.isArray(payload)) return payload;
-  if (key && Array.isArray(payload?.[key])) return payload[key];
-  if (Array.isArray(payload?.data)) return payload.data;
-  return [];
-};
-
-const subjectOfQuestion = (question) => question?.subjectId || {};
-const topicOfQuestion = (question) => question?.topicId || {};
-
-const getCourseId = (subject) =>
-  typeof subject?.courseId === "object"
-    ? subject.courseId?._id
-    : subject?.courseId;
-
-const getCourseName = (subject) => {
-  if (!subject || !subject._id) return "Unknown";
-
-  if (typeof subject?.courseId === "object") {
-    return subject.courseId?.name || "Unknown Course";
-  }
-
-  if (typeof subject?.courseId === "string") {
-    return "Unknown Course";
-  }
-
-  return "Unknown";
-};
-
-const makeImageSrc = (imageData, imageContentType) => {
-  if (!imageData || !imageContentType) return "";
-  if (String(imageData).startsWith("data:")) return imageData;
-  return `data:${imageContentType};base64,${imageData}`;
-};
-
-const getQuestionImageSrc = (question, questionImages = {}) => {
-  if (!question) return "";
-
-  if (question.localImagePreview) return question.localImagePreview;
-
-  if (question?._id && questionImages[question._id]) {
-    return questionImages[question._id];
-  }
-
-  if (!question?.imageData || !question?.imageContentType) return "";
-
-  return makeImageSrc(question.imageData, question.imageContentType);
-};
-
-const hasQuestionImage = (question) =>
-  Boolean(
-    question?.hasImage ||
-    question?.imageData ||
-    question?.imageContentType ||
-    question?.imageOriginalName ||
-    question?.imageSize,
-  );
-
-const formatFileSize = (size) => {
-  const bytes = Number(size || 0);
-
-  if (!bytes) return "";
-
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
-
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-};
-
-async function fetchAllPages(url, key, config = {}) {
-  let page = 1;
-  let totalPages = 1;
-  const allItems = [];
-
-  do {
-    const separator = url.includes("?") ? "&" : "?";
-
-    const response = await api.get(
-      `${url}${separator}page=${page}&limit=50`,
-      config,
-    );
-
-    const items = apiArray(response.data, key);
-
-    allItems.push(...items);
-    totalPages = Number(response.data?.totalPages || 1);
-    page += 1;
-  } while (page <= totalPages);
-
-  return allItems;
-}
-
-function ManageQuestionsPage() {
-  const navigate = useNavigate();
-
-  const [courses, setCourses] = useState([]);
-  const [subjects, setSubjects] = useState([]);
-  const [topics, setTopics] = useState([]);
-  const [questions, setQuestions] = useState([]);
-
-  const [courseFilter, setCourseFilter] = useState("");
-  const [levelFilter, setLevelFilter] = useState("");
-  const [subjectFilter, setSubjectFilter] = useState("");
-  const [topicFilter, setTopicFilter] = useState("");
-
-  const [hasLoadedQuestions, setHasLoadedQuestions] = useState(false);
-  const [isLoadingSetup, setIsLoadingSetup] = useState(true);
-  const [isLoadingQuestions, setIsLoadingQuestions] = useState(false);
-  const [isSavingEdit, setIsSavingEdit] = useState(false);
-
-  const [questionImages, setQuestionImages] = useState({});
-  const [loadingImageIds, setLoadingImageIds] = useState({});
-
-  const [editingId, setEditingId] = useState(null);
-  const [editImagePreview, setEditImagePreview] = useState("");
-  const [editForm, setEditForm] = useState({
-    subjectId: "",
-    topicId: "",
-    questionText: "",
-    options: ["", "", "", ""],
-    correctAnswer: "",
-    explanation: "",
-    image: null,
-    removeImage: false,
-    existingImageSrc: "",
-  });
-
-  const fetchAdminQuestionImage = async (questionId) => {
-    const response = await api.get(`/api/questions/${questionId}/admin-image`, {
-      _tokenType: "admin",
-    });
-
-    return makeImageSrc(
-      response.data?.imageData,
-      response.data?.imageContentType,
-    );
-  };
-
-  const loadQuestionImage = async (question) => {
-    if (!question?._id) return "";
-    if (questionImages[question._id]) return questionImages[question._id];
-    if (!hasQuestionImage(question)) return "";
-
-    try {
-      setLoadingImageIds((previous) => ({
-        ...previous,
-        [question._id]: true,
-      }));
-
-      const imageSrc = await fetchAdminQuestionImage(question._id);
-
-      if (imageSrc) {
-        setQuestionImages((previous) => ({
-          ...previous,
-          [question._id]: imageSrc,
-        }));
-      }
-
-      return imageSrc;
-    } catch (error) {
-      console.error("Error loading question image:", error);
-      return "";
-    } finally {
-      setLoadingImageIds((previous) => {
-        const next = { ...previous };
-        delete next[question._id];
-        return next;
-      });
-    }
-  };
-
-  const fetchSetupData = async () => {
-    try {
-      setIsLoadingSetup(true);
-
-      const [coursesRes, allSubjects, allTopics] = await Promise.all([
-        api.get("/api/courses?limit=100"),
-        fetchAllPages("/api/subjects/admin/all", "subjects", {
-          _tokenType: "admin",
-        }),
-        fetchAllPages("/api/topics/admin/all", "topics", {
-          _tokenType: "admin",
-        }),
-      ]);
-
-      setCourses(apiArray(coursesRes.data, "courses"));
-      setSubjects(allSubjects);
-      setTopics(allTopics);
-    } catch (error) {
-      console.error("Error loading filter data:", error);
-      alert(error.message || "Error loading filter data");
-    } finally {
-      setIsLoadingSetup(false);
-    }
-  };
-
-  const resetEditImagePreview = () => {
-    if (editImagePreview) {
-      URL.revokeObjectURL(editImagePreview);
-      setEditImagePreview("");
-    }
-  };
-
-  const cancelEdit = () => {
-    if (isSavingEdit) return;
-
-    resetEditImagePreview();
-    setEditingId(null);
-    setEditForm({
-      subjectId: "",
-      topicId: "",
-      questionText: "",
-      options: ["", "", "", ""],
-      correctAnswer: "",
-      explanation: "",
-      image: null,
-      removeImage: false,
-      existingImageSrc: "",
-    });
-  };
-
-  const loadQuestions = async () => {
-    if (isSavingEdit) return;
-
-    if (!subjectFilter) {
-      alert("Please select a subject first.");
-      return;
-    }
-
-    try {
-      setIsLoadingQuestions(true);
-      cancelEdit();
-
-      const params = new URLSearchParams();
-      params.set("subjectId", subjectFilter);
-      if (topicFilter) params.set("topicId", topicFilter);
-
-      const allQuestions = await fetchAllPages(
-        `/api/questions/admin/all?${params.toString()}`,
-        "questions",
-        { _tokenType: "admin" },
-      );
-
-      setQuestionImages({});
-      setLoadingImageIds({});
-      setQuestions(allQuestions);
-      setHasLoadedQuestions(true);
-    } catch (error) {
-      console.error("Error loading questions:", error);
-      alert(error.message || "Error loading questions");
-    } finally {
-      setIsLoadingQuestions(false);
-    }
-  };
+function Editor({ q, onSaved, onCancel, onDeleted, toast }) {
+  const [text, setText] = useState(q.questionText || "");
+  const [options, setOptions] = useState(() => [...(q.options || [])]);
+  const [correct, setCorrect] = useState(() => Math.max(0, (q.options || []).indexOf(q.correctAnswer)));
+  const [explanation, setExplanation] = useState(q.explanation || "");
+  const [image, setImage] = useState(null);
+  const [preview, setPreview] = useState("");
+  const [removeImage, setRemoveImage] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    fetchSetupData();
-  }, []);
-
-  useEffect(() => {
+    if (!q.hasImage) return;
+    let alive = true;
+    api.get(`/api/questions/${q._id}/admin-image`, ADMIN).then((r) => alive && setPreview(imageSrc(r.data?.imageData, r.data?.imageContentType))).catch(() => {});
     return () => {
-      if (editImagePreview) URL.revokeObjectURL(editImagePreview);
+      alive = false;
     };
-  }, [editImagePreview]);
+  }, [q._id, q.hasImage]);
 
-  const filteredSubjects = useMemo(() => {
-    return subjects.filter((subject) => {
-      const matchesCourse = courseFilter
-        ? getCourseId(subject) === courseFilter
-        : true;
-
-      const matchesLevel = levelFilter
-        ? Number(subject.level) === Number(levelFilter)
-        : true;
-
-      return matchesCourse && matchesLevel;
-    });
-  }, [subjects, courseFilter, levelFilter]);
-
-  const filteredTopics = useMemo(() => {
-    return topics.filter((topic) => {
-      const subject = topic.subjectId || {};
-
-      const matchesCourse = courseFilter
-        ? getCourseId(subject) === courseFilter
-        : true;
-
-      const matchesLevel = levelFilter
-        ? Number(subject.level) === Number(levelFilter)
-        : true;
-
-      const matchesSubject = subjectFilter
-        ? subject?._id === subjectFilter
-        : true;
-
-      return matchesCourse && matchesLevel && matchesSubject;
-    });
-  }, [topics, courseFilter, levelFilter, subjectFilter]);
-
-  useEffect(() => {
-    setQuestions([]);
-    setHasLoadedQuestions(false);
-    cancelEdit();
-
-    if (
-      subjectFilter &&
-      !filteredSubjects.some((subject) => subject._id === subjectFilter)
-    ) {
-      setSubjectFilter("");
-      setTopicFilter("");
-    }
-  }, [courseFilter, levelFilter]);
-
-  useEffect(() => {
-    setQuestions([]);
-    setHasLoadedQuestions(false);
-    cancelEdit();
-
-    if (
-      topicFilter &&
-      !filteredTopics.some((topic) => topic._id === topicFilter)
-    ) {
-      setTopicFilter("");
-    }
-  }, [subjectFilter]);
-
-  useEffect(() => {
-    setQuestions([]);
-    setHasLoadedQuestions(false);
-    cancelEdit();
-  }, [topicFilter]);
-
-  const startEdit = async (question) => {
-    if (isSavingEdit) return;
-
-    resetEditImagePreview();
-
-    const options = Array.isArray(question.options) ? question.options : [];
-    let existingImageSrc = getQuestionImageSrc(question, questionImages);
-
-    if (!existingImageSrc && hasQuestionImage(question)) {
-      existingImageSrc = await loadQuestionImage(question);
-    }
-
-    setEditingId(question._id);
-    setEditForm({
-      subjectId: subjectOfQuestion(question)?._id || "",
-      topicId: topicOfQuestion(question)?._id || "",
-      questionText: question.questionText || "",
-      options: [...options, "", "", "", "", "", ""].slice(
-        0,
-        Math.max(4, options.length),
-      ),
-      correctAnswer: question.correctAnswer || "",
-      explanation: question.explanation || "",
-      image: null,
-      removeImage: false,
-      existingImageSrc,
-    });
+  const pickImage = (file) => {
+    if (!file) return;
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) return setError("Use a JPG, PNG or WebP picture.");
+    if (file.size > 5 * 1024 * 1024) return setError("Pictures must be under 5 MB.");
+    setError("");
+    setImage(file);
+    setRemoveImage(false);
+    setPreview(URL.createObjectURL(file));
   };
 
-  const editTopics = useMemo(() => {
-    return topics.filter((topic) => {
-      const subject = topic.subjectId || {};
-      return editForm.subjectId ? subject?._id === editForm.subjectId : true;
-    });
-  }, [topics, editForm.subjectId]);
-
-  const updateOption = (index, value) => {
-    const next = [...editForm.options];
-    next[index] = value;
-    setEditForm({ ...editForm, options: next });
-  };
-
-  const handleEditImageChange = (event) => {
-    const file = event.target.files?.[0];
-
-    resetEditImagePreview();
-
-    if (!file) {
-      setEditForm({ ...editForm, image: null });
-      return;
-    }
-
-    const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
-
-    if (!allowedTypes.includes(file.type)) {
-      alert("Please upload a JPG, PNG, or WEBP image.");
-      event.target.value = "";
-      return;
-    }
-
-    const maxBytes = 5 * 1024 * 1024;
-
-    if (file.size > maxBytes) {
-      alert("Image is too large. Maximum size is 5MB.");
-      event.target.value = "";
-      return;
-    }
-
-    setEditForm({
-      ...editForm,
-      image: file,
-      removeImage: false,
-    });
-
-    setEditImagePreview(URL.createObjectURL(file));
-  };
-
-  const removeCurrentImage = () => {
-    if (isSavingEdit) return;
-
-    resetEditImagePreview();
-    setEditForm({
-      ...editForm,
-      image: null,
-      removeImage: true,
-      existingImageSrc: "",
-    });
-  };
-
-  const saveEdit = async (id) => {
-    if (isSavingEdit) return;
-
-    const options = editForm.options
-      .map((option) => option.trim())
-      .filter(Boolean);
-
-    if (
-      !editForm.subjectId ||
-      !editForm.topicId ||
-      !editForm.questionText.trim() ||
-      options.length < 2 ||
-      !editForm.correctAnswer.trim() ||
-      !editForm.explanation.trim()
-    ) {
-      alert(
-        "Please complete all question fields. At least two options are required.",
-      );
-      return;
-    }
-
-    if (!options.includes(editForm.correctAnswer.trim())) {
-      alert("Correct answer must match one of the options exactly.");
-      return;
-    }
-
+  const save = async () => {
+    const cleaned = options.map((o) => o.trim());
+    if (!text.trim()) return setError("The question can't be empty.");
+    if (cleaned.length < 2 || cleaned.some((o) => !o)) return setError("Every option needs text, and there must be at least 2.");
+    if (new Set(cleaned.map((o) => o.toLowerCase())).size !== cleaned.length) return setError("Two options are the same.");
+    if (!explanation.trim()) return setError("Please add an explanation.");
+    setSaving(true);
+    setError("");
     try {
-      setIsSavingEdit(true);
-
-      const selectedSubject = subjects.find(
-        (subject) => subject._id === editForm.subjectId,
-      );
-
-      const selectedTopic = topics.find(
-        (topic) => topic._id === editForm.topicId,
-      );
-
-      const localPreview = editImagePreview || "";
-
-      const formData = new FormData();
-      formData.append("subjectId", editForm.subjectId);
-      formData.append("topicId", editForm.topicId);
-      formData.append("questionText", editForm.questionText.trim());
-      formData.append("options", JSON.stringify(options));
-      formData.append("correctAnswer", editForm.correctAnswer.trim());
-      formData.append("explanation", editForm.explanation.trim());
-
-      if (editForm.image) {
-        formData.append("image", editForm.image);
-      }
-
-      if (editForm.removeImage) {
-        formData.append("removeImage", "true");
-      }
-
-      const response = await api.put(`/api/questions/${id}`, formData, {
-        _tokenType: "admin",
-      });
-
-      const updatedQuestionFromServer = response.data || {};
-
-      setQuestions((previousQuestions) =>
-        previousQuestions.map((question) => {
-          if (question._id !== id) return question;
-
-          const existingSubject = subjectOfQuestion(question);
-          const existingTopic = topicOfQuestion(question);
-
-          return {
-            ...question,
-            ...updatedQuestionFromServer,
-            _id: id,
-            subjectId: selectedSubject || existingSubject,
-            topicId: selectedTopic || existingTopic,
-            questionText: editForm.questionText.trim(),
-            options,
-            correctAnswer: editForm.correctAnswer.trim(),
-            explanation: editForm.explanation.trim(),
-            imageData: editForm.removeImage ? "" : question.imageData || "",
-            imageContentType: editForm.removeImage
-              ? ""
-              : updatedQuestionFromServer.imageContentType ||
-                editForm.image?.type ||
-                question.imageContentType ||
-                "",
-            imageOriginalName: editForm.removeImage
-              ? ""
-              : updatedQuestionFromServer.imageOriginalName ||
-                editForm.image?.name ||
-                question.imageOriginalName ||
-                "",
-            imageSize: editForm.removeImage
-              ? 0
-              : updatedQuestionFromServer.imageSize ||
-                editForm.image?.size ||
-                question.imageSize ||
-                0,
-            hasImage: editForm.removeImage
-              ? false
-              : Boolean(
-                  updatedQuestionFromServer.hasImage ||
-                  editForm.image ||
-                  question.hasImage ||
-                  question.imageContentType ||
-                  question.imageSize,
-                ),
-            localImagePreview: editForm.removeImage ? "" : localPreview,
-          };
-        }),
-      );
-
-      if (editForm.removeImage) {
-        setQuestionImages((previousImages) => {
-          const nextImages = { ...previousImages };
-          delete nextImages[id];
-          return nextImages;
-        });
-      } else if (localPreview) {
-        setQuestionImages((previousImages) => ({
-          ...previousImages,
-          [id]: localPreview,
-        }));
-      }
-
-      resetEditImagePreview();
-      setEditingId(null);
-      setEditForm({
-        subjectId: "",
-        topicId: "",
-        questionText: "",
-        options: ["", "", "", ""],
-        correctAnswer: "",
-        explanation: "",
-        image: null,
-        removeImage: false,
-        existingImageSrc: "",
-      });
-    } catch (error) {
-      console.error("Error updating question:", error);
-      alert(error.message || "Error updating question");
-    } finally {
-      setIsSavingEdit(false);
+      const fd = new FormData();
+      fd.append("subjectId", idOf(q.subjectId));
+      fd.append("topicId", idOf(q.topicId));
+      fd.append("questionText", text.trim());
+      fd.append("options", JSON.stringify(cleaned));
+      fd.append("correctAnswer", cleaned[correct]);
+      fd.append("explanation", explanation.trim());
+      if (image) fd.append("image", image);
+      if (removeImage) fd.append("removeImage", "true");
+      await api.put(`/api/questions/${q._id}`, fd, ADMIN);
+      toast("Question saved");
+      onSaved({ ...q, questionText: text.trim(), options: cleaned, correctAnswer: cleaned[correct], explanation: explanation.trim(), hasImage: removeImage ? false : q.hasImage || Boolean(image) });
+    } catch (err) {
+      setError(errorText(err, "Couldn't save the question."));
+      setSaving(false);
     }
   };
 
-  const deleteQuestion = async (id) => {
-    if (isSavingEdit) return;
-    if (!window.confirm("Delete this question?")) return;
-
+  const remove = async () => {
+    if (!window.confirm("Delete this question? This can't be undone.")) return;
     try {
-      await api.delete(`/api/questions/${id}`, { _tokenType: "admin" });
-      setQuestions((previousQuestions) =>
-        previousQuestions.filter((question) => question._id !== id),
-      );
-      setQuestionImages((previousImages) => {
-        const nextImages = { ...previousImages };
-        delete nextImages[id];
-        return nextImages;
-      });
-    } catch (error) {
-      console.error("Error deleting question:", error);
-      alert(error.message || "Error deleting question");
+      await api.delete(`/api/questions/${q._id}`, ADMIN);
+      toast("Question deleted");
+      onDeleted(q._id);
+    } catch (err) {
+      setError(errorText(err));
     }
   };
 
   return (
-    <>
-      <style>{`
-        @keyframes fadeUp {
-           from  { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-
-        .question-row {
-          animation: fadeUp 0.3s ease-out;
-        }
-      `}</style>
-
-      <div
-        style={{
-          minHeight: "100vh",
-          background: "#f8f9fb",
-          padding: "2.5rem 1.25rem 4rem",
-        }}
-      >
-        <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
-          <div style={{ marginBottom: "2rem" }}>
-            <p
-              style={{
-                margin: "0 0 0.75rem",
-                color: "#94a3b8",
-                fontSize: "12px",
-                fontWeight: "600",
-                textTransform: "uppercase",
-                letterSpacing: "0.08em",
-              }}
-            >
-              Admin / Manage Content
-            </p>
-            <h1
-              style={{
-                margin: "0 0 0.5rem",
-                color: "#0f172a",
-                fontSize: "32px",
-                fontWeight: "700",
-                letterSpacing: "-0.02em",
-              }}
-            >
-              Manage Questions
-            </h1>
-            <p
-              style={{
-                margin: 0,
-                color: "#64748b",
-                fontSize: "14px",
-                lineHeight: "1.6",
-              }}
-            >
-              Select filters to load, view, edit, and delete questions.
-            </p>
-          </div>
-
-          <div
-            style={{
-              background: "#fff",
-              border: "0.5px solid rgba(0,0,0,0.08)",
-              borderRadius: "14px",
-              padding: "1.5rem",
-              marginBottom: "1.5rem",
-              boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
-            }}
-          >
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-                gap: "1rem",
-                marginBottom: "1rem",
-              }}
-            >
-              <div>
-                <label style={filterLabelStyle}>Course</label>
-                <select
-                  value={courseFilter}
-                  onChange={(e) => setCourseFilter(e.target.value)}
-                  style={selectStyle}
-                  disabled={isLoadingSetup || isSavingEdit}
-                >
-                  <option value="">All courses</option>
-                  {courses.map((course) => (
-                    <option key={course._id} value={course._id}>
-                      {course.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label style={filterLabelStyle}>Level</label>
-                <select
-                  value={levelFilter}
-                  onChange={(e) => setLevelFilter(e.target.value)}
-                  style={selectStyle}
-                  disabled={isLoadingSetup || isSavingEdit}
-                >
-                  <option value="">All levels</option>
-                  {LEVELS.map((level) => (
-                    <option key={level} value={level}>
-                      {level} Level
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label style={filterLabelStyle}>Subject *</label>
-                <select
-                  value={subjectFilter}
-                  onChange={(e) => {
-                    setSubjectFilter(e.target.value);
-                    setTopicFilter("");
-                  }}
-                  style={selectStyle}
-                  disabled={isLoadingSetup || isSavingEdit}
-                >
-                  <option value="">Select subject</option>
-                  {filteredSubjects.map((subject) => (
-                    <option key={subject._id} value={subject._id}>
-                      {subject.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label style={filterLabelStyle}>Topic</label>
-                <select
-                  value={topicFilter}
-                  onChange={(e) => setTopicFilter(e.target.value)}
-                  style={selectStyle}
-                  disabled={isLoadingSetup || !subjectFilter || isSavingEdit}
-                >
-                  <option value="">All topics</option>
-                  {filteredTopics.map((topic) => (
-                    <option key={topic._id} value={topic._id}>
-                      {topic.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
-              <button
-                onClick={loadQuestions}
-                style={{
-                  padding: "10px 18px",
-                  border: "none",
-                  borderRadius: "8px",
-                  backgroundColor: "#185FA5",
-                  color: "white",
-                  fontSize: "13px",
-                  fontWeight: "600",
-                  cursor:
-                    isLoadingSetup || isLoadingQuestions || isSavingEdit
-                      ? "not-allowed"
-                      : "pointer",
-                  opacity:
-                    isLoadingSetup || isLoadingQuestions || isSavingEdit
-                      ? 0.6
-                      : 1,
-                  transition: "all 0.2s",
-                }}
-                disabled={isLoadingSetup || isLoadingQuestions || isSavingEdit}
-                onMouseEnter={(e) => {
-                  if (!(isLoadingSetup || isLoadingQuestions || isSavingEdit)) {
-                    e.currentTarget.style.backgroundColor = "#0e3d6e";
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = "#185FA5";
-                }}
-              >
-                {isLoadingQuestions ? "Loading..." : "Load Questions"}
-              </button>
-
-              <button
-                onClick={() => navigate("/admin")}
-                style={{
-                  padding: "10px 18px",
-                  border: "0.5px solid rgba(0,0,0,0.12)",
-                  borderRadius: "8px",
-                  backgroundColor: "#fff",
-                  color: "#334155",
-                  fontSize: "13px",
-                  fontWeight: "600",
-                  cursor: "pointer",
-                  transition: "all 0.2s",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = "#f1f5f9";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = "#fff";
-                }}
-              >
-                ← Back to Admin
-              </button>
-            </div>
-          </div>
-
-          <p
-            style={{
-              marginBottom: "1.5rem",
-              color: "#64748b",
-              fontSize: "13px",
-              fontWeight: "600",
-            }}
-          >
-            {hasLoadedQuestions
-              ? `📋 Showing ${questions.length} question(s)`
-              : "Select course, level, and subject, then click Load Questions."}
-          </p>
-
-          <div
-            style={{
-              background: "#fff",
-              border: "0.5px solid rgba(0,0,0,0.08)",
-              borderRadius: "14px",
-              overflow: "hidden",
-              boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
-            }}
-          >
-            {isLoadingSetup ? (
-              <div style={emptyStateStyle}>
-                <p style={{ margin: 0, color: "#64748b" }}>
-                  Loading filters...
-                </p>
-              </div>
-            ) : isLoadingQuestions ? (
-              <div style={emptyStateStyle}>
-                <p style={{ margin: 0, color: "#64748b" }}>
-                  Loading questions...
-                </p>
-              </div>
-            ) : !hasLoadedQuestions ? (
-              <div style={emptyStateStyle}>
-                <p style={emptyTitleStyle}>No questions loaded</p>
-                <p style={emptyBodyStyle}>
-                  Select filters above and click "Load Questions" to get
-                  started.
-                </p>
-              </div>
-            ) : questions.length === 0 ? (
-              <div style={emptyStateStyle}>
-                <p style={emptyTitleStyle}>No questions found</p>
-                <p style={emptyBodyStyle}>
-                  There are no questions matching your filters.
-                </p>
-              </div>
-            ) : (
-              questions.map((question, index) => {
-                const subject = subjectOfQuestion(question);
-                const topic = topicOfQuestion(question);
-                const questionImageSrc = getQuestionImageSrc(
-                  question,
-                  questionImages,
-                );
-                const imagePreviewToShow =
-                  editImagePreview || editForm.existingImageSrc;
-                const loadingThisImage = Boolean(loadingImageIds[question._id]);
-                const imageFileDetails = [
-                  question.imageOriginalName,
-                  formatFileSize(question.imageSize),
-                ]
-                  .filter(Boolean)
-                  .join(" · ");
-
-                return (
-                  <div
-                    key={question._id}
-                    className="question-row"
-                    style={{
-                      borderBottom:
-                        index === questions.length - 1
-                          ? "none"
-                          : "0.5px solid rgba(0,0,0,0.05)",
-                      padding: "1.5rem",
-                    }}
-                  >
-                    {editingId === question._id ? (
-                      <div style={{ width: "100%" }}>
-                        <div
-                          style={{
-                            display: "grid",
-                            gridTemplateColumns:
-                              "repeat(auto-fit, minmax(200px, 1fr))",
-                            gap: "0.75rem",
-                            marginBottom: "1rem",
-                          }}
-                        >
-                          <div>
-                            <label style={labelStyle}>Subject *</label>
-                            <select
-                              value={editForm.subjectId}
-                              onChange={(e) =>
-                                setEditForm({
-                                  ...editForm,
-                                  subjectId: e.target.value,
-                                  topicId: "",
-                                })
-                              }
-                              style={inputStyle}
-                              disabled={isSavingEdit}
-                            >
-                              <option value="">Select subject</option>
-                              {subjects.map((item) => (
-                                <option key={item._id} value={item._id}>
-                                  {item.name}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-
-                          <div>
-                            <label style={labelStyle}>Topic *</label>
-                            <select
-                              value={editForm.topicId}
-                              onChange={(e) =>
-                                setEditForm({
-                                  ...editForm,
-                                  topicId: e.target.value,
-                                })
-                              }
-                              style={inputStyle}
-                              disabled={isSavingEdit}
-                            >
-                              <option value="">Select topic</option>
-                              {editTopics.map((item) => (
-                                <option key={item._id} value={item._id}>
-                                  {item.name}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                        </div>
-
-                        <div>
-                          <label style={labelStyle}>Question text *</label>
-                          <textarea
-                            value={editForm.questionText}
-                            onChange={(e) =>
-                              setEditForm({
-                                ...editForm,
-                                questionText: e.target.value,
-                              })
-                            }
-                            style={textareaStyle}
-                            placeholder="Enter question text"
-                            disabled={isSavingEdit}
-                          />
-                        </div>
-
-                        <div>
-                          <label style={labelStyle}>Options (min 2) *</label>
-                          <div
-                            style={{
-                              display: "grid",
-                              gridTemplateColumns:
-                                "repeat(auto-fit, minmax(180px, 1fr))",
-                              gap: "0.75rem",
-                              marginBottom: "1rem",
-                            }}
-                          >
-                            {editForm.options.map((option, optionIndex) => (
-                              <input
-                                key={optionIndex}
-                                value={option}
-                                onChange={(e) =>
-                                  updateOption(optionIndex, e.target.value)
-                                }
-                                style={inputStyle}
-                                placeholder={`Option ${optionIndex + 1}`}
-                                disabled={isSavingEdit}
-                              />
-                            ))}
-                          </div>
-                        </div>
-
-                        <div>
-                          <label style={labelStyle}>Correct answer *</label>
-                          <input
-                            value={editForm.correctAnswer}
-                            onChange={(e) =>
-                              setEditForm({
-                                ...editForm,
-                                correctAnswer: e.target.value,
-                              })
-                            }
-                            style={inputStyle}
-                            placeholder="Must match one of the options"
-                            disabled={isSavingEdit}
-                          />
-                        </div>
-
-                        <div>
-                          <label style={labelStyle}>Explanation *</label>
-                          <textarea
-                            value={editForm.explanation}
-                            onChange={(e) =>
-                              setEditForm({
-                                ...editForm,
-                                explanation: e.target.value,
-                              })
-                            }
-                            style={textareaStyle}
-                            placeholder="Provide detailed explanation"
-                            disabled={isSavingEdit}
-                          />
-                        </div>
-
-                        <div
-                          style={{
-                            background: "#f8fafc",
-                            border: "0.5px solid rgba(0,0,0,0.08)",
-                            borderRadius: "10px",
-                            padding: "1.25rem",
-                            marginBottom: "1rem",
-                          }}
-                        >
-                          <label style={labelStyle}>Question image</label>
-
-                          {imagePreviewToShow ? (
-                            <div
-                              style={{
-                                border: "0.5px solid rgba(0,0,0,0.08)",
-                                borderRadius: "8px",
-                                padding: "8px",
-                                marginBottom: "1rem",
-                                background: "#fff",
-                              }}
-                            >
-                              <img
-                                src={imagePreviewToShow}
-                                alt="Question preview"
-                                style={{
-                                  width: "100%",
-                                  maxWidth: "400px",
-                                  maxHeight: "280px",
-                                  objectFit: "contain",
-                                  borderRadius: "6px",
-                                  display: "block",
-                                  margin: "0 auto",
-                                }}
-                              />
-                            </div>
-                          ) : (
-                            <div
-                              style={{
-                                border: "1px dashed rgba(0,0,0,0.12)",
-                                borderRadius: "8px",
-                                padding: "1.5rem",
-                                marginBottom: "1rem",
-                                textAlign: "center",
-                                color: "#94a3b8",
-                                fontSize: "13px",
-                              }}
-                            >
-                              No image attached
-                            </div>
-                          )}
-
-                          <input
-                            type="file"
-                            accept="image/jpeg,image/png,image/webp"
-                            onChange={handleEditImageChange}
-                            style={{
-                              ...inputStyle,
-                              marginBottom: "0.75rem",
-                              padding: "8px",
-                            }}
-                            disabled={isSavingEdit}
-                          />
-
-                          <button
-                            type="button"
-                            onClick={removeCurrentImage}
-                            disabled={isSavingEdit}
-                            style={{
-                              padding: "8px 14px",
-                              border: "0.5px solid #FCA5A5",
-                              borderRadius: "6px",
-                              background: "#FEE2E2",
-                              color: "#DC2626",
-                              fontSize: "12px",
-                              fontWeight: "600",
-                              cursor: isSavingEdit ? "not-allowed" : "pointer",
-                              opacity: isSavingEdit ? 0.6 : 1,
-                              transition: "all 0.2s",
-                            }}
-                            onMouseEnter={(e) => {
-                              if (!isSavingEdit) {
-                                e.currentTarget.style.background = "#FECACA";
-                              }
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.background = "#FEE2E2";
-                            }}
-                          >
-                            Remove image
-                          </button>
-
-                          <p
-                            style={{
-                              fontSize: "12px",
-                              color: "#64748b",
-                              margin: "0.75rem 0 0",
-                            }}
-                          >
-                            JPG, PNG, or WEBP. Max 5MB.
-                          </p>
-                        </div>
-
-                        <div style={{ display: "flex", gap: "0.75rem" }}>
-                          <button
-                            onClick={() => saveEdit(question._id)}
-                            disabled={isSavingEdit}
-                            style={{
-                              padding: "10px 16px",
-                              border: "none",
-                              borderRadius: "6px",
-                              background: "#185FA5",
-                              color: "#fff",
-                              fontSize: "13px",
-                              fontWeight: "600",
-                              cursor: isSavingEdit ? "not-allowed" : "pointer",
-                              opacity: isSavingEdit ? 0.6 : 1,
-                              transition: "all 0.2s",
-                            }}
-                            onMouseEnter={(e) => {
-                              if (!isSavingEdit) {
-                                e.currentTarget.style.background = "#0e3d6e";
-                              }
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.background = "#185FA5";
-                            }}
-                          >
-                            {isSavingEdit ? "Saving..." : "Save"}
-                          </button>
-
-                          <button
-                            onClick={cancelEdit}
-                            disabled={isSavingEdit}
-                            style={{
-                              padding: "10px 16px",
-                              border: "0.5px solid rgba(0,0,0,0.12)",
-                              borderRadius: "6px",
-                              background: "#fff",
-                              color: "#334155",
-                              fontSize: "13px",
-                              fontWeight: "600",
-                              cursor: isSavingEdit ? "not-allowed" : "pointer",
-                              opacity: isSavingEdit ? 0.6 : 1,
-                              transition: "all 0.2s",
-                            }}
-                            onMouseEnter={(e) => {
-                              if (!isSavingEdit) {
-                                e.currentTarget.style.background = "#f1f5f9";
-                              }
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.background = "#fff";
-                            }}
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        <div style={{ marginBottom: "1rem" }}>
-                          <div
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "1rem",
-                              marginBottom: "0.75rem",
-                              flexWrap: "wrap",
-                            }}
-                          >
-                            <h3
-                              style={{
-                                margin: 0,
-                                fontSize: "16px",
-                                fontWeight: "700",
-                                color: "#0f172a",
-                              }}
-                            >
-                              Question {index + 1}
-                            </h3>
-
-                            {subject && subject._id ? (
-                              <span
-                                style={{
-                                  fontSize: "12px",
-                                  padding: "4px 10px",
-                                  background: "#E6F1FB",
-                                  color: "#185FA5",
-                                  borderRadius: "6px",
-                                  fontWeight: "600",
-                                }}
-                              >
-                                {getCourseName(subject)} · L
-                                {subject?.level || "?"}
-                              </span>
-                            ) : (
-                              <span
-                                style={{
-                                  fontSize: "12px",
-                                  padding: "4px 10px",
-                                  background: "#FEE2E2",
-                                  color: "#DC2626",
-                                  borderRadius: "6px",
-                                  fontWeight: "600",
-                                }}
-                              >
-                                ⚠️ Deleted Subject
-                              </span>
-                            )}
-
-                            {hasQuestionImage(question) && (
-                              <span
-                                style={{
-                                  fontSize: "12px",
-                                  padding: "4px 10px",
-                                  background: "#ECFDF5",
-                                  color: "#047857",
-                                  borderRadius: "6px",
-                                  fontWeight: "600",
-                                }}
-                              >
-                                🖼 Image attached
-                              </span>
-                            )}
-                          </div>
-
-                          <p
-                            style={{
-                              margin: "0.5rem 0 0",
-                              fontSize: "12px",
-                              color: "#64748b",
-                            }}
-                          >
-                            <strong>Subject: </strong>{" "}
-                            {subject?.name || "Deleted"} |{" "}
-                            <strong>Topic: </strong> {topic?.name || "Deleted"}
-                          </p>
-                        </div>
-
-                        {questionImageSrc && (
-                          <div
-                            style={{
-                              border: "0.5px solid rgba(0,0,0,0.08)",
-                              borderRadius: "10px",
-                              padding: "8px",
-                              marginBottom: "1rem",
-                              background: "#f8fafc",
-                            }}
-                          >
-                            <img
-                              src={questionImageSrc}
-                              alt="Question"
-                              style={{
-                                width: "100%",
-                                maxWidth: "500px",
-                                maxHeight: "280px",
-                                objectFit: "contain",
-                                borderRadius: "6px",
-                                display: "block",
-                              }}
-                            />
-                          </div>
-                        )}
-
-                        {!questionImageSrc && hasQuestionImage(question) && (
-                          <div
-                            style={{
-                              border: "1px dashed rgba(0,0,0,0.12)",
-                              borderRadius: "10px",
-                              padding: "1rem",
-                              marginBottom: "1rem",
-                              background: "#f8fafc",
-                              color: "#64748b",
-                              fontSize: "13px",
-                            }}
-                          >
-                            <p style={{ margin: "0 0 0.75rem" }}>
-                              Image is attached
-                              {imageFileDetails ? `, ${imageFileDetails}` : ""}.
-                            </p>
-
-                            <button
-                              type="button"
-                              onClick={() => loadQuestionImage(question)}
-                              disabled={loadingThisImage}
-                              style={{
-                                padding: "8px 13px",
-                                border: "0.5px solid rgba(24,95,165,0.25)",
-                                borderRadius: "6px",
-                                background: "#E6F1FB",
-                                color: "#185FA5",
-                                fontSize: "12px",
-                                fontWeight: "700",
-                                cursor: loadingThisImage
-                                  ? "not-allowed"
-                                  : "pointer",
-                                opacity: loadingThisImage ? 0.65 : 1,
-                              }}
-                            >
-                              {loadingThisImage
-                                ? "Loading image..."
-                                : "Load image"}
-                            </button>
-                          </div>
-                        )}
-
-                        <p
-                          style={{
-                            fontSize: "14px",
-                            color: "#0f172a",
-                            lineHeight: "1.6",
-                            marginBottom: "1rem",
-                          }}
-                        >
-                          {question.questionText}
-                        </p>
-
-                        <div style={{ marginBottom: "1rem" }}>
-                          <p
-                            style={{
-                              fontSize: "12px",
-                              fontWeight: "600",
-                              color: "#64748b",
-                              marginBottom: "0.5rem",
-                            }}
-                          >
-                            Options:
-                          </p>
-                          <ol
-                            style={{
-                              margin: "0",
-                              paddingLeft: "1.5rem",
-                              color: "#475569",
-                              fontSize: "13px",
-                            }}
-                          >
-                            {(question.options || []).map(
-                              (option, optionIndex) => (
-                                <li key={`${question._id}-${optionIndex}`}>
-                                  {option}
-                                </li>
-                              ),
-                            )}
-                          </ol>
-                        </div>
-
-                        <div
-                          style={{
-                            background: "#f8fafc",
-                            border: "0.5px solid rgba(0,0,0,0.08)",
-                            borderRadius: "8px",
-                            padding: "1rem",
-                            marginBottom: "1rem",
-                          }}
-                        >
-                          <p
-                            style={{
-                              margin: "0 0 0.5rem",
-                              fontSize: "12px",
-                              fontWeight: "600",
-                              color: "#64748b",
-                            }}
-                          >
-                            ✓ Correct answer
-                          </p>
-                          <p
-                            style={{
-                              margin: "0 0 1rem",
-                              fontSize: "14px",
-                              color: "#0f172a",
-                              fontWeight: "600",
-                            }}
-                          >
-                            {question.correctAnswer}
-                          </p>
-
-                          <p
-                            style={{
-                              margin: "0 0 0.5rem",
-                              fontSize: "12px",
-                              fontWeight: "600",
-                              color: "#64748b",
-                            }}
-                          >
-                            💡 Explanation
-                          </p>
-                          <p
-                            style={{
-                              margin: 0,
-                              fontSize: "13px",
-                              color: "#475569",
-                              lineHeight: "1.6",
-                            }}
-                          >
-                            {question.explanation}
-                          </p>
-                        </div>
-
-                        <div style={{ display: "flex", gap: "0.75rem" }}>
-                          <button
-                            onClick={() => startEdit(question)}
-                            disabled={isSavingEdit}
-                            style={{
-                              padding: "9px 16px",
-                              border: "none",
-                              borderRadius: "6px",
-                              background: "#185FA5",
-                              color: "#fff",
-                              fontSize: "13px",
-                              fontWeight: "600",
-                              cursor: isSavingEdit ? "not-allowed" : "pointer",
-                              opacity: isSavingEdit ? 0.6 : 1,
-                              transition: "all 0.2s",
-                            }}
-                            onMouseEnter={(e) => {
-                              if (!isSavingEdit) {
-                                e.currentTarget.style.background = "#0e3d6e";
-                              }
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.background = "#185FA5";
-                            }}
-                          >
-                            ✏️ Edit
-                          </button>
-
-                          <button
-                            onClick={() => deleteQuestion(question._id)}
-                            disabled={isSavingEdit}
-                            style={{
-                              padding: "9px 16px",
-                              border: "0.5px solid #FCA5A5",
-                              borderRadius: "6px",
-                              background: "#FEE2E2",
-                              color: "#DC2626",
-                              fontSize: "13px",
-                              fontWeight: "600",
-                              cursor: isSavingEdit ? "not-allowed" : "pointer",
-                              opacity: isSavingEdit ? 0.6 : 1,
-                              transition: "all 0.2s",
-                            }}
-                            onMouseEnter={(e) => {
-                              if (!isSavingEdit) {
-                                e.currentTarget.style.background = "#FECACA";
-                              }
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.background = "#FEE2E2";
-                            }}
-                          >
-                            🗑️ Delete
-                          </button>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                );
-              })
+    <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 12 }}>
+      <label className="adm-field">Question<textarea className="adm-in" rows={3} value={text} onChange={(e) => setText(e.target.value)} /></label>
+      <fieldset style={{ border: 0, padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 8 }}>
+        <legend className="adm-field" style={{ marginBottom: 6 }}>Options · tick the correct one</legend>
+        {options.map((o, i) => (
+          <div key={i} style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <input type="radio" className="adm-check" name={`ok-${q._id}`} checked={correct === i} onChange={() => setCorrect(i)} aria-label={`Option ${String.fromCharCode(65 + i)} is correct`} />
+            <b style={{ width: 14, color: "#5b6577" }}>{String.fromCharCode(65 + i)}</b>
+            <input className="adm-in" value={o} aria-label={`Option ${String.fromCharCode(65 + i)}`} onChange={(e) => setOptions((p) => p.map((x, j) => (j === i ? e.target.value : x)))} style={correct === i ? { borderColor: "#86efac", background: "#f0fdf4" } : undefined} />
+            {options.length > 2 && (
+              <button type="button" className="adm-btn sm ghost" aria-label={`Remove option ${String.fromCharCode(65 + i)}`} onClick={() => { setOptions((p) => p.filter((_, j) => j !== i)); setCorrect((c) => (c === i ? 0 : c > i ? c - 1 : c)); }}>✕</button>
             )}
           </div>
-        </div>
+        ))}
+        {options.length < 6 && <button type="button" className="adm-btn sm" style={{ alignSelf: "flex-start" }} onClick={() => setOptions((p) => [...p, ""])}>+ Add option</button>}
+      </fieldset>
+      <label className="adm-field">Explanation<textarea className="adm-in" rows={3} value={explanation} onChange={(e) => setExplanation(e.target.value)} /></label>
+      <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+        {preview && !removeImage && <img src={preview} alt="Question picture" style={{ maxHeight: 110, maxWidth: 220, borderRadius: 10, border: "1px solid #e4e8ee" }} />}
+        <label className="adm-btn sm" style={{ cursor: "pointer" }}>{preview && !removeImage ? "Change picture" : "Add picture"}<input type="file" accept="image/jpeg,image/png,image/webp" className="adm-sr" onChange={(e) => pickImage(e.target.files?.[0])} /></label>
+        {preview && !removeImage && <button type="button" className="adm-btn sm ghost" onClick={() => { setRemoveImage(true); setImage(null); }}>Remove picture</button>}
       </div>
-    </>
+      {error && <div className="adm-note bad" role="alert">{error}</div>}
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+        <button type="button" className="adm-btn danger" onClick={remove}>Delete</button>
+        <span style={{ marginLeft: "auto", display: "flex", gap: 10 }}>
+          <button type="button" className="adm-btn" onClick={onCancel}>Cancel</button>
+          <button type="button" className="adm-btn pri" disabled={saving} onClick={save}>{saving ? "Saving…" : "Save changes"}</button>
+        </span>
+      </div>
+    </div>
   );
 }
 
-const filterLabelStyle = {
-  display: "block",
-  marginBottom: "6px",
-  fontSize: "12px",
-  fontWeight: "600",
-  color: "#64748b",
-  textTransform: "uppercase",
-  letterSpacing: "0.05em",
-};
+export default function ManageQuestionsPage() {
+  const [params, setParams] = useSearchParams();
+  const picker = useSubjectPicker(params, setParams);
+  const { subjectId, topicId } = picker;
+  const listKey = `${subjectId}|${topicId}`;
+  const [loaded, setLoaded] = useState({ key: "", list: null });
+  const [total, setTotal] = useState(0);
+  const [pageState, setPageState] = useState({ key: "", page: 1 });
+  const page = pageState.key === listKey ? pageState.page : 1;
+  const setPage = (fn) => setPageState({ key: listKey, page: typeof fn === "function" ? fn(page) : fn });
+  const [stats, setStats] = useState({});
+  const [reported, setReported] = useState({});
+  const [filter, setFilter] = useState("all");
+  const [search, setSearch] = useState("");
+  const [editing, setEditing] = useState(null);
+  const [error, setError] = useState("");
+  const [toastNode, toast] = useToast();
 
-const selectStyle = {
-  width: "100%",
-  padding: "9px 12px",
-  borderRadius: "8px",
-  border: "0.5px solid rgba(0,0,0,0.12)",
-  fontSize: "13px",
-  boxSizing: "border-box",
-  background: "#fff",
-  color: "#0f172a",
-  transition: "all 0.2s",
-  outline: "none",
-  appearance: "none",
-  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23334155' d='M1 1l5 5 5-5'/%3E%3C/svg%3E")`,
-  backgroundRepeat: "no-repeat",
-  backgroundPosition: "right 10px center",
-  paddingRight: "28px",
-};
+  useEffect(() => {
+    api.get("/api/reports/admin?status=open", ADMIN).then((r) => {
+      const m = {};
+      for (const it of r.data.items || []) m[it.questionId] = it.count;
+      setReported(m);
+    }).catch(() => {});
+  }, []);
 
-const inputStyle = {
-  width: "100%",
-  padding: "9px 12px",
-  borderRadius: "8px",
-  border: "0.5px solid rgba(0,0,0,0.12)",
-  fontSize: "13px",
-  boxSizing: "border-box",
-  background: "#fff",
-  color: "#0f172a",
-  transition: "all 0.2s",
-  outline: "none",
-};
+  const questions = loaded.key === `${listKey}|${page}` ? loaded.list : null;
+  const setQuestions = (fn) => setLoaded((l) => ({ ...l, list: typeof fn === "function" ? fn(l.list) : fn }));
 
-const textareaStyle = {
-  ...inputStyle,
-  minHeight: "80px",
-  resize: "vertical",
-  marginBottom: "1rem",
-  fontFamily: "inherit",
-};
+  const load = useCallback(async () => {
+    if (!subjectId) return;
+    const key = `${subjectId}|${topicId}|${page}`;
+    try {
+      const base = `/api/questions/admin/all?subjectId=${subjectId}${topicId ? `&topicId=${topicId}` : ""}`;
+      if (topicId) {
+        const all = [];
+        for (let p = 1; p <= 20; p += 1) {
+          const r = await api.get(`${base}&page=${p}&limit=100`, ADMIN);
+          all.push(...listOf(r.data, "questions"));
+          if (p >= (r.data.totalPages || 1)) break;
+        }
+        setLoaded({ key, list: all.reverse() });
+        setTotal(all.length);
+      } else {
+        const r = await api.get(`${base}&page=${page}&limit=${PAGE}`, ADMIN);
+        setLoaded({ key, list: listOf(r.data, "questions") });
+        setTotal(r.data.total || 0);
+      }
+      setError("");
+    } catch (err) {
+      setError(errorText(err, "Couldn't load questions."));
+      setLoaded({ key, list: [] });
+    }
+  }, [subjectId, topicId, page]);
 
-const labelStyle = {
-  display: "block",
-  marginBottom: "6px",
-  fontSize: "13px",
-  fontWeight: "600",
-  color: "#0f172a",
-};
+  useEffect(() => {
+    const id = setTimeout(load, 0); // load after render; it only sets state once data arrives
+    return () => clearTimeout(id);
+  }, [load]);
 
-const emptyStateStyle = {
-  padding: "3rem 2rem",
-  textAlign: "center",
-  color: "#64748b",
-};
+  useEffect(() => {
+    if (!subjectId) return;
+    api.get(`/api/admin/question-stats?subjectId=${subjectId}${topicId ? `&topicId=${topicId}` : ""}`, ADMIN).then((r) => setStats(r.data.stats || {})).catch(() => setStats({}));
+  }, [subjectId, topicId]);
 
-const emptyTitleStyle = {
-  margin: "0 0 0.5rem",
-  fontSize: "15px",
-  fontWeight: "700",
-  color: "#0f172a",
-};
+  const counts = useMemo(() => {
+    const list = questions || [];
+    return {
+      all: list.length,
+      reported: list.filter((q) => reported[q._id]).length,
+      hard: list.filter((q) => stats[q._id] && stats[q._id].attempts >= 5 && stats[q._id].correctRate < 40).length,
+      image: list.filter((q) => q.hasImage).length,
+    };
+  }, [questions, reported, stats]);
 
-const emptyBodyStyle = {
-  margin: 0,
-  fontSize: "13px",
-  color: "#64748b",
-  lineHeight: "1.6",
-};
+  const shown = (questions || []).filter((q) => {
+    if (filter === "reported" && !reported[q._id]) return false;
+    if (filter === "hard" && !(stats[q._id] && stats[q._id].attempts >= 5 && stats[q._id].correctRate < 40)) return false;
+    if (filter === "image" && !q.hasImage) return false;
+    const s = search.trim().toLowerCase();
+    return !s || `${q.questionText} ${(q.options || []).join(" ")}`.toLowerCase().includes(s);
+  });
+  const offset = topicId ? 0 : (page - 1) * PAGE;
+  const totalPages = topicId ? 1 : Math.max(1, Math.ceil(total / PAGE));
 
-export default ManageQuestionsPage;
+  return (
+    <AdminLayout title="Questions" subtitle="Find, check and edit any question" actions={<Link className="adm-btn pri" style={{ color: "#fff" }} to={`/add-question${subjectId ? `?subjectId=${subjectId}${topicId ? `&topicId=${topicId}` : ""}` : ""}`}>+ Add questions</Link>}>
+      {toastNode}
+      <section className="adm-card adm-grid c4" aria-label="Filters" style={{ alignItems: "end" }}>
+        <PickerFields picker={picker} />
+      </section>
+
+      {!subjectId ? (
+        <div className="adm-card adm-empty">Choose a subject to see its questions.</div>
+      ) : (
+        <>
+          <div className="adm-actions" style={{ justifyContent: "space-between" }}>
+            <div className="adm-chips" role="group" aria-label="Show">
+              <strong style={{ fontSize: 14, alignSelf: "center", marginRight: 4 }}>{num(topicId ? total : total)} questions</strong>
+              {[["all", "All", counts.all], ["reported", "Reported", counts.reported], ["hard", "Under 40% right", counts.hard], ["image", "With picture", counts.image]].map(([id, label, n]) => (
+                <button key={id} type="button" className="adm-chip" aria-pressed={filter === id} onClick={() => setFilter(id)}>{label}{id !== "all" && <small>{n}</small>}</button>
+              ))}
+            </div>
+            <label className="adm-search">
+              <span className="adm-sr">Search questions</span>
+              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={topicId ? "Search this topic" : "Search this page"} />
+            </label>
+          </div>
+          {error && <div className="adm-note bad" role="alert">{error}</div>}
+          {!questions && <div className="adm-card adm-empty">Loading questions…</div>}
+          {questions && shown.length === 0 && <div className="adm-card adm-empty">No questions match.</div>}
+          {shown.map((q) => {
+            const st = stats[q._id];
+            const n = (questions || []).indexOf(q) + 1 + offset;
+            const open = editing === q._id;
+            return (
+              <article key={q._id} className={`adm-card${open ? " hl" : ""}`} style={{ padding: "16px 20px" }}>
+                <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
+                  <span className="adm-pill" style={{ background: "#f1f5f9", color: "#5b6577", borderRadius: 8 }}>Q{n}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    {!topicId && <small style={{ color: "#5b6577", display: "block", marginBottom: 4 }}>{q.topicId?.name}</small>}
+                    {!open && (
+                      <>
+                        <div style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.45 }}>{q.questionText}</div>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
+                          {(q.options || []).map((o, i) => (
+                            <span key={i} style={{ fontSize: 13, padding: "4px 10px", borderRadius: 8, background: o === q.correctAnswer ? "#dcfce7" : "#f1f5f9", color: o === q.correctAnswer ? "#166534" : "#334155", fontWeight: o === q.correctAnswer ? 700 : 500 }}>{o}</span>
+                          ))}
+                          {q.hasImage && <span className="adm-pill info">Has picture</span>}
+                          {reported[q._id] && <Link to="/admin-reports" className="adm-pill warn">Reported {reported[q._id]}×</Link>}
+                        </div>
+                      </>
+                    )}
+                    {open && (
+                      <>
+                        {st && <p className="adm-sub">Answered {st.attempts} times · {st.correctRate}% right{st.commonWrong ? ` · most common wrong answer: ${st.commonWrong}` : ""}</p>}
+                        <Editor q={q} toast={toast} onCancel={() => setEditing(null)} onSaved={(nq) => { setQuestions((list) => list.map((x) => (x._id === nq._id ? nq : x))); setEditing(null); }} onDeleted={(id) => { setQuestions((list) => list.filter((x) => x._id !== id)); setTotal((t) => t - 1); setEditing(null); }} />
+                      </>
+                    )}
+                  </div>
+                  {!open && (
+                    <>
+                      <div style={{ flex: "none", textAlign: "right", minWidth: 44 }}>
+                        {st ? (<><div style={{ fontSize: 18, fontWeight: 800, color: st.correctRate < 40 ? "#b91c1c" : st.correctRate < 60 ? "#c2410c" : "#15803d" }}>{st.correctRate}%</div><div style={{ fontSize: 11, color: "#5b6577" }}>{st.attempts} tries</div></>) : <div style={{ fontSize: 11, color: "#7a8496" }}>no answers yet</div>}
+                      </div>
+                      <button type="button" className="adm-btn sm" onClick={() => setEditing(q._id)}>Edit</button>
+                    </>
+                  )}
+                </div>
+              </article>
+            );
+          })}
+          {!topicId && questions && totalPages > 1 && (
+            <div className="adm-pager" style={{ border: 0, padding: 0 }}>
+              <span>Page {page} of {totalPages}</span>
+              <span style={{ display: "flex", gap: 8 }}>
+                <button type="button" className="adm-btn sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>Previous</button>
+                <button type="button" className="adm-btn sm" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>Next</button>
+              </span>
+            </div>
+          )}
+        </>
+      )}
+    </AdminLayout>
+  );
+}

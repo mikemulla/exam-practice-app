@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
+import AdminLayout from "../components/AdminLayout";
+import { refreshAdminBadges } from "../lib/adminKit";
 import api from "../lib/api";
 import "../styles/dashboard.css";
 import "../styles/student.css";
@@ -145,6 +147,7 @@ function ReportsTab() {
     setBusy(questionId);
     try {
       await api.patch(`/api/reports/admin/question/${questionId}`, { status: next, note: notes[questionId] || "" }, ADMIN);
+      refreshAdminBadges();
       setData((d) => ({ ...d, items: d.items.filter((i) => i.questionId !== questionId), openCount: next === "open" ? d.openCount + 1 : status === "open" ? Math.max(0, d.openCount - 1) : d.openCount }));
     } catch (err) {
       alert(err?.message || "Couldn't update.");
@@ -315,27 +318,20 @@ function InsightsTab() {
 }
 
 export default function AdminQuestionReportsPage() {
-  const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const tab = params.get("tab") === "insights" ? "insights" : "reports";
   return (
-    <div className="db">
-      <header className="db-header">
-        <div className="db-header-inner">
-          <button type="button" className="st-btn st-btn-text" onClick={() => navigate("/admin")}>← Admin dashboard</button>
-        </div>
-      </header>
-      <main className="st-main" style={{ maxWidth: 980 }}>
-        <div>
-          <h1 className="st-h1">Question quality</h1>
-          <p className="st-sub">Reports from students, and questions the answer data says need a second look.</p>
-        </div>
-        <div className="lb-tabs ar-tabs" role="tablist">
+    <AdminLayout
+      title="Reported questions"
+      subtitle="Reports from students, and questions the answer data says need a second look"
+      actions={
+        <div className="adm-seg" role="tablist" aria-label="View">
           <button type="button" role="tab" aria-selected={tab === "reports"} onClick={() => setParams({})}>Reports</button>
           <button type="button" role="tab" aria-selected={tab === "insights"} onClick={() => setParams({ tab: "insights" })}>Question insights</button>
         </div>
-        {tab === "reports" ? <ReportsTab /> : <InsightsTab />}
-      </main>
-    </div>
+      }
+    >
+      <div className="ar-wrap">{tab === "reports" ? <ReportsTab /> : <InsightsTab />}</div>
+    </AdminLayout>
   );
 }

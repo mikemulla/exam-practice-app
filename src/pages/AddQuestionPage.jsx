@@ -1,543 +1,287 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import api from "../lib/api";
-import { useNavigate } from "react-router-dom";
+import AdminLayout from "../components/AdminLayout";
+import PickerFields from "../components/PickerFields";
+import { useToast } from "../lib/useToast";
+import { useSubjectPicker } from "../lib/useSubjectPicker";
+import { ADMIN, errorText, listOf } from "../lib/adminKit";
 
-const apiArray = (payload, key) => {
-  if (Array.isArray(payload)) return payload;
-  if (key && Array.isArray(payload?.[key])) return payload[key];
-  if (Array.isArray(payload?.data)) return payload.data;
-  return [];
-};
+const norm = (s) => String(s || "").toLowerCase().replace(/\s+/g, " ").replace(/[^\p{L}\p{N} ]/gu, "").trim();
+const LETTERS = "ABCDEF";
 
-const levels = [100, 200, 300, 400, 500, 600];
-
-function AddQuestionPage() {
-  const navigate = useNavigate();
-
-  const [courses, setCourses] = useState([]);
-  const [subjects, setSubjects] = useState([]);
-  const [topics, setTopics] = useState([]);
-
-  const [courseId, setCourseId] = useState("");
-  const [level, setLevel] = useState("");
-  const [subjectId, setSubjectId] = useState("");
-  const [topicId, setTopicId] = useState("");
-
-  const [questionText, setQuestionText] = useState("");
-  const [optionCount, setOptionCount] = useState(4);
+function OneQuestion({ subjectId, topicId, topicName, onSaved, toast }) {
+  const [text, setText] = useState("");
   const [options, setOptions] = useState(["", "", "", ""]);
-  const [correctAnswer, setCorrectAnswer] = useState("");
+  const [correct, setCorrect] = useState(0);
   const [explanation, setExplanation] = useState("");
-  const [imageFile, setImageFile] = useState(null);
-  const [imagePreview, setImagePreview] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [image, setImage] = useState(null);
+  const [preview, setPreview] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
-  useEffect(() => {
-    const fetchInitialData = async () => {
-      try {
-        const [courseRes, subjectRes] = await Promise.all([
-          api.get("/api/courses?limit=100"),
-          api.get("/api/subjects/admin/all?limit=100", {
-            _tokenType: "admin",
-          }),
-        ]);
-
-        setCourses(apiArray(courseRes.data, "courses"));
-        setSubjects(apiArray(subjectRes.data, "subjects"));
-      } catch (error) {
-        console.error("Error loading data:", error);
-        alert(error.message || "Failed to load courses and subjects");
-      }
-    };
-
-    fetchInitialData();
-  }, []);
-
-  const filteredSubjects = useMemo(() => {
-    return subjects.filter((subject) => {
-      const subjectCourseId =
-        typeof subject.courseId === "object"
-          ? subject.courseId?._id
-          : subject.courseId;
-
-      const courseMatches = courseId ? subjectCourseId === courseId : true;
-      const levelMatches = level ? Number(subject.level) === Number(level) : true;
-
-      return courseMatches && levelMatches;
-    });
-  }, [subjects, courseId, level]);
-
-  useEffect(() => {
-    setSubjectId("");
-    setTopicId("");
-    setTopics([]);
-  }, [courseId, level]);
-
-  useEffect(() => {
-    const fetchTopics = async () => {
-      if (!subjectId) {
-        setTopics([]);
-        setTopicId("");
-        return;
-      }
-
-      try {
-        const response = await api.get(
-          `/api/topics/admin/all?subjectId=${subjectId}&limit=100`,
-          {
-            _tokenType: "admin",
-          },
-        );
-
-        setTopics(apiArray(response.data, "topics"));
-        setTopicId("");
-      } catch (error) {
-        console.error("Error fetching topics:", error);
-        alert(error.message || "Failed to load topics");
-      }
-    };
-
-    fetchTopics();
-  }, [subjectId]);
-
-  const handleOptionCountChange = (e) => {
-    const count = Number(e.target.value);
-    setOptionCount(count);
-
-    const newOptions = [...options];
-
-    if (count > newOptions.length) {
-      while (newOptions.length < count) newOptions.push("");
-    } else {
-      newOptions.length = count;
-    }
-
-    setOptions(newOptions);
-
-    if (!newOptions.map((o) => o.trim()).includes(correctAnswer)) {
-      setCorrectAnswer("");
-    }
+  const reset = () => {
+    setText("");
+    setOptions(["", "", "", ""]);
+    setCorrect(0);
+    setExplanation("");
+    setImage(null);
+    setPreview("");
   };
 
-  const handleOptionChange = (index, value) => {
-    const updatedOptions = [...options];
-    updatedOptions[index] = value;
-    setOptions(updatedOptions);
-
-    const cleaned = updatedOptions.map((option) => option.trim());
-    if (correctAnswer && !cleaned.includes(correctAnswer)) {
-      setCorrectAnswer("");
-    }
+  const pickImage = (file) => {
+    if (!file) return;
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) return setError("Use a JPG, PNG or WebP picture.");
+    if (file.size > 5 * 1024 * 1024) return setError("Pictures must be under 5 MB.");
+    setError("");
+    setImage(file);
+    setPreview(URL.createObjectURL(file));
   };
 
-  const handleImageChange = (e) => {
-    const selectedFile = e.target.files?.[0] || null;
-
-    if (!selectedFile) {
-      setImageFile(null);
-      setImagePreview("");
-      return;
-    }
-
-    const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
-    if (!allowedTypes.includes(selectedFile.type)) {
-      alert("Please upload a JPG, PNG, or WEBP image.");
-      e.target.value = "";
-      setImageFile(null);
-      setImagePreview("");
-      return;
-    }
-
-    if (selectedFile.size > 5 * 1024 * 1024) {
-      alert("Image must be 5MB or less.");
-      e.target.value = "";
-      setImageFile(null);
-      setImagePreview("");
-      return;
-    }
-
-    setImageFile(selectedFile);
-    setImagePreview(URL.createObjectURL(selectedFile));
-  };
-
-  const clearImage = () => {
-    setImageFile(null);
-    setImagePreview("");
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    const cleanedOptions = options
-      .map((option) => option.trim())
-      .filter(Boolean);
-
-    if (!courseId) return alert("Please select a course");
-    if (!level) return alert("Please select a level");
-    if (!subjectId) return alert("Please select a subject");
-    if (!topicId) return alert("Please select a topic");
-    if (cleanedOptions.length < 2) return alert("Please enter at least 2 options");
-    if (!correctAnswer) return alert("Please select the correct answer");
-
+  const save = async () => {
+    const cleaned = options.map((o) => o.trim());
+    if (!topicId) return setError("Choose a subject and topic first.");
+    if (!text.trim()) return setError("Write the question.");
+    if (cleaned.length < 2 || cleaned.some((o) => !o)) return setError("Every option needs text.");
+    if (new Set(cleaned.map(norm)).size !== cleaned.length) return setError("Two options are the same.");
+    if (!explanation.trim()) return setError("Add an explanation. Students see it after answering.");
+    setSaving(true);
+    setError("");
     try {
-      setIsSubmitting(true);
-
-      const formData = new FormData();
-      formData.append("subjectId", subjectId);
-      formData.append("topicId", topicId);
-      formData.append("questionText", questionText.trim());
-      formData.append("options", JSON.stringify(cleanedOptions));
-      formData.append("correctAnswer", correctAnswer);
-      formData.append("explanation", explanation.trim());
-
-      // IMPORTANT: backend expects this exact field name.
-      if (imageFile) {
-        formData.append("image", imageFile);
-      }
-
-      console.log("ADD QUESTION IMAGE DEBUG:", {
-        imageFile,
-        hasImage: !!imageFile,
-        name: imageFile?.name,
-        type: imageFile?.type,
-        size: imageFile?.size,
-      });
-
-      await api.post("/api/questions", formData, {
-        _tokenType: "admin",
-      });
-
-      alert("Question saved successfully");
-
-      setQuestionText("");
-      setOptionCount(4);
-      setOptions(["", "", "", ""]);
-      setCorrectAnswer("");
-      setExplanation("");
-      setImageFile(null);
-      setImagePreview("");
-    } catch (error) {
-      console.error("Error saving question:", error);
-      alert(error.message || "Error saving question");
+      const fd = new FormData();
+      fd.append("subjectId", subjectId);
+      fd.append("topicId", topicId);
+      fd.append("questionText", text.trim());
+      fd.append("options", JSON.stringify(cleaned));
+      fd.append("correctAnswer", cleaned[correct]);
+      fd.append("explanation", explanation.trim());
+      if (image) fd.append("image", image);
+      await api.post("/api/questions", fd, ADMIN);
+      toast("Question saved");
+      onSaved();
+      reset();
+    } catch (err) {
+      setError(errorText(err, "Couldn't save the question."));
     } finally {
-      setIsSubmitting(false);
+      setSaving(false);
     }
   };
 
-  const validOptions = options.map((option) => option.trim()).filter(Boolean);
+  const filled = options.map((o, i) => o.trim() || `Option ${LETTERS[i]}`);
 
   return (
-    <div style={pageStyle}>
-      <div style={{ maxWidth: "900px", margin: "0 auto" }}>
-        <div style={{ marginBottom: "24px" }}>
-          <p style={eyebrowStyle}>Admin / Question builder</p>
-          <h1 style={headingStyle}>Add a new question</h1>
-          <p style={subheadingStyle}>
-            Select course, level, subject, and topic before creating the question.
-          </p>
+    <div className="adm-row">
+      <section className="adm-card" aria-label="One question" style={{ flex: "3 1 460px" }}>
+        <h2>One question</h2>
+        <p className="adm-sub">Students see it exactly as on the right</p>
+        <form onSubmit={(e) => { e.preventDefault(); save(); }} style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 14 }}>
+          <label className="adm-field">Question<textarea className="adm-in" rows={3} value={text} onChange={(e) => setText(e.target.value)} placeholder="Write the question here" /></label>
+          <fieldset style={{ border: 0, padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 8 }}>
+            <legend className="adm-field" style={{ marginBottom: 6 }}>Options · tick the correct one</legend>
+            {options.map((o, i) => (
+              <div key={i} style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <input type="radio" className="adm-check" name="correct" checked={correct === i} onChange={() => setCorrect(i)} aria-label={`Option ${LETTERS[i]} is correct`} />
+                <b style={{ width: 14, color: "#5b6577" }}>{LETTERS[i]}</b>
+                <input className="adm-in" value={o} aria-label={`Option ${LETTERS[i]}`} onChange={(e) => setOptions((p) => p.map((x, j) => (j === i ? e.target.value : x)))} style={correct === i ? { borderColor: "#86efac", background: "#f0fdf4" } : undefined} />
+                {options.length > 2 && <button type="button" className="adm-btn sm ghost" aria-label={`Remove option ${LETTERS[i]}`} onClick={() => { setOptions((p) => p.filter((_, j) => j !== i)); setCorrect((c) => (c === i ? 0 : c > i ? c - 1 : c)); }}>✕</button>}
+              </div>
+            ))}
+            {options.length < 6 && <button type="button" className="adm-btn sm" style={{ alignSelf: "flex-start" }} onClick={() => setOptions((p) => [...p, ""])}>+ Add option</button>}
+          </fieldset>
+          <label className="adm-field">Explanation<textarea className="adm-in" rows={3} value={explanation} onChange={(e) => setExplanation(e.target.value)} placeholder="Why the answer is right" /></label>
+          <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+            <label className="adm-btn sm" style={{ cursor: "pointer" }}>{image ? "Change picture" : "Add picture"}<input type="file" accept="image/jpeg,image/png,image/webp" className="adm-sr" onChange={(e) => pickImage(e.target.files?.[0])} /></label>
+            {image && <button type="button" className="adm-btn sm ghost" onClick={() => { setImage(null); setPreview(""); }}>Remove picture</button>}
+          </div>
+          {error && <div className="adm-note bad" role="alert">{error}</div>}
+          <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", flexWrap: "wrap" }}>
+            <button type="button" className="adm-btn" disabled={saving} onClick={save}>Save and add another</button>
+            <button className="adm-btn pri" disabled={saving}>{saving ? "Saving…" : "Save question"}</button>
+          </div>
+        </form>
+      </section>
+      <aside aria-label="Student preview" style={{ flex: "2 1 300px", background: "#0e3d6e", borderRadius: 16, padding: 20, color: "#fff", alignSelf: "flex-start" }}>
+        <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: ".06em", color: "#93c5fd" }}>HOW STUDENTS SEE IT</div>
+        <div style={{ background: "#fff", color: "#0f172a", borderRadius: 14, padding: 16, marginTop: 12 }}>
+          <div style={{ fontSize: 12, color: "#5b6577" }}>{topicName || "Topic"} · Question 1</div>
+          <div style={{ fontSize: 15, fontWeight: 600, margin: "8px 0 12px", lineHeight: 1.45 }}>{text.trim() || "Your question appears here"}</div>
+          {preview && <img src={preview} alt="" style={{ maxWidth: "100%", borderRadius: 10, marginBottom: 8 }} />}
+          {filled.map((o, i) => (
+            <div key={i} style={{ display: "flex", gap: 10, alignItems: "center", border: "1px solid #e4e8ee", borderRadius: 10, minHeight: 42, padding: "0 12px", marginTop: 8, fontSize: 14, color: options[i].trim() ? "#0f172a" : "#94a3b8" }}>
+              <b style={{ color: "#5b6577" }}>{LETTERS[i]}</b>{o}
+            </div>
+          ))}
         </div>
+      </aside>
+    </div>
+  );
+}
 
-        <div style={cardStyle}>
-          <form onSubmit={handleSubmit}>
-            <div style={gridStyle}>
-              <Field label="Course">
-                <select
-                  value={courseId}
-                  onChange={(e) => setCourseId(e.target.value)}
-                  style={inputStyle}
-                  required
-                >
-                  <option value="">Select Course</option>
-                  {courses.map((course) => (
-                    <option key={course._id} value={course._id}>
-                      {course.name}
-                    </option>
-                  ))}
-                </select>
-              </Field>
+function BulkImport({ subjectId, topicId, onSaved, toast }) {
+  const [raw, setRaw] = useState("");
+  const [existing, setExisting] = useState(null);
+  const [importing, setImporting] = useState(false);
 
-              <Field label="Level">
-                <select
-                  value={level}
-                  onChange={(e) => setLevel(e.target.value)}
-                  style={inputStyle}
-                  required
-                >
-                  <option value="">Select Level</option>
-                  {levels.map((item) => (
-                    <option key={item} value={item}>
-                      {item} Level
-                    </option>
-                  ))}
-                </select>
-              </Field>
+  useEffect(() => {
+    if (!topicId) return;
+    let alive = true;
+    (async () => {
+      const seen = new Set();
+      try {
+        for (let p = 1; p <= 20; p += 1) {
+          const r = await api.get(`/api/questions/admin/all?subjectId=${subjectId}&topicId=${topicId}&page=${p}&limit=100`, ADMIN);
+          listOf(r.data, "questions").forEach((q) => seen.add(norm(q.questionText)));
+          if (p >= (r.data.totalPages || 1)) break;
+        }
+      } catch {
+        /* duplicates just won't be caught */
+      }
+      if (alive) setExisting(seen);
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [subjectId, topicId]);
 
-              <Field label="Subject">
-                <select
-                  value={subjectId}
-                  onChange={(e) => setSubjectId(e.target.value)}
-                  style={inputStyle}
-                  required
-                  disabled={!courseId || !level}
-                >
-                  <option value="">
-                    {!courseId || !level
-                      ? "Select course and level first"
-                      : "Select Subject"}
-                  </option>
-                  {filteredSubjects.map((subject) => (
-                    <option key={subject._id} value={subject._id}>
-                      {subject.name}
-                    </option>
-                  ))}
-                </select>
-              </Field>
+  const check = useMemo(() => {
+    if (!raw.trim()) return null;
+    let items;
+    try {
+      items = JSON.parse(raw);
+    } catch (e) {
+      return { fatal: `That isn't valid JSON: ${e.message}` };
+    }
+    if (!Array.isArray(items)) items = Array.isArray(items?.questions) ? items.questions : null;
+    if (!items) return { fatal: "Paste a JSON list: [ { ... }, { ... } ]" };
+    const ready = [], dupes = [], problems = [];
+    const inFile = new Set();
+    items.forEach((it, i) => {
+      const n = i + 1;
+      const q = String(it?.questionText || it?.question || "").trim();
+      const options = Array.isArray(it?.options) ? it.options.map((o) => String(o ?? "").trim()) : [];
+      const answer = String(it?.correctAnswer ?? "").trim();
+      const explanation = String(it?.explanation || "").trim();
+      let why = "";
+      if (!q) why = "it has no question text";
+      else if (q.length > 2000) why = "the question is over 2,000 characters";
+      else if (options.length < 2 || options.length > 6) why = `it has ${options.length} options (2 to 6 needed)`;
+      else if (options.some((o) => !o)) why = "one of its options is empty";
+      else if (!options.includes(answer)) why = `the correct answer "${answer || "(blank)"}" isn't one of its options`;
+      else if (!explanation) why = "it has no explanation";
+      if (why) return problems.push({ n, why });
+      const key = norm(q);
+      if (inFile.has(key) || existing?.has(key)) return dupes.push(n);
+      inFile.add(key);
+      ready.push({ topicId, questionText: q, options, correctAnswer: answer, explanation });
+    });
+    return { total: items.length, ready, dupes, problems };
+  }, [raw, existing, topicId]);
 
-              <Field label="Topic">
-                <select
-                  value={topicId}
-                  onChange={(e) => setTopicId(e.target.value)}
-                  style={inputStyle}
-                  required
-                  disabled={!subjectId}
-                >
-                  <option value="">
-                    {subjectId ? "Select Topic" : "Select subject first"}
-                  </option>
-                  {topics.map((topic) => (
-                    <option key={topic._id} value={topic._id}>
-                      {topic.name}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-            </div>
+  const loadFile = (file) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setRaw(String(reader.result || ""));
+    reader.readAsText(file);
+  };
 
-            <Field label="Question Text">
-              <textarea
-                placeholder="Enter the question here"
-                value={questionText}
-                onChange={(e) => setQuestionText(e.target.value)}
-                rows="4"
-                style={textareaStyle}
-                required
-              />
-            </Field>
+  const run = async () => {
+    if (!check?.ready?.length) return;
+    setImporting(true);
+    let done = 0;
+    try {
+      for (let i = 0; i < check.ready.length; i += 100) {
+        await api.post("/api/questions/bulk", { subjectId, questions: check.ready.slice(i, i + 100) }, ADMIN);
+        done += Math.min(100, check.ready.length - i);
+      }
+      toast(`${done} questions imported`);
+      setRaw("");
+      onSaved();
+    } catch (err) {
+      toast(`${done} imported, then: ${errorText(err)}`, true);
+    } finally {
+      setImporting(false);
+    }
+  };
 
-            <Field label="Question Image (optional)">
-              <input
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                onChange={handleImageChange}
-                style={inputStyle}
-              />
-
-              {imagePreview && (
-                <div style={imagePreviewWrap}>
-                  <img src={imagePreview} alt="Question preview" style={imagePreviewStyle} />
-                  <button type="button" onClick={clearImage} style={removeImageButton}>
-                    Remove Image
-                  </button>
-                </div>
-              )}
-            </Field>
-
-            <Field label="Number of Options">
-              <select
-                value={optionCount}
-                onChange={handleOptionCountChange}
-                style={inputStyle}
-              >
-                {[2, 3, 4, 5, 6].map((count) => (
-                  <option key={count} value={count}>
-                    {count} Options
-                  </option>
-                ))}
-              </select>
-            </Field>
-
-            <div style={gridStyle}>
-              {options.map((option, index) => (
-                <Field key={index} label={`Option ${index + 1}`}>
-                  <input
-                    type="text"
-                    placeholder={`Enter option ${index + 1}`}
-                    value={option}
-                    onChange={(e) => handleOptionChange(index, e.target.value)}
-                    style={inputStyle}
-                    required
-                  />
-                </Field>
-              ))}
-            </div>
-
-            <Field label="Correct Answer">
-              <select
-                value={correctAnswer}
-                onChange={(e) => setCorrectAnswer(e.target.value)}
-                style={inputStyle}
-                required
-              >
-                <option value="">Select Correct Answer</option>
-                {validOptions.map((option, index) => (
-                  <option key={`${option}-${index}`} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </Field>
-
-            <Field label="Explanation">
-              <textarea
-                placeholder="Explain why the answer is correct"
-                value={explanation}
-                onChange={(e) => setExplanation(e.target.value)}
-                rows="4"
-                style={textareaStyle}
-                required
-              />
-            </Field>
-
-            <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-              <button type="submit" disabled={isSubmitting} style={primaryButton}>
-                {isSubmitting ? "Saving..." : "Save Question"}
+  return (
+    <section className="adm-card" aria-label="Bulk import">
+      <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: 10 }}>
+        <div><h2>Bulk import</h2><p className="adm-sub">Paste a JSON list or upload a .json file · each item needs questionText, options, correctAnswer and explanation</p></div>
+        <label className="adm-btn" style={{ cursor: "pointer" }}>Upload file<input type="file" accept=".json,application/json" className="adm-sr" onChange={(e) => loadFile(e.target.files?.[0])} /></label>
+      </div>
+      <div className="adm-row" style={{ marginTop: 14 }}>
+        <label className="adm-field" style={{ flex: "1 1 380px" }}>Paste JSON
+          <textarea className="adm-in" rows={12} value={raw} onChange={(e) => setRaw(e.target.value)} spellCheck={false}
+            style={{ fontFamily: "ui-monospace, Menlo, Consolas, monospace", fontSize: 13 }}
+            placeholder={'[\n  {\n    "questionText": "…",\n    "options": ["…", "…", "…", "…"],\n    "correctAnswer": "…",\n    "explanation": "…"\n  }\n]'} />
+        </label>
+        <div style={{ flex: "1 1 320px", display: "flex", flexDirection: "column", gap: 10 }}>
+          <div className="adm-field">Check before importing</div>
+          {!check && <p className="adm-sub">Paste or upload to see what will be imported.</p>}
+          {check?.fatal && <div className="adm-note bad">{check.fatal}</div>}
+          {check && !check.fatal && (
+            <>
+              <div className="adm-grid c3" style={{ gap: 10 }}>
+                <div className="adm-note ok"><b style={{ fontSize: 22, display: "block" }}>{check.ready.length}</b>ready</div>
+                <div className="adm-note warn"><b style={{ fontSize: 22, display: "block" }}>{check.dupes.length}</b>already exist</div>
+                <div className="adm-note bad"><b style={{ fontSize: 22, display: "block" }}>{check.problems.length}</b>need fixing</div>
+              </div>
+              {check.problems.slice(0, 6).map((p) => <div key={p.n} className="adm-note bad"><strong>Item {p.n}:</strong> {p.why}.</div>)}
+              {check.problems.length > 6 && <p className="adm-sub">…and {check.problems.length - 6} more.</p>}
+              {check.dupes.length > 0 && <p className="adm-sub">Skipping items {check.dupes.slice(0, 12).join(", ")}{check.dupes.length > 12 ? "…" : ""}: the same question is already in this topic or earlier in the file.</p>}
+              <button type="button" className="adm-btn pri" style={{ alignSelf: "flex-start" }} disabled={!topicId || importing || !check.ready.length} onClick={run}>
+                {importing ? "Importing…" : `Import ${check.ready.length} question${check.ready.length === 1 ? "" : "s"}`}
               </button>
-
-              <button
-                type="button"
-                onClick={() => navigate("/admin")}
-                style={secondaryButton}
-              >
-                Back to Admin
-              </button>
-            </div>
-          </form>
+            </>
+          )}
         </div>
       </div>
-    </div>
+    </section>
   );
 }
 
-function Field({ label, children }) {
+export default function AddQuestionPage() {
+  const [params, setParams] = useSearchParams();
+  const tab = params.get("tab") === "bulk" ? "bulk" : "one";
+  const picker = useSubjectPicker(params, (next) => setParams({ ...next, ...(tab === "bulk" ? { tab } : {}) }));
+  const { subjectId, topicId, topics } = picker;
+  const topic = topics.find((t) => t.id === topicId);
+  const [toastNode, toast] = useToast();
+
+  const setTab = (t) => {
+    const next = Object.fromEntries(params.entries());
+    if (t === "bulk") next.tab = "bulk";
+    else delete next.tab;
+    setParams(next);
+  };
+
   return (
-    <div style={{ marginBottom: "20px" }}>
-      <label style={labelStyle}>{label}</label>
-      {children}
-    </div>
+    <AdminLayout
+      title="Add questions"
+      subtitle="Write one at a time, or import a whole topic at once"
+      actions={
+        <div className="adm-seg" role="tablist" aria-label="How to add">
+          <button type="button" role="tab" aria-selected={tab === "one"} onClick={() => setTab("one")}>One question</button>
+          <button type="button" role="tab" aria-selected={tab === "bulk"} onClick={() => setTab("bulk")}>Bulk import</button>
+        </div>
+      }
+    >
+      {toastNode}
+      <section className="adm-card adm-grid c4" aria-label="Where the questions go" style={{ alignItems: "end" }}>
+        <PickerFields picker={picker} needTopic />
+      </section>
+      {subjectId && topicId ? (
+        <p className="adm-sub" style={{ margin: 0 }}>
+          Adding to <b>{topic?.name || "this topic"}</b>{topic ? ` · ${topic.questions} questions so far` : ""} · <Link to={`/manage-questions?subjectId=${subjectId}&topicId=${topicId}`}>see them</Link>
+        </p>
+      ) : (
+        <div className="adm-note info">Choose the subject and topic the questions belong to. To add a new topic, go to <Link to="/admin-courses">Courses &amp; subjects</Link>.</div>
+      )}
+      {tab === "one" ? (
+        <OneQuestion subjectId={subjectId} topicId={topicId} topicName={topic?.name} onSaved={picker.reloadTopics} toast={toast} />
+      ) : (
+        <BulkImport key={topicId} subjectId={subjectId} topicId={topicId} onSaved={picker.reloadTopics} toast={toast} />
+      )}
+    </AdminLayout>
   );
 }
-
-const pageStyle = {
-  minHeight: "100vh",
-  background: "linear-gradient(135deg, #f8fbff 0%, #eef4ff 50%, #f7f9fc 100%)",
-  padding: "32px 20px",
-};
-
-const eyebrowStyle = {
-  margin: 0,
-  color: "var(--text-secondary)",
-  fontSize: "14px",
-  fontWeight: "600",
-};
-
-const headingStyle = {
-  margin: "10px 0 8px",
-  fontSize: "36px",
-  color: "var(--text-primary)",
-};
-
-const subheadingStyle = {
-  margin: 0,
-  color: "var(--text-secondary)",
-  fontSize: "16px",
-  lineHeight: "1.6",
-};
-
-const cardStyle = {
-  backgroundColor: "white",
-  border: "1px solid #e2e8f0",
-  borderRadius: "20px",
-  padding: "28px",
-  boxShadow: "0 12px 30px rgba(15,23,42,0.06)",
-};
-
-const gridStyle = {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-  gap: "16px",
-};
-
-const labelStyle = {
-  display: "block",
-  marginBottom: "8px",
-  fontWeight: "600",
-  color: "var(--text-primary)",
-};
-
-const inputStyle = {
-  width: "100%",
-  padding: "14px 16px",
-  borderRadius: "10px",
-  border: "1px solid #cbd5e1",
-  fontSize: "15px",
-  outline: "none",
-  boxSizing: "border-box",
-  backgroundColor: "white",
-};
-
-const textareaStyle = {
-  ...inputStyle,
-  resize: "vertical",
-};
-
-const imagePreviewWrap = {
-  marginTop: "12px",
-  padding: "12px",
-  border: "1px solid #e2e8f0",
-  borderRadius: "12px",
-  backgroundColor: "#f8fafc",
-};
-
-const imagePreviewStyle = {
-  display: "block",
-  width: "100%",
-  maxWidth: "420px",
-  maxHeight: "280px",
-  objectFit: "contain",
-  borderRadius: "10px",
-  marginBottom: "10px",
-};
-
-const removeImageButton = {
-  padding: "10px 14px",
-  border: "1px solid #fecaca",
-  borderRadius: "10px",
-  backgroundColor: "#fff5f5",
-  color: "#dc2626",
-  fontWeight: "600",
-  cursor: "pointer",
-};
-
-const primaryButton = {
-  padding: "14px 22px",
-  border: "none",
-  borderRadius: "10px",
-  backgroundColor: "var(--button-primary)",
-  color: "white",
-  fontSize: "15px",
-  fontWeight: "600",
-  cursor: "pointer",
-};
-
-const secondaryButton = {
-  padding: "14px 22px",
-  border: "1px solid #cbd5e1",
-  borderRadius: "10px",
-  backgroundColor: "white",
-  color: "var(--text-primary)",
-  fontSize: "15px",
-  fontWeight: "600",
-  cursor: "pointer",
-};
-
-export default AddQuestionPage;

@@ -1,544 +1,152 @@
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import api from "../lib/api";
+import AdminLayout from "../components/AdminLayout";
+import { useToast } from "../lib/useToast";
+import { ADMIN, errorText, listOf, refreshAdminBadges, timeAgo } from "../lib/adminKit";
 
-const apiArray = (payload, key) => {
-  if (Array.isArray(payload)) return payload;
-  if (key && Array.isArray(payload?.[key])) return payload[key];
-  if (Array.isArray(payload?.data)) return payload.data;
-  return [];
-};
+const key = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+const sizeText = (b) => (!b ? "" : b > 1024 * 1024 ? `${(b / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(b / 1024))} KB`);
+const extOf = (name = "") => (String(name).split(".").pop() || "FILE").slice(0, 4).toUpperCase();
 
-const fmtDate = (iso) =>
-  iso
-    ? new Date(iso).toLocaleDateString("en-GB", {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      })
-    : "Not available";
+export default function AdminRequestdPage() {
+  const [status, setStatus] = useState("pending");
+  const [items, setItems] = useState(null);
+  const [counts, setCounts] = useState({ pending: 0, reviewed: 0 });
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(null);
+  const [toastNode, toast] = useToast();
 
-const fmtSize = (bytes) => {
-  if (!bytes) return null;
-  if (bytes >= 1_048_576) return `${(bytes / 1_048_576).toFixed(1)} MB`;
-  return `${Math.round(bytes / 1024)} KB`;
-};
-
-const initials = (name = "") =>
-  name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-
-const CheckIcon = () => (
-  <svg
-    width="14"
-    height="14"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.5"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <polyline points="20 6 9 17 4 12" />
-  </svg>
-);
-
-const TrashIcon = () => (
-  <svg
-    width="13"
-    height="13"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <polyline points="3 6 5 6 21 6" />
-    <path d="M19 6l-1 14H6L5 6M10 11v6M14 11v6M9 6V4h6v2" />
-  </svg>
-);
-
-const PaperclipIcon = () => (
-  <svg
-    width="13"
-    height="13"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66L9.41 17.41a2 2 0 01-2.83-2.83l8.49-8.48" />
-  </svg>
-);
-
-const S = {
-  page: {
-    minHeight: "100vh",
-    backgroundColor: "#f8fafc",
-    padding: "32px 20px",
-  },
-  inner: { maxWidth: "780px", margin: "0 auto" },
-  eyebrow: {
-    margin: 0,
-    fontSize: "11px",
-    fontWeight: 600,
-    color: "#94a3b8",
-    letterSpacing: "0.08em",
-    textTransform: "uppercase",
-    marginBottom: "6px",
-  },
-  heading: {
-    margin: "0 0 4px",
-    fontSize: "26px",
-    fontWeight: 700,
-    color: "#0f172a",
-  },
-  subheading: {
-    margin: "0 0 24px",
-    color: "#64748b",
-    fontSize: "14px",
-    lineHeight: 1.6,
-  },
-  stats: {
-    display: "grid",
-    gridTemplateColumns: "repeat(3, 1fr)",
-    gap: "12px",
-    marginBottom: "20px",
-  },
-  statCard: {
-    backgroundColor: "white",
-    border: "1px solid #e2e8f0",
-    borderRadius: "12px",
-    padding: "14px 16px",
-  },
-  statLabel: {
-    fontSize: "11px",
-    color: "#94a3b8",
-    fontWeight: 600,
-    marginBottom: "4px",
-    textTransform: "uppercase",
-    letterSpacing: "0.06em",
-    margin: "0 0 4px",
-  },
-  statValue: { fontSize: "22px", fontWeight: 700, margin: 0 },
-  filterRow: {
-    display: "flex",
-    gap: "8px",
-    flexWrap: "wrap",
-    marginBottom: "20px",
-    alignItems: "center",
-  },
-  pill: (active) => ({
-    padding: "8px 16px",
-    borderRadius: "999px",
-    border: active ? "none" : "1px solid #e2e8f0",
-    backgroundColor: active ? "#185FA5" : "white",
-    color: active ? "white" : "#475569",
-    fontWeight: 600,
-    fontSize: "13px",
-    cursor: "pointer",
-    whiteSpace: "nowrap",
-  }),
-  backBtn: {
-    marginLeft: "auto",
-    padding: "8px 16px",
-    borderRadius: "8px",
-    border: "1px solid #e2e8f0",
-    backgroundColor: "white",
-    color: "#475569",
-    fontWeight: 600,
-    fontSize: "13px",
-    cursor: "pointer",
-    whiteSpace: "nowrap",
-  },
-  list: { display: "flex", flexDirection: "column", gap: "12px" },
-  card: {
-    backgroundColor: "white",
-    border: "1px solid #e2e8f0",
-    borderRadius: "16px",
-    padding: "20px",
-  },
-  cardTop: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: "12px",
-    gap: "12px",
-  },
-  badge: (status) => ({
-    display: "inline-flex",
-    alignItems: "center",
-    gap: "5px",
-    padding: "4px 10px",
-    borderRadius: "999px",
-    fontSize: "11px",
-    fontWeight: 700,
-    backgroundColor: status === "pending" ? "#fff7ed" : "#f0fdf4",
-    color: status === "pending" ? "#c2410c" : "#15803d",
-    textTransform: "capitalize",
-  }),
-  badgeDot: (status) => ({
-    width: "6px",
-    height: "6px",
-    borderRadius: "50%",
-    backgroundColor: status === "pending" ? "#c2410c" : "#15803d",
-    flexShrink: 0,
-  }),
-  subject: {
-    fontSize: "15px",
-    fontWeight: 700,
-    color: "#0f172a",
-    margin: "0 0 12px",
-    textTransform: "capitalize",
-  },
-  metaGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
-    gap: "10px 20px",
-    marginBottom: "12px",
-  },
-  metaItem: { display: "flex", flexDirection: "column", gap: "2px" },
-  metaLabel: {
-    fontSize: "11px",
-    color: "#94a3b8",
-    fontWeight: 600,
-    textTransform: "uppercase",
-    letterSpacing: "0.06em",
-  },
-  metaValue: { fontSize: "13px", color: "#334155" },
-  fileChip: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: "6px",
-    padding: "6px 10px",
-    backgroundColor: "#f1f5f9",
-    borderRadius: "8px",
-    fontSize: "12px",
-    color: "#475569",
-    marginBottom: "12px",
-    maxWidth: "100%",
-    overflow: "hidden",
-  },
-  fileName: {
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-    flex: 1,
-  },
-  fileSize: { color: "#94a3b8", flexShrink: 0 },
-  divider: { height: "1px", backgroundColor: "#f1f5f9", margin: "14px 0" },
-  userRow: {
-    display: "flex",
-    alignItems: "center",
-    gap: "10px",
-    marginBottom: "14px",
-  },
-  avatar: {
-    width: "34px",
-    height: "34px",
-    borderRadius: "50%",
-    backgroundColor: "#dbeafe",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontSize: "11px",
-    fontWeight: 700,
-    color: "#1d4ed8",
-    flexShrink: 0,
-  },
-  userName: { fontSize: "13px", fontWeight: 600, color: "#0f172a", margin: 0 },
-  userEmail: { fontSize: "12px", color: "#94a3b8", margin: 0 },
-  actionsRow: { display: "flex", gap: "8px", flexWrap: "wrap" },
-  reviewBtn: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: "6px",
-    padding: "9px 16px",
-    borderRadius: "8px",
-    border: "none",
-    backgroundColor: "#185FA5",
-    color: "white",
-    fontWeight: 700,
-    fontSize: "13px",
-    cursor: "pointer",
-  },
-  deleteBtn: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: "6px",
-    padding: "9px 14px",
-    borderRadius: "8px",
-    border: "1px solid #fecaca",
-    backgroundColor: "#fff5f5",
-    color: "#dc2626",
-    fontWeight: 700,
-    fontSize: "13px",
-    cursor: "pointer",
-  },
-  empty: {
-    color: "#94a3b8",
-    textAlign: "center",
-    padding: "40px 0",
-    fontSize: "14px",
-  },
-  toastWrap: {
-    position: "fixed",
-    bottom: "24px",
-    left: "50%",
-    transform: "translateX(-50%)",
-    zIndex: 9999,
-    pointerEvents: "none",
-  },
-  toast: (visible) => ({
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-    padding: "12px 18px",
-    borderRadius: "10px",
-    backgroundColor: "#0f172a",
-    color: "white",
-    fontSize: "13px",
-    fontWeight: 500,
-    opacity: visible ? 1 : 0,
-    transform: visible ? "translateY(0)" : "translateY(8px)",
-    transition: "opacity 0.25s, transform 0.25s",
-    whiteSpace: "nowrap",
-  }),
-};
-
-function Toast({ message, visible }) {
-  return (
-    <div style={S.toastWrap}>
-      <div style={S.toast(visible)}>
-        <CheckIcon />
-        {message}
-      </div>
-    </div>
-  );
-}
-
-function RequestRow({ request, onMarkReviewed, onDelete }) {
-  const u = request.userId || {};
-  const courseName = u.courseId?.name || "Not available";
-  const level = u.level || "Not available";
-  const fullName = u.fullName || "Unknown user";
-  const email = u.email || "No email";
-
-  const handleDelete = () => {
-    if (!window.confirm("Are you sure you want to delete this request?"))
-      return;
-    onDelete(request._id);
-  };
-
-  const handleReview = () => {
-    if (
-      !window.confirm(
-        `Mark "${request.subject}" as reviewed?\n\nThis will send a notification email to ${fullName} (${email}).`,
-      )
-    ) {
-      return;
-    }
-
-    onMarkReviewed(request._id);
-  };
-
-  return (
-    <div style={S.card}>
-      <div style={S.cardTop}>
-        <span style={S.badge(request.status)}>
-          <span style={S.badgeDot(request.status)} />
-          {request.status}
-        </span>
-      </div>
-
-      <p style={S.subject}>{request.subject}</p>
-
-      <div style={S.metaGrid}>
-        {[
-          ["Course", courseName],
-          ["Level", level],
-          ["Topic", request.topic],
-          ["Timer", `${request.timer} min`],
-          ["Submitted", fmtDate(request.createdAt)],
-        ].map(([label, value]) => (
-          <div key={label} style={S.metaItem}>
-            <span style={S.metaLabel}>{label}</span>
-            <span style={S.metaValue}>{value}</span>
-          </div>
-        ))}
-      </div>
-
-      {request.fileName && (
-        <div style={S.fileChip}>
-          <PaperclipIcon />
-          <span style={S.fileName}>{request.fileName}</span>
-          {request.fileSize && (
-            <span style={S.fileSize}>{fmtSize(request.fileSize)}</span>
-          )}
-        </div>
-      )}
-
-      <div style={S.divider} />
-
-      <div style={S.userRow}>
-        <div style={S.avatar}>{initials(fullName)}</div>
-        <div>
-          <p style={S.userName}>{fullName}</p>
-          <p style={S.userEmail}>{email}</p>
-        </div>
-      </div>
-
-      <div style={S.actionsRow}>
-        {request.status !== "reviewed" && (
-          <button onClick={handleReview} style={S.reviewBtn}>
-            <CheckIcon /> Mark as reviewed
-          </button>
-        )}
-        <button onClick={handleDelete} style={S.deleteBtn}>
-          <TrashIcon /> Delete
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function AdminRequestsPage() {
-  const navigate = useNavigate();
-  const [requests, setRequests] = useState([]);
-  const [filter, setFilter] = useState("all");
-  const [isLoading, setIsLoading] = useState(true);
-  const [toast, setToast] = useState({ visible: false, message: "" });
-
-  const showToast = (message) => {
-    setToast({ visible: true, message });
-    setTimeout(() => setToast({ visible: false, message: "" }), 3000);
-  };
-
-  const fetchRequests = async () => {
+  const load = useCallback(async () => {
     try {
-      setIsLoading(true);
-      const { data } = await api.get("/api/requests", { _tokenType: "admin" });
-      setRequests(apiArray(data, "requests"));
+      const all = [];
+      for (let p = 1; p <= 10; p += 1) {
+        const r = await api.get(`/api/requests?status=${status}&page=${p}&limit=100`, ADMIN);
+        all.push(...listOf(r.data, "requests"));
+        if (p >= (r.data.totalPages || 1)) break;
+      }
+      setItems(all);
+      setError("");
+      const other = status === "pending" ? "reviewed" : "pending";
+      const o = await api.get(`/api/requests?status=${other}&limit=1`, ADMIN);
+      setCounts({ [status]: all.length, [other]: o.data.total || 0 });
     } catch (err) {
-      console.error("Error fetching requests:", err);
-      alert(err.message || "Failed to load requests");
-    } finally {
-      setIsLoading(false);
+      setError(errorText(err, "Couldn't load requests."));
+      setItems([]);
     }
-  };
+  }, [status]);
 
   useEffect(() => {
-    fetchRequests();
-  }, []);
+    const id = setTimeout(load, 0); // load after render; it only sets state once data arrives
+    return () => clearTimeout(id);
+  }, [load]);
 
-  const filteredRequests = useMemo(
-    () =>
-      filter === "all" ? requests : requests.filter((r) => r.status === filter),
-    [requests, filter],
-  );
-
-  const markReviewed = async (id) => {
-    try {
-      await api.put(
-        `/api/requests/${id}/reviewed`,
-        {},
-        { _tokenType: "admin" },
-      );
-
-      showToast("Request marked as reviewed");
-      fetchRequests();
-    } catch (err) {
-      console.error("Error marking request reviewed:", err);
-      alert(err.message || "Failed to update request");
-    }
+  const switchTo = (next) => {
+    if (next === status) return;
+    setItems(null);
+    setStatus(next);
   };
 
-  const deleteRequest = async (id) => {
-    try {
-      await api.delete(`/api/requests/${id}`, { _tokenType: "admin" });
-
-      showToast("Request deleted");
-      fetchRequests();
-    } catch (err) {
-      console.error("Error deleting request:", err);
-      alert(err.message || "Failed to delete request");
+  const groups = useMemo(() => {
+    const m = new Map();
+    for (const r of items || []) {
+      const u = r.userId || {};
+      const k = [key(r.subject), key(r.topic), u.courseId?._id || "", u.level || ""].join("|");
+      if (!m.has(k)) m.set(k, { key: k, subject: r.subject, topic: r.topic, course: u.courseId?.name, level: u.level, requests: [] });
+      m.get(k).requests.push(r);
     }
+    return [...m.values()].sort((a, b) => b.requests.length - a.requests.length || new Date(b.requests[0].createdAt) - new Date(a.requests[0].createdAt));
+  }, [items]);
+
+  const markDone = async (g) => {
+    setBusy(g.key);
+    let done = 0;
+    for (const r of g.requests) {
+      try {
+        await api.put(`/api/requests/${r._id}/reviewed`, {}, ADMIN);
+        done += 1;
+      } catch {
+        /* keep going */
+      }
+    }
+    setBusy(null);
+    refreshAdminBadges();
+    toast(`Marked done · ${done} student${done === 1 ? "" : "s"} emailed`, done < g.requests.length);
+    load();
   };
 
-  const pendingCount = requests.filter((r) => r.status === "pending").length;
-  const reviewedCount = requests.filter((r) => r.status === "reviewed").length;
+  const remove = async (g) => {
+    if (!window.confirm(`Delete ${g.requests.length === 1 ? "this request" : `these ${g.requests.length} requests`}? Students aren't told.`)) return;
+    setBusy(g.key);
+    for (const r of g.requests) {
+      try {
+        await api.delete(`/api/requests/${r._id}`, ADMIN);
+      } catch {
+        /* keep going */
+      }
+    }
+    setBusy(null);
+    refreshAdminBadges();
+    toast("Deleted");
+    load();
+  };
 
   return (
-    <div style={S.page}>
-      <div style={S.inner}>
-        <p style={S.eyebrow}>Admin · Subject requests</p>
-        <h1 style={S.heading}>Request inbox</h1>
-        <p style={S.subheading}>
-          View and manage subject requests submitted by users.
-        </p>
-
-        <div style={S.stats}>
-          {[
-            ["Total", requests.length, "#0f172a"],
-            ["Pending", pendingCount, "#c2410c"],
-            ["Reviewed", reviewedCount, "#15803d"],
-          ].map(([label, value, color]) => (
-            <div key={label} style={S.statCard}>
-              <p style={S.statLabel}>{label}</p>
-              <p style={{ ...S.statValue, color }}>{value}</p>
+    <AdminLayout
+      title="Subject requests"
+      subtitle="Topics students want added · requests for the same topic are grouped"
+      actions={
+        <div className="adm-seg" role="tablist" aria-label="Request status">
+          <button type="button" role="tab" aria-selected={status === "pending"} onClick={() => switchTo("pending")}>Pending {counts.pending || ""}</button>
+          <button type="button" role="tab" aria-selected={status === "reviewed"} onClick={() => switchTo("reviewed")}>Done {counts.reviewed || ""}</button>
+        </div>
+      }
+    >
+      {toastNode}
+      {error && <div className="adm-note bad" role="alert">{error}</div>}
+      {!items && <div className="adm-card adm-empty">Loading requests…</div>}
+      {items && groups.length === 0 && <div className="adm-card adm-empty">{status === "pending" ? "No requests waiting. Nice." : "Nothing here yet."}</div>}
+      {groups.map((g) => {
+        const names = g.requests.map((r) => r.userId?.fullName).filter(Boolean);
+        const files = g.requests.filter((r) => r.fileName);
+        return (
+          <article key={g.key} className="adm-card adm-row" style={{ gap: 18 }}>
+            <div style={{ flex: "1 1 380px", minWidth: 0 }}>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
+                {g.course && <span className="adm-pill info">{g.course} · {g.level}L</span>}
+                <span className="adm-pill warn">Asked by {g.requests.length} student{g.requests.length === 1 ? "" : "s"}</span>
+                <small style={{ color: "#5b6577" }}>Latest {timeAgo(g.requests[0].createdAt)}</small>
+              </div>
+              <h2 style={{ margin: "10px 0 2px", fontSize: 18 }}>{g.topic}</h2>
+              <div style={{ fontSize: 14, color: "#5b6577" }}>Subject: <b style={{ color: "#0f172a" }}>{g.subject}</b>{g.requests[0].timer ? ` · wants a ${g.requests[0].timer}-minute test` : ""}</div>
+              <div style={{ fontSize: 13, color: "#5b6577", marginTop: 8 }}>
+                From {names.slice(0, 3).join(", ")}{names.length > 3 ? ` and ${names.length - 3} more` : ""}
+              </div>
             </div>
-          ))}
-        </div>
-
-        <div style={S.filterRow}>
-          {[
-            ["all", `All (${requests.length})`],
-            ["pending", `Pending (${pendingCount})`],
-            ["reviewed", `Reviewed (${reviewedCount})`],
-          ].map(([key, label]) => (
-            <button
-              key={key}
-              onClick={() => setFilter(key)}
-              style={S.pill(filter === key)}
-            >
-              {label}
-            </button>
-          ))}
-          <button onClick={() => navigate("/admin")} style={S.backBtn}>
-            ← Back to admin
-          </button>
-        </div>
-
-        <div style={S.list}>
-          {isLoading ? (
-            <p style={S.empty}>Loading requests…</p>
-          ) : filteredRequests.length === 0 ? (
-            <p style={S.empty}>No requests found.</p>
-          ) : (
-            filteredRequests.map((request) => (
-              <RequestRow
-                key={request._id}
-                request={request}
-                onMarkReviewed={markReviewed}
-                onDelete={deleteRequest}
-              />
-            ))
-          )}
-        </div>
-      </div>
-
-      <Toast message={toast.message} visible={toast.visible} />
-    </div>
+            <div style={{ flex: "1 1 280px", display: "flex", flexDirection: "column", gap: 10 }}>
+              {files.map((r) => (
+                <div key={r._id} style={{ display: "flex", alignItems: "center", gap: 12, border: "1px solid #e4e8ee", borderRadius: 12, padding: "10px 12px" }}>
+                  <span style={{ width: 40, height: 40, borderRadius: 9, background: "#fef2f2", color: "#b91c1c", fontSize: 11, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>{extOf(r.fileName)}</span>
+                  <span style={{ minWidth: 0 }}>
+                    <b style={{ display: "block", fontSize: 13, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.fileName}</b>
+                    <small style={{ color: "#5b6577" }}>{sizeText(r.fileSize)} · sent to your email</small>
+                  </span>
+                </div>
+              ))}
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {status === "pending" && <Link to="/admin-courses" className="adm-btn">Add this topic</Link>}
+                {status === "pending" && (
+                  <button type="button" className="adm-btn pri" disabled={busy === g.key} onClick={() => markDone(g)}>
+                    {busy === g.key ? "Working…" : `Mark done & email ${g.requests.length === 1 ? "student" : `all ${g.requests.length}`}`}
+                  </button>
+                )}
+                <button type="button" className="adm-btn danger" disabled={busy === g.key} onClick={() => remove(g)}>Delete</button>
+              </div>
+            </div>
+          </article>
+        );
+      })}
+      {status === "pending" && groups.length > 0 && <p className="adm-sub" style={{ textAlign: "center" }}>"Mark done" emails each student that their request was reviewed.</p>}
+    </AdminLayout>
   );
 }
-
-export default AdminRequestsPage;

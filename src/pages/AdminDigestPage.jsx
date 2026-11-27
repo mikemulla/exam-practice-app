@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import AdminLayout from "../components/AdminLayout";
 import api from "../lib/api";
 import "../styles/dashboard.css";
 import "../styles/student.css";
@@ -8,7 +8,6 @@ const ADMIN = { _tokenType: "admin" };
 const fmt = (d) => (d ? new Date(d).toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "never");
 
 export default function AdminDigestPage() {
-  const navigate = useNavigate();
   const [status, setStatus] = useState(null);
   const [email, setEmail] = useState("");
   const [to, setTo] = useState("");
@@ -62,17 +61,8 @@ export default function AdminDigestPage() {
   };
 
   return (
-    <div className="db">
-      <header className="db-header">
-        <div className="db-header-inner">
-          <button type="button" className="st-btn st-btn-text" onClick={() => navigate("/admin")}>← Admin dashboard</button>
-        </div>
-      </header>
-      <main className="st-main" style={{ maxWidth: 900 }}>
-        <div>
-          <h1 className="st-h1">Weekly progress email</h1>
-          <p className="st-sub">Sent on Sunday evenings (Lagos time) to students who practised in the last 60 days and haven't switched it off. Nobody gets more than one a week, and at most 250 go out per run (Brevo's free plan allows 300 a day).</p>
-        </div>
+    <AdminLayout title="Weekly progress email" subtitle="Sent on Sunday evenings (Lagos time) to students who practised in the last 60 days and haven't switched it off. Nobody gets more than one a week, and at most 250 go out per run (Brevo's free plan allows 300 a day).">
+      <div style={{ display: "flex", flexDirection: "column", gap: 18, maxWidth: 980 }}>
 
         {status && (
           <section className="db-grid-4">
@@ -111,7 +101,7 @@ export default function AdminDigestPage() {
         </section>
 
         {note && <div className="rs-banner" role="status">{note}</div>}
-      </main>
-    </div>
+      </div>
+    </AdminLayout>
   );
 }
