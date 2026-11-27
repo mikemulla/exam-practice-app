@@ -5,6 +5,7 @@ import { ADMIN, errorText } from "../lib/adminKit";
 const KINDS = ["checkin", "reminder", "comeback", "welldone"];
 const FIELD_LABEL = { firstName: "first name", daysAway: "days away", weakTopic: "weakest topic", lastTopic: "last topic" };
 let templateCache = null;
+const BATCH = 10;
 
 const randomOf = (list, avoid) => {
   if (!list?.length) return "";
@@ -74,20 +75,31 @@ export default function CheckInComposer({ recipients, defaultKind = "checkin", o
     requestAnimationFrame(() => { el.focus(); el.selectionStart = el.selectionEnd = start + token.length; });
   };
 
+  const [progress, setProgress] = useState(null);
+
+  // Send in small batches so no single request runs long enough to time out.
   const send = async () => {
     setSending(true);
     setError("");
+    const total = { sent: 0, skippedEmailsOff: 0, skippedRecent: 0, failed: 0 };
+    const ids = recipients.map((x) => x.id);
     try {
-      const r = await api.post("/api/admin/check-in/send", { userIds: recipients.map((x) => x.id), subject, message }, ADMIN);
-      const d = r.data;
-      const skipped = [d.skippedEmailsOff && `${d.skippedEmailsOff} turned emails off`, d.skippedRecent && `${d.skippedRecent} already got one today`, d.failed && `${d.failed} failed`].filter(Boolean);
-      toast(`${d.sent} email${d.sent === 1 ? "" : "s"} sent${skipped.length ? ` · ${skipped.join(" · ")}` : ""}`, d.sent === 0);
-      onSent?.();
-      onClose();
+      for (let i = 0; i < ids.length; i += BATCH) {
+        setProgress({ done: i, of: ids.length });
+        const r = await api.post("/api/admin/check-in/send", { userIds: ids.slice(i, i + BATCH), subject, message }, { ...ADMIN, timeout: 90000 });
+        for (const k of Object.keys(total)) total[k] += Number(r.data?.[k] || 0);
+      }
     } catch (err) {
-      setError(errorText(err, "Couldn't send."));
+      setError(`${total.sent} sent so far, then: ${errorText(err, "couldn't send")}. Press Send again to finish. Students who already got it are skipped.`);
       setSending(false);
+      setProgress(null);
+      onSent?.();
+      return;
     }
+    const skipped = [total.skippedEmailsOff && `${total.skippedEmailsOff} turned emails off`, total.skippedRecent && `${total.skippedRecent} already got one today`, total.failed && `${total.failed} failed`].filter(Boolean);
+    toast(`${total.sent} email${total.sent === 1 ? "" : "s"} sent${skipped.length ? ` · ${skipped.join(" · ")}` : ""}`, total.sent === 0);
+    onSent?.();
+    onClose();
   };
 
   const who = recipients.length === 1 ? first.fullName : `${recipients.length} students`;
@@ -137,7 +149,7 @@ export default function CheckInComposer({ recipients, defaultKind = "checkin", o
         {error && <div className="adm-note bad" role="alert" style={{ marginTop: 12 }}>{error}</div>}
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 16 }}>
           <button type="button" className="adm-btn" onClick={onClose}>Cancel</button>
-          <button type="button" className="adm-btn pri" disabled={sending || !subject.trim() || !message.trim()} onClick={send}>{sending ? "Sending…" : `Send to ${who}`}</button>
+          <button type="button" className="adm-btn pri" disabled={sending || !subject.trim() || !message.trim()} onClick={send}>{sending ? (progress && recipients.length > BATCH ? `Sending ${progress.done + 1}–${Math.min(progress.done + BATCH, progress.of)} of ${progress.of}…` : "Sending…") : `Send to ${who}`}</button>
         </div>
       </div>
     </div>
